@@ -21,6 +21,9 @@ Current features:
 	- Optional directional, shadow-casting searchlight (projected texture) that follows the scanner.
  - Pickups: `item_ammo_ar2_altfire`, `item_battery`, `item_healthvial`, `item_healthkit` emit very subtle light.
  - Bullet impacts: subtle flashes at impact positions (AR2 = blue, all others = warm orange).
+ - Muzzle Flash: brief light at the weapon muzzle when firing (AR2 = blue, others = warm orange).
+ - Antlion Grub (`npc_antlion_grub`): subtle green abdomen glow.
+ - Antlion Guardian (`npc_antlionguard`, guardian variant): subtle green glow (detected via client heuristics: SaveTable/NW flags, skin/name hints).
  
 
 Client ConVars:
