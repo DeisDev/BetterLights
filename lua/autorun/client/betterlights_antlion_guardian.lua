@@ -52,9 +52,13 @@ if CLIENT then
             return true
         end
 
-        -- Name heuristic
-        local nm = (ent:GetName() or ""):lower()
-        if nm ~= "" and nm:find("guardian", 1, true) then
+        -- Name heuristic (targetname); guard for missing GetName on some clients/entities
+        local nm = ""
+        if ent.GetName then
+            local ok, name = pcall(ent.GetName, ent)
+            if ok and isstring(name) then nm = string.lower(name) end
+        end
+        if nm ~= "" and string.find(nm, "guardian", 1, true) then
             dbg("Targetname heuristic matched (%s)", nm)
             return true
         end
