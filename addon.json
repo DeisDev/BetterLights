@@ -1,0 +1,12 @@
+{
+  "title": "BetterLights",
+  "type": "effects",
+  "tags": ["realism", "fun"],
+  "ignore": [
+    "*.psd",
+    "*.vcproj",
+    "*.svn*",
+    "*.bat",
+    "*.cmd"
+  ]
+}
