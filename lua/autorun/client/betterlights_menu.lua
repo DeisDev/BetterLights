@@ -178,6 +178,45 @@ if CLIENT then
             })
         end)
 
+        -- Antlion Spit
+        spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_AntlionSpit", "Antlion Spit", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Acid-green glow on Antlion Worker spit (grenade_spit) and a small flash on impact")
+            panel:CheckBox("Enable glow", "betterlights_antlion_spit_enable")
+            panel:NumSlider("Glow radius", "betterlights_antlion_spit_size", 0, 400, 0)
+            panel:NumSlider("Glow brightness", "betterlights_antlion_spit_brightness", 0, 5, 2)
+            panel:NumSlider("Glow decay", "betterlights_antlion_spit_decay", 0, 5000, 0)
+            panel:Help("Glow Color (RGB)")
+            panel:NumSlider("Red", "betterlights_antlion_spit_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_antlion_spit_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_antlion_spit_color_b", 0, 255, 0)
+            panel:Help("Impact Flash")
+            panel:CheckBox("Flash on impact", "betterlights_antlion_spit_flash_enable")
+            panel:NumSlider("Flash radius", "betterlights_antlion_spit_flash_size", 0, 800, 0)
+            panel:NumSlider("Flash brightness", "betterlights_antlion_spit_flash_brightness", 0, 10, 2)
+            panel:NumSlider("Flash time (s)", "betterlights_antlion_spit_flash_time", 0, 1, 2)
+            panel:Help("Flash Color (RGB)")
+            panel:NumSlider("Red", "betterlights_antlion_spit_flash_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_antlion_spit_flash_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_antlion_spit_flash_color_b", 0, 255, 0)
+            addResetButton(panel, {
+                betterlights_antlion_spit_enable = 1,
+                betterlights_antlion_spit_size = 70,
+                betterlights_antlion_spit_brightness = 0.5,
+                betterlights_antlion_spit_decay = 1800,
+                betterlights_antlion_spit_color_r = 120,
+                betterlights_antlion_spit_color_g = 255,
+                betterlights_antlion_spit_color_b = 140,
+                betterlights_antlion_spit_flash_enable = 1,
+                betterlights_antlion_spit_flash_size = 130,
+                betterlights_antlion_spit_flash_brightness = 1.2,
+                betterlights_antlion_spit_flash_time = 0.12,
+                betterlights_antlion_spit_flash_color_r = 180,
+                betterlights_antlion_spit_flash_color_g = 255,
+                betterlights_antlion_spit_flash_color_b = 120,
+            })
+        end)
+
         -- Burning entities
     spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Fire", "Burning Entities", "", "", function(panel)
             panel:ClearControls()
@@ -578,6 +617,29 @@ if CLIENT then
                 betterlights_antlion_guardian_color_r = 120,
                 betterlights_antlion_guardian_color_g = 255,
                 betterlights_antlion_guardian_color_b = 140,
+            })
+        end)
+
+        -- Antlion Worker
+        spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionWorker", "Antlion Worker", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Subtle glow for Antlion Workers attached to Antlion.Back_Bone")
+            panel:CheckBox("Enable", "betterlights_antlion_worker_enable")
+            panel:NumSlider("Radius", "betterlights_antlion_worker_size", 0, 800, 0)
+            panel:NumSlider("Brightness", "betterlights_antlion_worker_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "betterlights_antlion_worker_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_antlion_worker_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_antlion_worker_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_antlion_worker_color_b", 0, 255, 0)
+            addResetButton(panel, {
+                betterlights_antlion_worker_enable = 1,
+                betterlights_antlion_worker_size = 120,
+                betterlights_antlion_worker_brightness = 0.55,
+                betterlights_antlion_worker_decay = 2000,
+                betterlights_antlion_worker_color_r = 180,
+                betterlights_antlion_worker_color_g = 240,
+                betterlights_antlion_worker_color_b = 120,
             })
         end)
 
