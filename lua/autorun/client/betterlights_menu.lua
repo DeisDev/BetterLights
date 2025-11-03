@@ -150,6 +150,33 @@ if CLIENT then
             })
         end)
 
+            -- Generic Explosion Flash
+        spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Explosions", "Explosion Flash (Generic)", "", "", function(panel)
+                panel:ClearControls()
+                panel:Help("Brief flash when generic explosions occur (env_explosion, explosive barrels)")
+                panel:CheckBox("Enable", "betterlights_explosion_flash_enable")
+                panel:NumSlider("Radius", "betterlights_explosion_flash_size", 0, 800, 0)
+                panel:NumSlider("Brightness", "betterlights_explosion_flash_brightness", 0, 10, 2)
+                panel:NumSlider("Duration (s)", "betterlights_explosion_flash_time", 0, 1, 2)
+                panel:Help("Detection")
+                panel:CheckBox("Detect env_* explosion entities", "betterlights_explosion_detect_env")
+                panel:CheckBox("Detect explosive barrels", "betterlights_explosion_detect_barrels")
+                panel:Help("Color (RGB)")
+                panel:NumSlider("Red", "betterlights_explosion_flash_color_r", 0, 255, 0)
+                panel:NumSlider("Green", "betterlights_explosion_flash_color_g", 0, 255, 0)
+                panel:NumSlider("Blue", "betterlights_explosion_flash_color_b", 0, 255, 0)
+                addResetButton(panel, {
+                    betterlights_explosion_flash_enable = 1,
+                    betterlights_explosion_flash_size = 320,
+                    betterlights_explosion_flash_brightness = 3.0,
+                    betterlights_explosion_flash_time = 0.18,
+                    betterlights_explosion_detect_env = 1,
+                    betterlights_explosion_detect_barrels = 1,
+                    betterlights_explosion_flash_color_r = 255,
+                    betterlights_explosion_flash_color_g = 210,
+                    betterlights_explosion_flash_color_b = 120,
+                })
+            end)
         -- Frag grenade
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Grenade", "Frag Grenade", "", "", function(panel)
             panel:ClearControls()
@@ -449,42 +476,20 @@ if CLIENT then
             })
         end)
 
-        -- Pickups (AR2 alt, Battery, Health Vial, Health Kit)
-    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickups", "Pickups", "", "", function(panel)
+        -- Pickups: AR2 alt-fire ammo
+    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_AR2Alt", "AR2 Alt Ammo", "", "", function(panel)
             panel:ClearControls()
-            panel:Help("Subtle glows for common pickups")
-            -- AR2 alt-fire ammo
-            panel:CheckBox("AR2 alt-fire ammo", "betterlights_item_ar2alt_enable")
-            panel:NumSlider("AR2 alt Radius", "betterlights_item_ar2alt_size", 0, 300, 0)
-            panel:NumSlider("AR2 alt Brightness", "betterlights_item_ar2alt_brightness", 0, 2, 2)
-            panel:NumSlider("AR2 alt Decay", "betterlights_item_ar2alt_decay", 0, 5000, 0)
-            panel:CheckBox("AR2 alt model elight", "betterlights_item_ar2alt_models_elight")
-            panel:NumSlider("AR2 alt elight radius x", "betterlights_item_ar2alt_models_elight_size_mult", 0, 3, 2)
-
-            -- Battery
-            panel:CheckBox("Battery", "betterlights_item_battery_enable")
-            panel:NumSlider("Battery Radius", "betterlights_item_battery_size", 0, 300, 0)
-            panel:NumSlider("Battery Brightness", "betterlights_item_battery_brightness", 0, 2, 2)
-            panel:NumSlider("Battery Decay", "betterlights_item_battery_decay", 0, 5000, 0)
-            panel:CheckBox("Battery model elight", "betterlights_item_battery_models_elight")
-            panel:NumSlider("Battery elight radius x", "betterlights_item_battery_models_elight_size_mult", 0, 3, 2)
-
-            -- Health Vial
-            panel:CheckBox("Health Vial", "betterlights_item_healthvial_enable")
-            panel:NumSlider("Vial Radius", "betterlights_item_healthvial_size", 0, 300, 0)
-            panel:NumSlider("Vial Brightness", "betterlights_item_healthvial_brightness", 0, 2, 2)
-            panel:NumSlider("Vial Decay", "betterlights_item_healthvial_decay", 0, 5000, 0)
-            panel:CheckBox("Vial model elight", "betterlights_item_healthvial_models_elight")
-            panel:NumSlider("Vial elight radius x", "betterlights_item_healthvial_models_elight_size_mult", 0, 3, 2)
-
-            -- Health Kit
-            panel:CheckBox("Health Kit", "betterlights_item_healthkit_enable")
-            panel:NumSlider("Kit Radius", "betterlights_item_healthkit_size", 0, 300, 0)
-            panel:NumSlider("Kit Brightness", "betterlights_item_healthkit_brightness", 0, 2, 2)
-            panel:NumSlider("Kit Decay", "betterlights_item_healthkit_decay", 0, 5000, 0)
-            panel:CheckBox("Kit model elight", "betterlights_item_healthkit_models_elight")
-            panel:NumSlider("Kit elight radius x", "betterlights_item_healthkit_models_elight_size_mult", 0, 3, 2)
-
+            panel:Help("Subtle glow for item_ammo_ar2_altfire")
+            panel:CheckBox("Enable", "betterlights_item_ar2alt_enable")
+            panel:NumSlider("Radius", "betterlights_item_ar2alt_size", 0, 300, 0)
+            panel:NumSlider("Brightness", "betterlights_item_ar2alt_brightness", 0, 2, 2)
+            panel:NumSlider("Decay", "betterlights_item_ar2alt_decay", 0, 5000, 0)
+            panel:CheckBox("Add model elight", "betterlights_item_ar2alt_models_elight")
+            panel:NumSlider("Elight radius x", "betterlights_item_ar2alt_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_item_ar2alt_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_item_ar2alt_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_item_ar2alt_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_item_ar2alt_enable = 1,
                 betterlights_item_ar2alt_size = 60,
@@ -492,27 +497,140 @@ if CLIENT then
                 betterlights_item_ar2alt_decay = 1800,
                 betterlights_item_ar2alt_models_elight = 1,
                 betterlights_item_ar2alt_models_elight_size_mult = 1.0,
+                betterlights_item_ar2alt_color_r = 255,
+                betterlights_item_ar2alt_color_g = 220,
+                betterlights_item_ar2alt_color_b = 60,
+            })
+        end)
+
+        -- Pickups: Battery
+    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Battery", "Battery", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Subtle glow for item_battery")
+            panel:CheckBox("Enable", "betterlights_item_battery_enable")
+            panel:NumSlider("Radius", "betterlights_item_battery_size", 0, 300, 0)
+            panel:NumSlider("Brightness", "betterlights_item_battery_brightness", 0, 2, 2)
+            panel:NumSlider("Decay", "betterlights_item_battery_decay", 0, 5000, 0)
+            panel:CheckBox("Add model elight", "betterlights_item_battery_models_elight")
+            panel:NumSlider("Elight radius x", "betterlights_item_battery_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_item_battery_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_item_battery_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_item_battery_color_b", 0, 255, 0)
+            addResetButton(panel, {
                 betterlights_item_battery_enable = 1,
                 betterlights_item_battery_size = 55,
                 betterlights_item_battery_brightness = 0.2,
                 betterlights_item_battery_decay = 1800,
                 betterlights_item_battery_models_elight = 1,
                 betterlights_item_battery_models_elight_size_mult = 1.0,
+                betterlights_item_battery_color_r = 110,
+                betterlights_item_battery_color_g = 190,
+                betterlights_item_battery_color_b = 255,
+            })
+        end)
+
+        -- Pickups: Health Vial
+    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Vial", "Health Vial", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Subtle glow for item_healthvial")
+            panel:CheckBox("Enable", "betterlights_item_healthvial_enable")
+            panel:NumSlider("Radius", "betterlights_item_healthvial_size", 0, 300, 0)
+            panel:NumSlider("Brightness", "betterlights_item_healthvial_brightness", 0, 2, 2)
+            panel:NumSlider("Decay", "betterlights_item_healthvial_decay", 0, 5000, 0)
+            panel:CheckBox("Add model elight", "betterlights_item_healthvial_models_elight")
+            panel:NumSlider("Elight radius x", "betterlights_item_healthvial_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_item_healthvial_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_item_healthvial_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_item_healthvial_color_b", 0, 255, 0)
+            addResetButton(panel, {
                 betterlights_item_healthvial_enable = 1,
                 betterlights_item_healthvial_size = 45,
                 betterlights_item_healthvial_brightness = 0.18,
                 betterlights_item_healthvial_decay = 1800,
                 betterlights_item_healthvial_models_elight = 1,
                 betterlights_item_healthvial_models_elight_size_mult = 1.0,
+                betterlights_item_healthvial_color_r = 150,
+                betterlights_item_healthvial_color_g = 255,
+                betterlights_item_healthvial_color_b = 150,
+            })
+        end)
+
+        -- Pickups: Health Kit
+    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_HealthKit", "Health Kit", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Subtle glow for item_healthkit")
+            panel:CheckBox("Enable", "betterlights_item_healthkit_enable")
+            panel:NumSlider("Radius", "betterlights_item_healthkit_size", 0, 300, 0)
+            panel:NumSlider("Brightness", "betterlights_item_healthkit_brightness", 0, 2, 2)
+            panel:NumSlider("Decay", "betterlights_item_healthkit_decay", 0, 5000, 0)
+            panel:CheckBox("Add model elight", "betterlights_item_healthkit_models_elight")
+            panel:NumSlider("Elight radius x", "betterlights_item_healthkit_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_item_healthkit_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_item_healthkit_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_item_healthkit_color_b", 0, 255, 0)
+            addResetButton(panel, {
                 betterlights_item_healthkit_enable = 1,
                 betterlights_item_healthkit_size = 55,
                 betterlights_item_healthkit_brightness = 0.2,
                 betterlights_item_healthkit_decay = 1800,
                 betterlights_item_healthkit_models_elight = 1,
                 betterlights_item_healthkit_models_elight_size_mult = 1.0,
+                betterlights_item_healthkit_color_r = 150,
+                betterlights_item_healthkit_color_g = 255,
+                betterlights_item_healthkit_color_b = 150,
             })
         end)
 
+            -- Chargers (Suit/Health)
+        spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Chargers", "Chargers", "", "", function(panel)
+                panel:ClearControls()
+                panel:Help("Subtle glows for suit and health wall chargers")
+                -- Suit charger
+                panel:CheckBox("Suit Charger", "betterlights_suitcharger_enable")
+                panel:NumSlider("Suit Radius", "betterlights_suitcharger_size", 0, 300, 0)
+                panel:NumSlider("Suit Brightness", "betterlights_suitcharger_brightness", 0, 2, 2)
+                panel:NumSlider("Suit Decay", "betterlights_suitcharger_decay", 0, 5000, 0)
+                panel:CheckBox("Suit model elight", "betterlights_suitcharger_models_elight")
+                panel:NumSlider("Suit elight radius x", "betterlights_suitcharger_models_elight_size_mult", 0, 3, 2)
+                panel:Help("Suit Color (RGB)")
+                panel:NumSlider("Red", "betterlights_suitcharger_color_r", 0, 255, 0)
+                panel:NumSlider("Green", "betterlights_suitcharger_color_g", 0, 255, 0)
+                panel:NumSlider("Blue", "betterlights_suitcharger_color_b", 0, 255, 0)
+                -- Health charger
+                panel:CheckBox("Health Charger", "betterlights_healthcharger_enable")
+                panel:NumSlider("Health Radius", "betterlights_healthcharger_size", 0, 300, 0)
+                panel:NumSlider("Health Brightness", "betterlights_healthcharger_brightness", 0, 2, 2)
+                panel:NumSlider("Health Decay", "betterlights_healthcharger_decay", 0, 5000, 0)
+                panel:CheckBox("Health model elight", "betterlights_healthcharger_models_elight")
+                panel:NumSlider("Health elight radius x", "betterlights_healthcharger_models_elight_size_mult", 0, 3, 2)
+                panel:Help("Health Color (RGB)")
+                panel:NumSlider("Red", "betterlights_healthcharger_color_r", 0, 255, 0)
+                panel:NumSlider("Green", "betterlights_healthcharger_color_g", 0, 255, 0)
+                panel:NumSlider("Blue", "betterlights_healthcharger_color_b", 0, 255, 0)
+                addResetButton(panel, {
+                    betterlights_suitcharger_enable = 1,
+                    betterlights_suitcharger_size = 75,
+                    betterlights_suitcharger_brightness = 0.25,
+                    betterlights_suitcharger_decay = 1800,
+                    betterlights_suitcharger_models_elight = 1,
+                    betterlights_suitcharger_models_elight_size_mult = 1.0,
+                    betterlights_suitcharger_color_r = 255,
+                    betterlights_suitcharger_color_g = 180,
+                    betterlights_suitcharger_color_b = 80,
+                    betterlights_healthcharger_enable = 1,
+                    betterlights_healthcharger_size = 75,
+                    betterlights_healthcharger_brightness = 0.25,
+                    betterlights_healthcharger_decay = 1800,
+                    betterlights_healthcharger_models_elight = 1,
+                    betterlights_healthcharger_models_elight_size_mult = 1.0,
+                    betterlights_healthcharger_color_r = 110,
+                    betterlights_healthcharger_color_g = 190,
+                    betterlights_healthcharger_color_b = 255,
+                })
+            end)
 
     end
 
