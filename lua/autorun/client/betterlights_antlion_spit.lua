@@ -12,7 +12,7 @@ if CLIENT then
     local cvar_flash_enable = CreateClientConVar("betterlights_antlion_spit_flash_enable", "1", true, false, "Add a brief light flash when Antlion spit impacts")
     local cvar_flash_size = CreateClientConVar("betterlights_antlion_spit_flash_size", "160", true, false, "Impact flash radius for Antlion spit")
     local cvar_flash_brightness = CreateClientConVar("betterlights_antlion_spit_flash_brightness", "1.5", true, false, "Impact flash brightness for Antlion spit")
-    local cvar_flash_time = CreateClientConVar("betterlights_antlion_spit_flash_time", "0.12", true, false, "Duration of the impact flash (seconds)")
+    local cvar_flash_time = CreateClientConVar("betterlights_antlion_spit_flash_time", "1.0", true, false, "Duration of the impact flash (seconds)")
 
     -- Colors
     local cvar_col_r = CreateClientConVar("betterlights_antlion_spit_color_r", "120", true, false, "Antlion spit glow color - red (0-255)")
