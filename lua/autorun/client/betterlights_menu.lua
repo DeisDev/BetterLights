@@ -20,11 +20,18 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_combineball_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_combineball_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_combineball_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_combineball_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_combineball_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_combineball_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_combineball_enable = 1,
                 betterlights_combineball_size = 320,
                 betterlights_combineball_brightness = 2.5,
                 betterlights_combineball_decay = 2000,
+                betterlights_combineball_color_r = 80,
+                betterlights_combineball_color_g = 180,
+                betterlights_combineball_color_b = 255,
             })
         end)
 
@@ -36,10 +43,18 @@ if CLIENT then
             panel:NumSlider("Generic radius", "betterlights_bullet_impact_size", 0, 300, 0)
             panel:NumSlider("Generic brightness", "betterlights_bullet_impact_brightness", 0, 2, 2)
             panel:NumSlider("Decay", "betterlights_bullet_impact_decay", 0, 5000, 0)
+            panel:Help("Generic Color (RGB)")
+            panel:NumSlider("Red", "betterlights_bullet_impact_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_bullet_impact_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_bullet_impact_color_b", 0, 255, 0)
             panel:Help("AR2 (Combine Rifle) overrides")
             panel:CheckBox("Enable AR2 tint", "betterlights_bullet_impact_ar2_enable")
             panel:NumSlider("AR2 radius", "betterlights_bullet_impact_ar2_size", 0, 300, 0)
             panel:NumSlider("AR2 brightness", "betterlights_bullet_impact_ar2_brightness", 0, 2, 2)
+            panel:Help("AR2 Color (RGB)")
+            panel:NumSlider("Red", "betterlights_bullet_impact_ar2_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_bullet_impact_ar2_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_bullet_impact_ar2_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_bullet_impact_enable = 1,
                 betterlights_bullet_impact_size = 60,
@@ -48,6 +63,12 @@ if CLIENT then
                 betterlights_bullet_impact_ar2_enable = 1,
                 betterlights_bullet_impact_ar2_size = 70,
                 betterlights_bullet_impact_ar2_brightness = 0.3,
+                betterlights_bullet_impact_color_r = 255,
+                betterlights_bullet_impact_color_g = 160,
+                betterlights_bullet_impact_color_b = 60,
+                betterlights_bullet_impact_ar2_color_r = 110,
+                betterlights_bullet_impact_ar2_color_g = 190,
+                betterlights_bullet_impact_ar2_color_b = 255,
             })
         end)
 
@@ -59,10 +80,18 @@ if CLIENT then
             panel:NumSlider("Generic radius", "betterlights_muzzle_size", 0, 300, 0)
             panel:NumSlider("Generic brightness", "betterlights_muzzle_brightness", 0, 2, 2)
             panel:NumSlider("Decay", "betterlights_muzzle_decay", 0, 5000, 0)
+            panel:Help("Generic Color (RGB)")
+            panel:NumSlider("Red", "betterlights_muzzle_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_muzzle_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_muzzle_color_b", 0, 255, 0)
             panel:Help("AR2 (Combine Rifle) overrides")
             panel:CheckBox("Enable AR2 tint", "betterlights_muzzle_ar2_enable")
             panel:NumSlider("AR2 radius", "betterlights_muzzle_ar2_size", 0, 300, 0)
             panel:NumSlider("AR2 brightness", "betterlights_muzzle_ar2_brightness", 0, 2, 2)
+            panel:Help("AR2 Color (RGB)")
+            panel:NumSlider("Red", "betterlights_muzzle_ar2_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_muzzle_ar2_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_muzzle_ar2_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_muzzle_enable = 1,
                 betterlights_muzzle_size = 250,
@@ -71,6 +100,12 @@ if CLIENT then
                 betterlights_muzzle_ar2_enable = 1,
                 betterlights_muzzle_ar2_size = 250,
                 betterlights_muzzle_ar2_brightness = 2.0,
+                betterlights_muzzle_color_r = 255,
+                betterlights_muzzle_color_g = 170,
+                betterlights_muzzle_color_b = 90,
+                betterlights_muzzle_ar2_color_r = 110,
+                betterlights_muzzle_ar2_color_g = 190,
+                betterlights_muzzle_ar2_color_b = 255,
             })
         end)
 
@@ -82,11 +117,18 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_bolt_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_bolt_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_bolt_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_bolt_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_bolt_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_bolt_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_bolt_enable = 1,
                 betterlights_bolt_size = 220,
                 betterlights_bolt_brightness = 0.96,
                 betterlights_bolt_decay = 2000,
+                betterlights_bolt_color_r = 255,
+                betterlights_bolt_color_g = 140,
+                betterlights_bolt_color_b = 40,
             })
         end)
 
@@ -98,11 +140,18 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_crossbow_hold_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_crossbow_hold_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_crossbow_hold_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_crossbow_hold_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_crossbow_hold_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_crossbow_hold_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_crossbow_hold_enable = 1,
                 betterlights_crossbow_hold_size = 30,
                 betterlights_crossbow_hold_brightness = 0.32,
                 betterlights_crossbow_hold_decay = 2000,
+                betterlights_crossbow_hold_color_r = 255,
+                betterlights_crossbow_hold_color_g = 140,
+                betterlights_crossbow_hold_color_b = 40,
             })
         end)
 
@@ -114,11 +163,18 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_rpg_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_rpg_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_rpg_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_rpg_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_rpg_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_rpg_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_rpg_enable = 1,
                 betterlights_rpg_size = 280,
                 betterlights_rpg_brightness = 2.2,
                 betterlights_rpg_decay = 2000,
+                betterlights_rpg_color_r = 255,
+                betterlights_rpg_color_g = 170,
+                betterlights_rpg_color_b = 60,
             })
         end)
 
@@ -132,6 +188,10 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_fire_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_fire_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_fire_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_fire_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_fire_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_fire_color_b", 0, 255, 0)
             panel:CheckBox("Flicker", "betterlights_fire_flicker_enable")
             panel:NumSlider("Flicker amount", "betterlights_fire_flicker_amount", 0, 1, 2)
             panel:NumSlider("Flicker size amt", "betterlights_fire_flicker_size_amount", 0, 1, 2)
@@ -143,6 +203,9 @@ if CLIENT then
                 betterlights_fire_decay = 2000,
                 betterlights_fire_models_elight = 1,
                 betterlights_fire_models_elight_size_mult = 1.0,
+                betterlights_fire_color_r = 255,
+                betterlights_fire_color_g = 170,
+                betterlights_fire_color_b = 60,
                 betterlights_fire_flicker_enable = 1,
                 betterlights_fire_flicker_amount = 0.35,
                 betterlights_fire_flicker_size_amount = 0.12,
@@ -187,6 +250,10 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_grenade_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_grenade_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_grenade_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_grenade_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_grenade_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_grenade_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_grenade_enable = 1,
                 betterlights_grenade_size = 80,
@@ -194,6 +261,9 @@ if CLIENT then
                 betterlights_grenade_decay = 1800,
                 betterlights_grenade_models_elight = 1,
                 betterlights_grenade_models_elight_size_mult = 1.0,
+                betterlights_grenade_color_r = 255,
+                betterlights_grenade_color_g = 40,
+                betterlights_grenade_color_b = 40,
             })
         end)
 
@@ -209,6 +279,15 @@ if CLIENT then
             panel:CheckBox("Idle glow", "betterlights_combine_mine_idle_enable")
             panel:NumSlider("Idle radius size", "betterlights_combine_mine_idle_size", 0, 400, 0)
             panel:NumSlider("Idle brightness", "betterlights_combine_mine_idle_brightness", 0, 2, 2)
+            panel:Help("Colors (RGB)")
+            panel:Help("Idle Color")
+            panel:NumSlider("Idle Red", "betterlights_combine_mine_idle_color_r", 0, 255, 0)
+            panel:NumSlider("Idle Green", "betterlights_combine_mine_idle_color_g", 0, 255, 0)
+            panel:NumSlider("Idle Blue", "betterlights_combine_mine_idle_color_b", 0, 255, 0)
+            panel:Help("Alert Color")
+            panel:NumSlider("Alert Red", "betterlights_combine_mine_alert_color_r", 0, 255, 0)
+            panel:NumSlider("Alert Green", "betterlights_combine_mine_alert_color_g", 0, 255, 0)
+            panel:NumSlider("Alert Blue", "betterlights_combine_mine_alert_color_b", 0, 255, 0)
             panel:CheckBox("Pulse on alert", "betterlights_combine_mine_pulse_enable")
             panel:NumSlider("Pulse amount", "betterlights_combine_mine_pulse_amount", 0, 1, 2)
             panel:NumSlider("Pulse speed", "betterlights_combine_mine_pulse_speed", 0, 30, 1)
@@ -223,6 +302,12 @@ if CLIENT then
                 betterlights_combine_mine_idle_enable = 1,
                 betterlights_combine_mine_idle_size = 80,
                 betterlights_combine_mine_idle_brightness = 0.25,
+                betterlights_combine_mine_idle_color_r = 90,
+                betterlights_combine_mine_idle_color_g = 180,
+                betterlights_combine_mine_idle_color_b = 255,
+                betterlights_combine_mine_alert_color_r = 255,
+                betterlights_combine_mine_alert_color_g = 60,
+                betterlights_combine_mine_alert_color_b = 60,
                 betterlights_combine_mine_pulse_enable = 1,
                 betterlights_combine_mine_pulse_amount = 0.15,
                 betterlights_combine_mine_pulse_speed = 6.0,
@@ -241,6 +326,11 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_physgun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_physgun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_physgun_models_elight_size_mult", 0, 3, 2)
+            panel:CheckBox("Override Weapon Color", "betterlights_physgun_color_override")
+            panel:Help("Override Color (RGB)")
+            panel:NumSlider("Red", "betterlights_physgun_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_physgun_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_physgun_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_physgun_enable = 1,
                 betterlights_physgun_size = 33,
@@ -248,6 +338,10 @@ if CLIENT then
                 betterlights_physgun_decay = 2000,
                 betterlights_physgun_models_elight = 1,
                 betterlights_physgun_models_elight_size_mult = 1.0,
+                betterlights_physgun_color_override = 0,
+                betterlights_physgun_color_r = 70,
+                betterlights_physgun_color_g = 130,
+                betterlights_physgun_color_b = 255,
             })
         end)
 
@@ -261,6 +355,10 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_gravitygun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_gravitygun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_gravitygun_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_gravitygun_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_gravitygun_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_gravitygun_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_gravitygun_enable = 1,
                 betterlights_gravitygun_size = 36,
@@ -268,6 +366,32 @@ if CLIENT then
                 betterlights_gravitygun_decay = 2000,
                 betterlights_gravitygun_models_elight = 1,
                 betterlights_gravitygun_models_elight_size_mult = 1.0,
+                betterlights_gravitygun_color_r = 255,
+                betterlights_gravitygun_color_g = 140,
+                betterlights_gravitygun_color_b = 40,
+            })
+        end)
+
+        -- RPG (Held)
+    spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_RPG_Held", "RPG (Held)", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Subtle red light at the laser dot and on your left hand (ValveBiped.Bip01_L_Hand)")
+            panel:CheckBox("Enable", "betterlights_rpg_hold_enable")
+            panel:NumSlider("Radius", "betterlights_rpg_hold_size", 0, 300, 0)
+            panel:NumSlider("Brightness", "betterlights_rpg_hold_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "betterlights_rpg_hold_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_rpg_hold_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_rpg_hold_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_rpg_hold_color_b", 0, 255, 0)
+            addResetButton(panel, {
+                betterlights_rpg_hold_enable = 1,
+                betterlights_rpg_hold_size = 24,
+                betterlights_rpg_hold_brightness = 0.22,
+                betterlights_rpg_hold_decay = 2000,
+                betterlights_rpg_hold_color_r = 255,
+                betterlights_rpg_hold_color_g = 60,
+                betterlights_rpg_hold_color_b = 60,
             })
         end)
 
@@ -281,6 +405,10 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_toolgun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_toolgun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_toolgun_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_toolgun_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_toolgun_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_toolgun_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_toolgun_enable = 1,
                 betterlights_toolgun_size = 28,
@@ -288,6 +416,9 @@ if CLIENT then
                 betterlights_toolgun_decay = 2000,
                 betterlights_toolgun_models_elight = 1,
                 betterlights_toolgun_models_elight_size_mult = 1.0,
+                betterlights_toolgun_color_r = 255,
+                betterlights_toolgun_color_g = 255,
+                betterlights_toolgun_color_b = 255,
             })
         end)
 
@@ -301,11 +432,19 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_heli_bomb_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_heli_bomb_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_heli_bomb_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Glow Color (RGB)")
+            panel:NumSlider("Red", "betterlights_heli_bomb_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_heli_bomb_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_heli_bomb_color_b", 0, 255, 0)
             panel:Help("Explosion Flash")
             panel:CheckBox("Flash on explosion", "betterlights_heli_bomb_flash_enable")
             panel:NumSlider("Flash radius", "betterlights_heli_bomb_flash_size", 0, 800, 0)
             panel:NumSlider("Flash brightness", "betterlights_heli_bomb_flash_brightness", 0, 10, 2)
             panel:NumSlider("Flash time (s)", "betterlights_heli_bomb_flash_time", 0, 1, 2)
+            panel:Help("Flash Color (RGB)")
+            panel:NumSlider("Red", "betterlights_heli_bomb_flash_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_heli_bomb_flash_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_heli_bomb_flash_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_heli_bomb_enable = 1,
                 betterlights_heli_bomb_size = 140,
@@ -313,10 +452,16 @@ if CLIENT then
                 betterlights_heli_bomb_decay = 2000,
                 betterlights_heli_bomb_models_elight = 1,
                 betterlights_heli_bomb_models_elight_size_mult = 1.0,
+                betterlights_heli_bomb_color_r = 255,
+                betterlights_heli_bomb_color_g = 60,
+                betterlights_heli_bomb_color_b = 60,
                 betterlights_heli_bomb_flash_enable = 1,
                 betterlights_heli_bomb_flash_size = 320,
                 betterlights_heli_bomb_flash_brightness = 5.0,
                 betterlights_heli_bomb_flash_time = 0.18,
+                betterlights_heli_bomb_flash_color_r = 255,
+                betterlights_heli_bomb_flash_color_g = 210,
+                betterlights_heli_bomb_flash_color_b = 120,
             })
         end)
 
@@ -330,11 +475,19 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_magnusson_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_magnusson_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_magnusson_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Glow Color (RGB)")
+            panel:NumSlider("Red", "betterlights_magnusson_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_magnusson_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_magnusson_color_b", 0, 255, 0)
             panel:Help("Explosion Flash")
             panel:CheckBox("Flash on explosion", "betterlights_magnusson_flash_enable")
             panel:NumSlider("Flash radius", "betterlights_magnusson_flash_size", 0, 800, 0)
             panel:NumSlider("Flash brightness", "betterlights_magnusson_flash_brightness", 0, 10, 2)
             panel:NumSlider("Flash time (s)", "betterlights_magnusson_flash_time", 0, 1, 2)
+            panel:Help("Flash Color (RGB)")
+            panel:NumSlider("Red", "betterlights_magnusson_flash_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_magnusson_flash_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_magnusson_flash_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_magnusson_enable = 1,
                 betterlights_magnusson_size = 130,
@@ -342,10 +495,16 @@ if CLIENT then
                 betterlights_magnusson_decay = 2000,
                 betterlights_magnusson_models_elight = 1,
                 betterlights_magnusson_models_elight_size_mult = 1.0,
+                betterlights_magnusson_color_r = 130,
+                betterlights_magnusson_color_g = 180,
+                betterlights_magnusson_color_b = 255,
                 betterlights_magnusson_flash_enable = 1,
                 betterlights_magnusson_flash_size = 360,
                 betterlights_magnusson_flash_brightness = 2.2,
                 betterlights_magnusson_flash_time = 0.14,
+                betterlights_magnusson_flash_color_r = 180,
+                betterlights_magnusson_flash_color_g = 220,
+                betterlights_magnusson_flash_color_b = 255,
             })
         end)
 
@@ -359,6 +518,10 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_manhack_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_manhack_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_manhack_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_manhack_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_manhack_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_manhack_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_manhack_enable = 1,
                 betterlights_manhack_size = 70,
@@ -366,6 +529,9 @@ if CLIENT then
                 betterlights_manhack_decay = 2000,
                 betterlights_manhack_models_elight = 1,
                 betterlights_manhack_models_elight_size_mult = 1.0,
+                betterlights_manhack_color_r = 255,
+                betterlights_manhack_color_g = 60,
+                betterlights_manhack_color_b = 60,
             })
         end)
 
@@ -377,11 +543,18 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_antlion_grub_size", 0, 400, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_grub_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_grub_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_antlion_grub_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_antlion_grub_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_antlion_grub_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_antlion_grub_enable = 1,
                 betterlights_antlion_grub_size = 70,
                 betterlights_antlion_grub_brightness = 0.35,
                 betterlights_antlion_grub_decay = 2000,
+                betterlights_antlion_grub_color_r = 120,
+                betterlights_antlion_grub_color_g = 255,
+                betterlights_antlion_grub_color_b = 120,
             })
         end)
 
@@ -393,11 +566,18 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_antlion_guardian_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_guardian_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_guardian_decay", 0, 5000, 0)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_antlion_guardian_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_antlion_guardian_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_antlion_guardian_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_antlion_guardian_enable = 1,
                 betterlights_antlion_guardian_size = 180,
                 betterlights_antlion_guardian_brightness = 0.6,
                 betterlights_antlion_guardian_decay = 2000,
+                betterlights_antlion_guardian_color_r = 120,
+                betterlights_antlion_guardian_color_g = 255,
+                betterlights_antlion_guardian_color_b = 140,
             })
         end)
 
@@ -411,6 +591,19 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_rollermine_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_rollermine_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_rollermine_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Colors (RGB) by skin")
+            panel:Help("Skin 0 (Default)")
+            panel:NumSlider("Red", "betterlights_rollermine_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_rollermine_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_rollermine_color_b", 0, 255, 0)
+            panel:Help("Skin 1 (Yellow)")
+            panel:NumSlider("Red", "betterlights_rollermine_skin1_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_rollermine_skin1_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_rollermine_skin1_color_b", 0, 255, 0)
+            panel:Help("Skin 2 (Red)")
+            panel:NumSlider("Red", "betterlights_rollermine_skin2_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_rollermine_skin2_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_rollermine_skin2_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_rollermine_enable = 1,
                 betterlights_rollermine_size = 110,
@@ -418,6 +611,15 @@ if CLIENT then
                 betterlights_rollermine_decay = 2000,
                 betterlights_rollermine_models_elight = 1,
                 betterlights_rollermine_models_elight_size_mult = 1.0,
+                betterlights_rollermine_color_r = 110,
+                betterlights_rollermine_color_g = 190,
+                betterlights_rollermine_color_b = 255,
+                betterlights_rollermine_skin1_color_r = 255,
+                betterlights_rollermine_skin1_color_g = 220,
+                betterlights_rollermine_skin1_color_b = 60,
+                betterlights_rollermine_skin2_color_r = 255,
+                betterlights_rollermine_skin2_color_g = 80,
+                betterlights_rollermine_skin2_color_b = 80,
             })
         end)
 
@@ -431,6 +633,10 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_rollermine_hacked_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_rollermine_hacked_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_rollermine_hacked_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Color (RGB)")
+            panel:NumSlider("Red", "betterlights_rollermine_hacked_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_rollermine_hacked_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_rollermine_hacked_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_rollermine_hacked_enable = 1,
                 betterlights_rollermine_hacked_size = 110,
@@ -438,6 +644,9 @@ if CLIENT then
                 betterlights_rollermine_hacked_decay = 2000,
                 betterlights_rollermine_hacked_models_elight = 1,
                 betterlights_rollermine_hacked_models_elight_size_mult = 1.0,
+                betterlights_rollermine_hacked_color_r = 255,
+                betterlights_rollermine_hacked_color_g = 160,
+                betterlights_rollermine_hacked_color_b = 60,
             })
         end)
 
@@ -451,6 +660,10 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_cscanner_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_cscanner_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_cscanner_models_elight_size_mult", 0, 3, 2)
+            panel:Help("Glow Color (RGB)")
+            panel:NumSlider("Red", "betterlights_cscanner_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_cscanner_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_cscanner_color_b", 0, 255, 0)
             panel:Help("Searchlight (shadow-casting)")
             panel:CheckBox("Enable searchlight", "betterlights_cscanner_searchlight_enable")
             panel:CheckBox("Include npc_clawscanner", "betterlights_scanner_searchlight_include_clawscanner")
@@ -459,6 +672,10 @@ if CLIENT then
             panel:NumSlider("Searchlight distance", "betterlights_cscanner_searchlight_distance", 0, 3000, 0)
             panel:NumSlider("Searchlight near Z", "betterlights_cscanner_searchlight_near", 0, 128, 0)
             panel:NumSlider("Searchlight brightness", "betterlights_cscanner_searchlight_brightness", 0, 2, 2)
+            panel:Help("Searchlight Color (RGB)")
+            panel:NumSlider("Red", "betterlights_cscanner_searchlight_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_cscanner_searchlight_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_cscanner_searchlight_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_cscanner_enable = 1,
                 betterlights_cscanner_size = 120,
@@ -466,6 +683,9 @@ if CLIENT then
                 betterlights_cscanner_decay = 2000,
                 betterlights_cscanner_models_elight = 1,
                 betterlights_cscanner_models_elight_size_mult = 1.0,
+                betterlights_cscanner_color_r = 180,
+                betterlights_cscanner_color_g = 230,
+                betterlights_cscanner_color_b = 255,
                 betterlights_cscanner_searchlight_enable = 1,
                 betterlights_scanner_searchlight_include_clawscanner = 1,
                 betterlights_cscanner_searchlight_shadows = 1,
@@ -473,6 +693,9 @@ if CLIENT then
                 betterlights_cscanner_searchlight_distance = 900,
                 betterlights_cscanner_searchlight_near = 8,
                 betterlights_cscanner_searchlight_brightness = 0.7,
+                betterlights_cscanner_searchlight_color_r = 255,
+                betterlights_cscanner_searchlight_color_g = 255,
+                betterlights_cscanner_searchlight_color_b = 255,
             })
         end)
 

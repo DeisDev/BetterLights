@@ -11,8 +11,24 @@ if CLIENT then
     local cvar_ar2_size = CreateClientConVar("betterlights_muzzle_ar2_size", "250", true, false, "AR2 muzzle flash radius")
     local cvar_ar2_brightness = CreateClientConVar("betterlights_muzzle_ar2_brightness", "2.0", true, false, "AR2 muzzle flash brightness")
 
-    local ORANGE = { r = 255, g = 170, b = 90 }
-    local BLUE = { r = 110, g = 190, b = 255 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_muzzle_color_r", "255", true, false, "Generic muzzle flash color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_muzzle_color_g", "170", true, false, "Generic muzzle flash color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_muzzle_color_b", "90", true, false, "Generic muzzle flash color - blue (0-255)")
+    local cvar_ar2_col_r = CreateClientConVar("betterlights_muzzle_ar2_color_r", "110", true, false, "AR2 muzzle flash color - red (0-255)")
+    local cvar_ar2_col_g = CreateClientConVar("betterlights_muzzle_ar2_color_g", "190", true, false, "AR2 muzzle flash color - green (0-255)")
+    local cvar_ar2_col_b = CreateClientConVar("betterlights_muzzle_ar2_color_b", "255", true, false, "AR2 muzzle flash color - blue (0-255)")
+
+    local function getGenericColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
+    local function getAR2Color()
+        return math.Clamp(math.floor(cvar_ar2_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_ar2_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_ar2_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     local __bl_muzzle_counter = 0
     local function spawnFlashAt(pos, col, size, bright, decay)
@@ -21,9 +37,9 @@ if CLIENT then
         local dl = DynamicLight(id)
         if not dl then return end
         dl.pos = pos
-        dl.r = col.r
-        dl.g = col.g
-        dl.b = col.b
+    dl.r = col.r
+    dl.g = col.g
+    dl.b = col.b
         dl.brightness = math.max(0, bright)
         dl.Decay = math.max(0, decay)
         dl.size = math.max(0, size)
@@ -36,9 +52,11 @@ if CLIENT then
         local isAR2 = net.ReadBool()
 
         if isAR2 and cvar_ar2_enable:GetBool() then
-            spawnFlashAt(pos, BLUE, cvar_ar2_size:GetFloat(), cvar_ar2_brightness:GetFloat(), cvar_decay:GetFloat())
+            local r, g, b = getAR2Color()
+            spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_ar2_size:GetFloat(), cvar_ar2_brightness:GetFloat(), cvar_decay:GetFloat())
         else
-            spawnFlashAt(pos, ORANGE, cvar_size:GetFloat(), cvar_brightness:GetFloat(), cvar_decay:GetFloat())
+            local r, g, b = getGenericColor()
+            spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_size:GetFloat(), cvar_brightness:GetFloat(), cvar_decay:GetFloat())
         end
     end)
 end

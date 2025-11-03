@@ -7,8 +7,15 @@ if CLIENT then
     local cvar_brightness = CreateClientConVar("betterlights_rpg_brightness", "2.2", true, false, "Dynamic light brightness for RPG rockets")
     local cvar_decay = CreateClientConVar("betterlights_rpg_decay", "2000", true, false, "Dynamic light decay for RPG rockets")
 
-    -- Warm orange/yellow flame color
-    local FLAME = { r = 255, g = 170, b = 60 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_rpg_color_r", "255", true, false, "RPG rocket color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_rpg_color_g", "170", true, false, "RPG rocket color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_rpg_color_b", "60", true, false, "RPG rocket color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     hook.Add("Think", "BetterLights_RPGMissile_DLight", function()
         if not cvar_enable:GetBool() then return end
@@ -26,9 +33,10 @@ if CLIENT then
                 local dlight = DynamicLight(ent:EntIndex())
                 if dlight then
                     dlight.pos = ent:WorldSpaceCenter()
-                    dlight.r = FLAME.r
-                    dlight.g = FLAME.g
-                    dlight.b = FLAME.b
+                    local r, g, b = getColor()
+                    dlight.r = r
+                    dlight.g = g
+                    dlight.b = b
                     dlight.brightness = brightness
                     dlight.decay = decay
                     dlight.size = size

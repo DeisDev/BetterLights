@@ -9,7 +9,19 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_physgun_models_elight", "1", true, false, "Also add an entity light (elight) to light the physgun model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_physgun_models_elight_size_mult", "1.0", true, false, "Multiplier for physgun elight radius")
 
+    -- Optional color override (defaults to weapon color)
+    local cvar_col_override = CreateClientConVar("betterlights_physgun_color_override", "0", true, false, "Override physgun color instead of using Weapon Color")
+    local cvar_col_r = CreateClientConVar("betterlights_physgun_color_r", "70", true, false, "Physgun override color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_physgun_color_g", "130", true, false, "Physgun override color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_physgun_color_b", "255", true, false, "Physgun override color - blue (0-255)")
+
     local function getPhysgunColorRGB()
+        if cvar_col_override:GetBool() then
+            local r = math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255)
+            local g = math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255)
+            local b = math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+            return r, g, b
+        end
         local ply = LocalPlayer()
         if not IsValid(ply) then return 70, 130, 255 end -- fallback cyan-ish
         local v = ply.GetWeaponColor and ply:GetWeaponColor()

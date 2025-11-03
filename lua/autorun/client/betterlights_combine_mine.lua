@@ -19,8 +19,23 @@ if CLIENT then
     local cvar_pulse_amount = CreateClientConVar("betterlights_combine_mine_pulse_amount", "0.15", true, false, "Pulse intensity as a fraction of brightness")
     local cvar_pulse_speed = CreateClientConVar("betterlights_combine_mine_pulse_speed", "6.0", true, false, "Pulse speed for alert mines")
 
-    local COLOR_IDLE = { r = 90, g = 180, b = 255 } -- subtle cyan/blue
-    local COLOR_ALERT = { r = 255, g = 60, b = 60 } -- warning red
+    -- Color configuration
+    local cvar_idle_r = CreateClientConVar("betterlights_combine_mine_idle_color_r", "90", true, false, "Combine mine idle color - red (0-255)")
+    local cvar_idle_g = CreateClientConVar("betterlights_combine_mine_idle_color_g", "180", true, false, "Combine mine idle color - green (0-255)")
+    local cvar_idle_b = CreateClientConVar("betterlights_combine_mine_idle_color_b", "255", true, false, "Combine mine idle color - blue (0-255)")
+    local cvar_alert_r = CreateClientConVar("betterlights_combine_mine_alert_color_r", "255", true, false, "Combine mine alert color - red (0-255)")
+    local cvar_alert_g = CreateClientConVar("betterlights_combine_mine_alert_color_g", "60", true, false, "Combine mine alert color - green (0-255)")
+    local cvar_alert_b = CreateClientConVar("betterlights_combine_mine_alert_color_b", "60", true, false, "Combine mine alert color - blue (0-255)")
+    local function getIdleColor()
+        return math.Clamp(math.floor(cvar_idle_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_idle_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_idle_b:GetFloat() + 0.5), 0, 255)
+    end
+    local function getAlertColor()
+        return math.Clamp(math.floor(cvar_alert_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_alert_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_alert_b:GetFloat() + 0.5), 0, 255)
+    end
 
     hook.Add("Think", "BetterLights_CombineMine_DLight", function()
         if not cvar_enable:GetBool() then return end
@@ -52,7 +67,14 @@ if CLIENT then
                 -- Choose params per state
                 local size = inRange and math.max(0, cvar_size_alert:GetFloat()) or math.max(0, cvar_size_idle:GetFloat())
                 local brightness = inRange and math.max(0, cvar_brightness_alert:GetFloat()) or math.max(0, cvar_brightness_idle:GetFloat())
-                local col = inRange and COLOR_ALERT or COLOR_IDLE
+                local col
+                if inRange then
+                    local r, g, b = getAlertColor()
+                    col = { r = r, g = g, b = b }
+                else
+                    local r, g, b = getIdleColor()
+                    col = { r = r, g = g, b = b }
+                end
 
                 -- Optional pulse on alert
                 if inRange and cvar_pulse_enable:GetBool() then

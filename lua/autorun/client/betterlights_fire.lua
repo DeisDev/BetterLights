@@ -13,7 +13,15 @@ if CLIENT then
     local cvar_flicker_size_amount = CreateClientConVar("betterlights_fire_flicker_size_amount", "0.12", true, false, "Flicker intensity applied to light radius")
     local cvar_flicker_speed = CreateClientConVar("betterlights_fire_flicker_speed", "11.5", true, false, "Flicker speed (higher = faster flicker)")
 
-    local FLAME = { r = 255, g = 170, b = 60 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_fire_color_r", "255", true, false, "Burning entities color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_fire_color_g", "170", true, false, "Burning entities color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_fire_color_b", "60", true, false, "Burning entities color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     hook.Add("Think", "BetterLights_Fire_DLight", function()
         if not cvar_enable:GetBool() then return end
@@ -68,9 +76,10 @@ if CLIENT then
                 local dlight = DynamicLight(lightIndex)
                 if dlight then
                     dlight.pos = pos
-                    dlight.r = FLAME.r
-                    dlight.g = FLAME.g
-                    dlight.b = FLAME.b
+                    local r, g, b = getColor()
+                    dlight.r = r
+                    dlight.g = g
+                    dlight.b = b
                     dlight.brightness = b_eff
                     dlight.decay = decay
                     dlight.size = s_eff
@@ -85,9 +94,10 @@ if CLIENT then
                     local el = DynamicLight(lightIndex, true) -- elight: lights models, not world
                     if el then
                         el.pos = pos
-                        el.r = FLAME.r
-                        el.g = FLAME.g
-                        el.b = FLAME.b
+                        local r, g, b = getColor()
+                        el.r = r
+                        el.g = g
+                        el.b = b
                         el.brightness = b_eff
                         el.decay = decay
                         el.size = s_eff * math.max(0, cvar_models_elight_size_mult:GetFloat())

@@ -8,7 +8,15 @@ if CLIENT then
     local cvar_decay = CreateClientConVar("betterlights_crossbow_hold_decay", "2000", true, false, "Dynamic light decay for held Crossbow")
     local cvar_require_loaded = CreateClientConVar("betterlights_crossbow_hold_require_loaded", "1", true, false, "Only emit light when a bolt is loaded (clip > 0)")
 
-    local ORANGE = { r = 255, g = 140, b = 40 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_crossbow_hold_color_r", "255", true, false, "Crossbow (held) color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_crossbow_hold_color_g", "140", true, false, "Crossbow (held) color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_crossbow_hold_color_b", "40", true, false, "Crossbow (held) color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     local function getHeldCrossbowPos(ply, wep)
         -- Prefer viewmodel attachment when in first-person
@@ -96,9 +104,10 @@ if CLIENT then
         local dlight = DynamicLight(ply:EntIndex() + 1337) -- offset to avoid collisions
         if dlight then
             dlight.pos = pos_world
-            dlight.r = ORANGE.r
-            dlight.g = ORANGE.g
-            dlight.b = ORANGE.b
+            local r, g, b = getColor()
+            dlight.r = r
+            dlight.g = g
+            dlight.b = b
             dlight.brightness = brightness
             dlight.decay = decay
             dlight.size = size

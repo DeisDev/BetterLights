@@ -9,7 +9,15 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_manhack_models_elight", "1", true, false, "Also add an entity light (elight) to light the Manhack model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_manhack_models_elight_size_mult", "1.0", true, false, "Multiplier for Manhack elight radius")
 
-    local RED = { r = 255, g = 60, b = 60 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_manhack_color_r", "255", true, false, "Manhack color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_manhack_color_g", "60", true, false, "Manhack color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_manhack_color_b", "60", true, false, "Manhack color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     hook.Add("Think", "BetterLights_Manhack_DLight", function()
         if not cvar_enable:GetBool() then return end
@@ -36,9 +44,10 @@ if CLIENT then
                 local d = DynamicLight(idx)
                 if d then
                     d.pos = pos
-                    d.r = RED.r
-                    d.g = RED.g
-                    d.b = RED.b
+                    local r, g, b = getColor()
+                    d.r = r
+                    d.g = g
+                    d.b = b
                     d.brightness = brightness
                     d.decay = decay
                     d.size = size
@@ -52,9 +61,10 @@ if CLIENT then
                     local el = DynamicLight(idx, true)
                     if el then
                         el.pos = pos
-                        el.r = RED.r
-                        el.g = RED.g
-                        el.b = RED.b
+                        local r, g, b = getColor()
+                        el.r = r
+                        el.g = g
+                        el.b = b
                         el.brightness = brightness
                         el.decay = decay
                         el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())

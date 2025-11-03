@@ -9,6 +9,16 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_toolgun_models_elight", "1", true, false, "Also add an entity light (elight) to light the Tool Gun model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_toolgun_models_elight_size_mult", "1.0", true, false, "Multiplier for Tool Gun elight radius")
 
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_toolgun_color_r", "255", true, false, "Tool Gun color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_toolgun_color_g", "255", true, false, "Tool Gun color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_toolgun_color_b", "255", true, false, "Tool Gun color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
+
     local function getToolgunLightPos(ply, wep)
         -- Prefer viewmodel attachments for first person, then worldmodel attachments
         if IsValid(ply) and ply == LocalPlayer() then
@@ -75,8 +85,8 @@ if CLIENT then
         -- Use a stable index separate from other features (offset from player index)
         local idx = ply:EntIndex() + 1480
 
-        -- White light
-        local r, g, b = 255, 255, 255
+    -- Configurable color
+    local r, g, b = getColor()
 
         local d = DynamicLight(idx)
         if d then

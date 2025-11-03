@@ -16,9 +16,23 @@ if CLIENT then
     local cvar_flash_brightness = CreateClientConVar("betterlights_magnusson_flash_brightness", "2.2", true, false, "Explosion flash brightness for Magnusson devices")
     local cvar_flash_time = CreateClientConVar("betterlights_magnusson_flash_time", "0.14", true, false, "Duration of the explosion flash (seconds)")
 
-    -- Light blue for glow and flash
-    local ORANGE = { r = 130, g = 180, b = 255 }
-    local FLASH = { r = 180, g = 220, b = 255 }
+    -- Color configuration (light blue by default)
+    local cvar_col_r = CreateClientConVar("betterlights_magnusson_color_r", "130", true, false, "Magnusson device glow color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_magnusson_color_g", "180", true, false, "Magnusson device glow color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_magnusson_color_b", "255", true, false, "Magnusson device glow color - blue (0-255)")
+    local cvar_flash_r = CreateClientConVar("betterlights_magnusson_flash_color_r", "180", true, false, "Magnusson flash color - red (0-255)")
+    local cvar_flash_g = CreateClientConVar("betterlights_magnusson_flash_color_g", "220", true, false, "Magnusson flash color - green (0-255)")
+    local cvar_flash_b = CreateClientConVar("betterlights_magnusson_flash_color_b", "255", true, false, "Magnusson flash color - blue (0-255)")
+    local function getGlowColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
+    local function getFlashColor()
+        return math.Clamp(math.floor(cvar_flash_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_flash_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_flash_b:GetFloat() + 0.5), 0, 255)
+    end
 
     -- Exact classname for Strider Buster in GMod
     local TARGET_CLASS = "weapon_striderbuster"
@@ -109,10 +123,11 @@ if CLIENT then
 
                 local d = DynamicLight(idx)
                 if d then
+                    local r, g, b = getGlowColor()
                     d.pos = pos
-                    d.r = ORANGE.r
-                    d.g = ORANGE.g
-                    d.b = ORANGE.b
+                    d.r = r
+                    d.g = g
+                    d.b = b
                     d.brightness = brightness
                     d.decay = decay
                     d.size = size
@@ -126,9 +141,10 @@ if CLIENT then
                     local el = DynamicLight(idx, true)
                     if el then
                         el.pos = pos
-                        el.r = ORANGE.r
-                        el.g = ORANGE.g
-                        el.b = ORANGE.b
+                        local r, g, b = getGlowColor()
+                        el.r = r
+                        el.g = g
+                        el.b = b
                         el.brightness = brightness
                         el.decay = decay
                         el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
@@ -162,10 +178,11 @@ if CLIENT then
 
                 local d = DynamicLight(f.id or (60000 + i))
                 if d then
+                    local r, g, b = getFlashColor()
                     d.pos = f.pos
-                    d.r = FLASH.r
-                    d.g = FLASH.g
-                    d.b = FLASH.b
+                    d.r = r
+                    d.g = g
+                    d.b = b
                     d.brightness = b_eff
                     d.decay = 0
                     d.size = s_eff

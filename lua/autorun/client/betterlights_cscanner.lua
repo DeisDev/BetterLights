@@ -9,8 +9,15 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_cscanner_models_elight", "1", true, false, "Also add an entity light (elight) to light the scanner model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_cscanner_models_elight_size_mult", "1.0", true, false, "Multiplier for scanner elight radius")
 
-    -- Cool white/blue hue befitting the scanner spotlight
-    local SCAN = { r = 180, g = 230, b = 255 }
+    -- Glow color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_cscanner_color_r", "180", true, false, "Scanner glow color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_cscanner_color_g", "230", true, false, "Scanner glow color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_cscanner_color_b", "255", true, false, "Scanner glow color - blue (0-255)")
+    local function getGlowColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     -- Directional searchlight (projected texture) settings
     local cvar_sl_enable = CreateClientConVar("betterlights_cscanner_searchlight_enable", "1", true, false, "Add a directional, shadow-casting searchlight to scanners")
@@ -20,6 +27,16 @@ if CLIENT then
     local cvar_sl_brightness = CreateClientConVar("betterlights_cscanner_searchlight_brightness", "0.7", true, false, "Searchlight brightness (0-1+)")
     local cvar_sl_shadows = CreateClientConVar("betterlights_cscanner_searchlight_shadows", "1", true, false, "Enable shadow casting for the searchlight (expensive; engine limit ~8)")
     local cvar_sl_include_claw = CreateClientConVar("betterlights_scanner_searchlight_include_clawscanner", "1", true, false, "Also attach searchlights to npc_clawscanner if present")
+
+    -- Searchlight color configuration
+    local cvar_sl_r = CreateClientConVar("betterlights_cscanner_searchlight_color_r", "255", true, false, "Scanner searchlight color - red (0-255)")
+    local cvar_sl_g = CreateClientConVar("betterlights_cscanner_searchlight_color_g", "255", true, false, "Scanner searchlight color - green (0-255)")
+    local cvar_sl_b = CreateClientConVar("betterlights_cscanner_searchlight_color_b", "255", true, false, "Scanner searchlight color - blue (0-255)")
+    local function getSearchlightColor()
+        return math.Clamp(math.floor(cvar_sl_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_sl_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_sl_b:GetFloat() + 0.5), 0, 255)
+    end
 
     -- Keep projected textures per-entity (keyed by the entity for robust cleanup)
     local scannerProjectors = {}
@@ -54,10 +71,11 @@ if CLIENT then
                 if cvar_enable:GetBool() then
                     local d = DynamicLight(idx)
                     if d then
+                        local r, g, b = getGlowColor()
                         d.pos = pos
-                        d.r = SCAN.r
-                        d.g = SCAN.g
-                        d.b = SCAN.b
+                        d.r = r
+                        d.g = g
+                        d.b = b
                         d.brightness = brightness
                         d.decay = decay
                         d.size = size
@@ -70,10 +88,11 @@ if CLIENT then
                     if cvar_models_elight:GetBool() then
                         local el = DynamicLight(idx, true)
                         if el then
+                            local r, g, b = getGlowColor()
                             el.pos = pos
-                            el.r = SCAN.r
-                            el.g = SCAN.g
-                            el.b = SCAN.b
+                            el.r = r
+                            el.g = g
+                            el.b = b
                             el.brightness = brightness
                             el.decay = decay
                             el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
@@ -111,7 +130,8 @@ if CLIENT then
                         lamp:SetFarZ(math.max(1, cvar_sl_far:GetFloat()))
                         lamp:SetFOV(math.Clamp(cvar_sl_fov:GetFloat(), 1, 175))
                         lamp:SetBrightness(cvar_sl_brightness:GetFloat())
-                        lamp:SetColor(Color(255, 255, 255))
+                        local rr, gg, bb = getSearchlightColor()
+                        lamp:SetColor(Color(rr, gg, bb))
                         lamp:SetEnableShadows(cvar_sl_shadows:GetBool())
                         lamp:Update()
                     end

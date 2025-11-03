@@ -7,8 +7,15 @@ if CLIENT then
     local cvar_brightness = CreateClientConVar("betterlights_bolt_brightness", "0.96", true, false, "Dynamic light brightness for crossbow bolts")
     local cvar_decay = CreateClientConVar("betterlights_bolt_decay", "2000", true, false, "Dynamic light decay for crossbow bolts")
 
-    -- Default warm orange color
-    local ORANGE = { r = 255, g = 140, b = 40 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_bolt_color_r", "255", true, false, "Crossbow bolt color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_bolt_color_g", "140", true, false, "Crossbow bolt color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_bolt_color_b", "40", true, false, "Crossbow bolt color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     hook.Add("Think", "BetterLights_CrossbowBolt_DLight", function()
         if not cvar_enable:GetBool() then return end
@@ -25,9 +32,10 @@ if CLIENT then
                 local dlight = DynamicLight(ent:EntIndex())
                 if dlight then
                     dlight.pos = ent:WorldSpaceCenter()
-                    dlight.r = ORANGE.r
-                    dlight.g = ORANGE.g
-                    dlight.b = ORANGE.b
+                    local r, g, b = getColor()
+                    dlight.r = r
+                    dlight.g = g
+                    dlight.b = b
                     dlight.brightness = brightness
                     dlight.decay = decay
                     dlight.size = size

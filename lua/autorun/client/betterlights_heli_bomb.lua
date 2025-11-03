@@ -15,8 +15,23 @@ if CLIENT then
     local cvar_flash_brightness = CreateClientConVar("betterlights_heli_bomb_flash_brightness", "5.0", true, false, "Explosion flash brightness for helicopter bombs")
     local cvar_flash_time = CreateClientConVar("betterlights_heli_bomb_flash_time", "0.18", true, false, "Duration of the explosion flash")
 
-    local RED = { r = 255, g = 60, b = 60 }
-    local FLASH = { r = 255, g = 210, b = 120 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_heli_bomb_color_r", "255", true, false, "Heli bomb glow color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_heli_bomb_color_g", "60", true, false, "Heli bomb glow color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_heli_bomb_color_b", "60", true, false, "Heli bomb glow color - blue (0-255)")
+    local cvar_flash_r = CreateClientConVar("betterlights_heli_bomb_flash_color_r", "255", true, false, "Heli bomb flash color - red (0-255)")
+    local cvar_flash_g = CreateClientConVar("betterlights_heli_bomb_flash_color_g", "210", true, false, "Heli bomb flash color - green (0-255)")
+    local cvar_flash_b = CreateClientConVar("betterlights_heli_bomb_flash_color_b", "120", true, false, "Heli bomb flash color - blue (0-255)")
+    local function getGlowColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
+    local function getFlashColor()
+        return math.Clamp(math.floor(cvar_flash_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_flash_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_flash_b:GetFloat() + 0.5), 0, 255)
+    end
 
     -- Track ephemeral explosion flashes
     local BL_HeliBomb_Flashes = BL_HeliBomb_Flashes or {}
@@ -71,10 +86,11 @@ if CLIENT then
 
                 local d = DynamicLight(ent:EntIndex())
                 if d then
+                    local r, g, b = getGlowColor()
                     d.pos = pos
-                    d.r = RED.r
-                    d.g = RED.g
-                    d.b = RED.b
+                    d.r = r
+                    d.g = g
+                    d.b = b
                     d.brightness = b_eff
                     d.decay = decay
                     d.size = size
@@ -88,9 +104,10 @@ if CLIENT then
                     local el = DynamicLight(idx, true)
                     if el then
                         el.pos = pos
-                        el.r = RED.r
-                        el.g = RED.g
-                        el.b = RED.b
+                        local r, g, b = getGlowColor()
+                        el.r = r
+                        el.g = g
+                        el.b = b
                         el.brightness = b_eff
                         el.decay = decay
                         el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
@@ -124,10 +141,11 @@ if CLIENT then
 
                 local d = DynamicLight(f.id or (57000 + i))
                 if d then
+                    local r, g, b = getFlashColor()
                     d.pos = f.pos
-                    d.r = FLASH.r
-                    d.g = FLASH.g
-                    d.b = FLASH.b
+                    d.r = r
+                    d.g = g
+                    d.b = b
                     d.brightness = b_eff
                     d.decay = 0
                     d.size = s_eff

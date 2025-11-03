@@ -8,15 +8,15 @@ if CLIENT then
     local cvar_brightness = CreateClientConVar("betterlights_combineball_brightness", "2.5", true, false, "Dynamic light brightness for Combine AR2 orb")
     local cvar_decay = CreateClientConVar("betterlights_combineball_decay", "2000", true, false, "Dynamic light decay for Combine AR2 orb (higher = faster fade)")
 
-    -- Utility: fetch current light color for the orb (blue/cyan by default)
-    local function getCombineBallColor(ent)
-        -- Prefer entity render color if customized
-        local col = ent:GetColor() or color_white
-        if col.r ~= 255 or col.g ~= 255 or col.b ~= 255 then
-            return col.r, col.g, col.b
-        end
-        -- Default HL2 combine ball glow color
-        return 80, 180, 255
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_combineball_color_r", "80", true, false, "Combine ball color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_combineball_color_g", "180", true, false, "Combine ball color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_combineball_color_b", "255", true, false, "Combine ball color - blue (0-255)")
+    local function getCombineBallColor()
+        local r = math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255)
+        local g = math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255)
+        local b = math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+        return r, g, b
     end
 
     hook.Add("Think", "BetterLights_CombineBall_DLight", function()
@@ -35,7 +35,7 @@ if CLIENT then
             if IsValid(ent) then
                 local dlight = DynamicLight(ent:EntIndex())
                 if dlight then
-                    local r, g, b = getCombineBallColor(ent)
+                    local r, g, b = getCombineBallColor()
                     dlight.pos = ent:WorldSpaceCenter()
                     dlight.r = r
                     dlight.g = g

@@ -7,7 +7,15 @@ if CLIENT then
     local cvar_brightness = CreateClientConVar("betterlights_antlion_grub_brightness", "0.35", true, false, "Grub light brightness")
     local cvar_decay = CreateClientConVar("betterlights_antlion_grub_decay", "2000", true, false, "Grub light decay")
 
-    local GREEN = { r = 120, g = 255, b = 120 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_antlion_grub_color_r", "120", true, false, "Antlion grub color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_antlion_grub_color_g", "255", true, false, "Antlion grub color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_antlion_grub_color_b", "120", true, false, "Antlion grub color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     local function getAbdomenPos(ent)
         if not IsValid(ent) then return end
@@ -39,9 +47,10 @@ if CLIENT then
             local dl = DynamicLight(ent:EntIndex() + 23000)
             if dl then
                 dl.pos = pos
-                dl.r = GREEN.r
-                dl.g = GREEN.g
-                dl.b = GREEN.b
+                local r, g, b = getColor()
+                dl.r = r
+                dl.g = g
+                dl.b = b
                 dl.brightness = math.max(0, cvar_brightness:GetFloat())
                 dl.decay = math.max(0, cvar_decay:GetFloat())
                 dl.size = math.max(0, cvar_size:GetFloat())

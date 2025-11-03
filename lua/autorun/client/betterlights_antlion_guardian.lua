@@ -9,7 +9,15 @@ if CLIENT then
 
     local cvar_debug = CreateClientConVar("betterlights_antlion_guardian_debug", "0", false, false, "Debug guardian detection prints")
 
-    local GREEN = { r = 120, g = 255, b = 140 }
+    -- Color configuration
+    local cvar_col_r = CreateClientConVar("betterlights_antlion_guardian_color_r", "120", true, false, "Antlion Guardian color - red (0-255)")
+    local cvar_col_g = CreateClientConVar("betterlights_antlion_guardian_color_g", "255", true, false, "Antlion Guardian color - green (0-255)")
+    local cvar_col_b = CreateClientConVar("betterlights_antlion_guardian_color_b", "140", true, false, "Antlion Guardian color - blue (0-255)")
+    local function getColor()
+        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
+               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
+    end
 
     local lastDebug = 0
     local function dbg(fmt, ...)
@@ -92,9 +100,10 @@ if CLIENT then
             local dl = DynamicLight(ent:EntIndex() + 23100)
             if dl then
                 dl.pos = pos
-                dl.r = GREEN.r
-                dl.g = GREEN.g
-                dl.b = GREEN.b
+                local r, g, b = getColor()
+                dl.r = r
+                dl.g = g
+                dl.b = b
                 dl.brightness = math.max(0, cvar_brightness:GetFloat())
                 dl.decay = math.max(0, cvar_decay:GetFloat())
                 dl.size = math.max(0, cvar_size:GetFloat())

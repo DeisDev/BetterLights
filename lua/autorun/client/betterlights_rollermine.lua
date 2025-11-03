@@ -20,8 +20,30 @@ if CLIENT then
     local cvar_h_models_elight_mult = CreateClientConVar("betterlights_rollermine_hacked_models_elight_size_mult", "1.0", true, false, "Multiplier for hacked rollermine elight radius")
     local cvar_debug = CreateClientConVar("betterlights_rollermine_debug", "0", true, false, "Debug hacked rollermine detection (prints to console)")
 
+    -- Color configuration (by skin and hacked override)
+    local rm0_r = CreateClientConVar("betterlights_rollermine_color_r", "110", true, false, "Rollermine skin0 (default) color - red (0-255)")
+    local rm0_g = CreateClientConVar("betterlights_rollermine_color_g", "190", true, false, "Rollermine skin0 (default) color - green (0-255)")
+    local rm0_b = CreateClientConVar("betterlights_rollermine_color_b", "255", true, false, "Rollermine skin0 (default) color - blue (0-255)")
+    local rm1_r = CreateClientConVar("betterlights_rollermine_skin1_color_r", "255", true, false, "Rollermine skin1 (yellow) color - red (0-255)")
+    local rm1_g = CreateClientConVar("betterlights_rollermine_skin1_color_g", "220", true, false, "Rollermine skin1 (yellow) color - green (0-255)")
+    local rm1_b = CreateClientConVar("betterlights_rollermine_skin1_color_b", "60", true, false, "Rollermine skin1 (yellow) color - blue (0-255)")
+    local rm2_r = CreateClientConVar("betterlights_rollermine_skin2_color_r", "255", true, false, "Rollermine skin2 (red) color - red (0-255)")
+    local rm2_g = CreateClientConVar("betterlights_rollermine_skin2_color_g", "80", true, false, "Rollermine skin2 (red) color - green (0-255)")
+    local rm2_b = CreateClientConVar("betterlights_rollermine_skin2_color_b", "80", true, false, "Rollermine skin2 (red) color - blue (0-255)")
+    local hk_r = CreateClientConVar("betterlights_rollermine_hacked_color_r", "255", true, false, "Hacked rollermine color - red (0-255)")
+    local hk_g = CreateClientConVar("betterlights_rollermine_hacked_color_g", "160", true, false, "Hacked rollermine color - green (0-255)")
+    local hk_b = CreateClientConVar("betterlights_rollermine_hacked_color_b", "60", true, false, "Hacked rollermine color - blue (0-255)")
+
+    local function rgb(r, g, b)
+        return {
+            r = math.Clamp(math.floor(r:GetFloat() + 0.5), 0, 255),
+            g = math.Clamp(math.floor(g:GetFloat() + 0.5), 0, 255),
+            b = math.Clamp(math.floor(b:GetFloat() + 0.5), 0, 255),
+        }
+    end
+
     -- Color mapping by skin:
-    -- 0 = blue (default), 1 = yellow, 2 = red
+    -- 0 = blue (default), 1 = yellow, 2 = red (others -> default)
     local function BL_GetRollermineColor(ent)
         local skin = 0
         if ent.GetSkin then
@@ -29,11 +51,11 @@ if CLIENT then
             if ok and type(s) == "number" then skin = s end
         end
         if skin == 1 then
-            return { r = 255, g = 220, b = 60 } -- yellow
+            return rgb(rm1_r, rm1_g, rm1_b)
         elseif skin == 2 then
-            return { r = 255, g = 80, b = 80 } -- red
+            return rgb(rm2_r, rm2_g, rm2_b)
         else
-            return { r = 110, g = 190, b = 255 } -- blue (default)
+            return rgb(rm0_r, rm0_g, rm0_b)
         end
     end
 
@@ -104,7 +126,7 @@ if CLIENT then
                 local use_elight
                 local el_mult
                 if hacked then
-                    col = { r = 255, g = 160, b = 60 } -- orange for hacked
+                    col = rgb(hk_r, hk_g, hk_b)
                     size = math.max(0, cvar_h_size:GetFloat())
                     brightness = math.max(0, cvar_h_brightness:GetFloat())
                     decay = math.max(0, cvar_h_decay:GetFloat())
