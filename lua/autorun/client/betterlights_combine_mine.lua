@@ -9,7 +9,6 @@ if CLIENT then
     local cvar_size_alert = CreateClientConVar("betterlights_combine_mine_size", "140", true, false, "Dynamic light radius for alert mines")
     local cvar_brightness_alert = CreateClientConVar("betterlights_combine_mine_brightness", "1.2", true, false, "Dynamic light brightness for alert mines")
     local cvar_decay = CreateClientConVar("betterlights_combine_mine_decay", "2000", true, false, "Dynamic light decay for Combine Mines")
-    local cvar_update_hz = CreateClientConVar("betterlights_combine_mine_update_hz", "30", true, false, "Update rate in Hz (15-120)")
 
     local cvar_idle_enable = CreateClientConVar("betterlights_combine_mine_idle_enable", "1", true, false, "Also emit a very dim idle glow when out of range")
     local cvar_size_idle = CreateClientConVar("betterlights_combine_mine_idle_size", "80", true, false, "Dynamic light radius for idle mines")
@@ -45,14 +44,6 @@ if CLIENT then
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_CombineMine_DLight", function()
         if not cvar_enable:GetBool() then return end
-    -- Refresh cap
-    local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-    BetterLights._nextTick = BetterLights._nextTick or {}
-    local now = CurTime()
-    local key = "CombineMine_DLight"
-    local nxt = BetterLights._nextTick[key] or 0
-    if now < nxt then return end
-    BetterLights._nextTick[key] = now + (1 / hz)
 
         local lp = LocalPlayer()
         if not IsValid(lp) then return end

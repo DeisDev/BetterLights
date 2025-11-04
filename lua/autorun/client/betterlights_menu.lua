@@ -20,12 +20,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_combineball_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_combineball_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_combineball_decay", 0, 5000, 0)
-            panel:Help("Performance & Mode")
-            panel:CheckBox("World lighting (dlight)", "betterlights_combineball_world_light_enable")
-            panel:CheckBox("Model lighting (dlight)", "betterlights_combineball_model_light_enable")
-            panel:CheckBox("Add model elight (models-only)", "betterlights_combineball_models_elight")
-            panel:NumSlider("Elight radius x", "betterlights_combineball_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_combineball_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_combineball_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_combineball_color_g", 0, 255, 0)
@@ -35,11 +29,6 @@ if CLIENT then
                 betterlights_combineball_size = 320,
                 betterlights_combineball_brightness = 2.5,
                 betterlights_combineball_decay = 2000,
-                betterlights_combineball_world_light_enable = 1,
-                betterlights_combineball_model_light_enable = 1,
-                betterlights_combineball_models_elight = 0,
-                betterlights_combineball_models_elight_size_mult = 1.0,
-                betterlights_combineball_update_hz = 30,
                 betterlights_combineball_color_r = 80,
                 betterlights_combineball_color_g = 180,
                 betterlights_combineball_color_b = 255,
@@ -128,7 +117,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_bolt_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_bolt_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_bolt_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_bolt_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_bolt_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_bolt_color_g", 0, 255, 0)
@@ -138,7 +126,6 @@ if CLIENT then
                 betterlights_bolt_size = 220,
                 betterlights_bolt_brightness = 0.96,
                 betterlights_bolt_decay = 2000,
-                betterlights_bolt_update_hz = 30,
                 betterlights_bolt_color_r = 255,
                 betterlights_bolt_color_g = 140,
                 betterlights_bolt_color_b = 40,
@@ -153,7 +140,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_crossbow_hold_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_crossbow_hold_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_crossbow_hold_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_crossbow_hold_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_crossbow_hold_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_crossbow_hold_color_g", 0, 255, 0)
@@ -163,7 +149,6 @@ if CLIENT then
                 betterlights_crossbow_hold_size = 30,
                 betterlights_crossbow_hold_brightness = 0.32,
                 betterlights_crossbow_hold_decay = 2000,
-                betterlights_crossbow_hold_update_hz = 30,
                 betterlights_crossbow_hold_color_r = 255,
                 betterlights_crossbow_hold_color_g = 140,
                 betterlights_crossbow_hold_color_b = 40,
@@ -178,7 +163,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_rpg_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_rpg_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_rpg_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_rpg_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_rpg_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_rpg_color_g", 0, 255, 0)
@@ -188,7 +172,6 @@ if CLIENT then
                 betterlights_rpg_size = 280,
                 betterlights_rpg_brightness = 2.2,
                 betterlights_rpg_decay = 2000,
-                betterlights_rpg_update_hz = 30,
                 betterlights_rpg_color_r = 255,
                 betterlights_rpg_color_g = 170,
                 betterlights_rpg_color_b = 60,
@@ -203,7 +186,6 @@ if CLIENT then
             panel:NumSlider("Glow radius", "betterlights_antlion_spit_size", 0, 400, 0)
             panel:NumSlider("Glow brightness", "betterlights_antlion_spit_brightness", 0, 5, 2)
             panel:NumSlider("Glow decay", "betterlights_antlion_spit_decay", 0, 5000, 0)
-            panel:NumSlider("Glow Update Hz", "betterlights_antlion_spit_update_hz", 15, 120, 0)
             panel:Help("Glow Color (RGB)")
             panel:NumSlider("Red", "betterlights_antlion_spit_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_antlion_spit_color_g", 0, 255, 0)
@@ -213,7 +195,6 @@ if CLIENT then
             panel:NumSlider("Flash radius", "betterlights_antlion_spit_flash_size", 0, 800, 0)
             panel:NumSlider("Flash brightness", "betterlights_antlion_spit_flash_brightness", 0, 10, 2)
             panel:NumSlider("Flash time (s)", "betterlights_antlion_spit_flash_time", 0, 1, 2)
-            panel:NumSlider("Flash Update Hz", "betterlights_antlion_spit_flash_update_hz", 15, 120, 0)
             panel:Help("Flash Color (RGB)")
             panel:NumSlider("Red", "betterlights_antlion_spit_flash_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_antlion_spit_flash_color_g", 0, 255, 0)
@@ -223,7 +204,6 @@ if CLIENT then
                 betterlights_antlion_spit_size = 100,
                 betterlights_antlion_spit_brightness = 1.0,
                 betterlights_antlion_spit_decay = 1800,
-                betterlights_antlion_spit_update_hz = 30,
                 betterlights_antlion_spit_color_r = 120,
                 betterlights_antlion_spit_color_g = 255,
                 betterlights_antlion_spit_color_b = 140,
@@ -231,7 +211,6 @@ if CLIENT then
                 betterlights_antlion_spit_flash_size = 160,
                 betterlights_antlion_spit_flash_brightness = 1.5,
                 betterlights_antlion_spit_flash_time = 1.0,
-                betterlights_antlion_spit_flash_update_hz = 60,
                 betterlights_antlion_spit_flash_color_r = 180,
                 betterlights_antlion_spit_flash_color_g = 255,
                 betterlights_antlion_spit_flash_color_b = 120,
@@ -256,7 +235,6 @@ if CLIENT then
             panel:NumSlider("Flicker amount", "betterlights_fire_flicker_amount", 0, 1, 2)
             panel:NumSlider("Flicker size amt", "betterlights_fire_flicker_size_amount", 0, 1, 2)
             panel:NumSlider("Flicker speed", "betterlights_fire_flicker_speed", 0, 30, 1)
-            panel:NumSlider("Update Hz", "betterlights_fire_update_hz", 15, 120, 0)
             addResetButton(panel, {
                 betterlights_fire_enable = 1,
                 betterlights_fire_size = 160,
@@ -271,7 +249,6 @@ if CLIENT then
                 betterlights_fire_flicker_amount = 0.35,
                 betterlights_fire_flicker_size_amount = 0.12,
                 betterlights_fire_flicker_speed = 11.5,
-                betterlights_fire_update_hz = 30,
             })
         end)
 
@@ -283,7 +260,6 @@ if CLIENT then
                 panel:NumSlider("Radius", "betterlights_explosion_flash_size", 0, 800, 0)
                 panel:NumSlider("Brightness", "betterlights_explosion_flash_brightness", 0, 10, 2)
                 panel:NumSlider("Duration (s)", "betterlights_explosion_flash_time", 0, 1, 2)
-                panel:NumSlider("Flash Update Hz", "betterlights_explosion_flash_update_hz", 15, 120, 0)
                 panel:Help("Detection")
                 panel:CheckBox("Detect env_* explosion entities", "betterlights_explosion_detect_env")
                 panel:CheckBox("Detect explosive barrels", "betterlights_explosion_detect_barrels")
@@ -296,7 +272,6 @@ if CLIENT then
                     betterlights_explosion_flash_size = 320,
                     betterlights_explosion_flash_brightness = 3.0,
                     betterlights_explosion_flash_time = 0.18,
-                    betterlights_explosion_flash_update_hz = 60,
                     betterlights_explosion_detect_env = 1,
                     betterlights_explosion_detect_barrels = 1,
                     betterlights_explosion_flash_color_r = 255,
@@ -314,7 +289,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_grenade_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_grenade_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_grenade_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_grenade_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_grenade_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_grenade_color_g", 0, 255, 0)
@@ -326,7 +300,6 @@ if CLIENT then
                 betterlights_grenade_decay = 1800,
                 betterlights_grenade_models_elight = 1,
                 betterlights_grenade_models_elight_size_mult = 1.0,
-                betterlights_grenade_update_hz = 30,
                 betterlights_grenade_color_r = 255,
                 betterlights_grenade_color_g = 40,
                 betterlights_grenade_color_b = 40,
@@ -342,7 +315,6 @@ if CLIENT then
             panel:NumSlider("Alert radius size", "betterlights_combine_mine_size", 0, 400, 0)
             panel:NumSlider("Alert brightness", "betterlights_combine_mine_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_combine_mine_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_combine_mine_update_hz", 15, 120, 0)
             panel:CheckBox("Idle glow", "betterlights_combine_mine_idle_enable")
             panel:NumSlider("Idle radius size", "betterlights_combine_mine_idle_size", 0, 400, 0)
             panel:NumSlider("Idle brightness", "betterlights_combine_mine_idle_brightness", 0, 2, 2)
@@ -366,7 +338,6 @@ if CLIENT then
                 betterlights_combine_mine_size = 140,
                 betterlights_combine_mine_brightness = 1.2,
                 betterlights_combine_mine_decay = 2000,
-                betterlights_combine_mine_update_hz = 30,
                 betterlights_combine_mine_idle_enable = 1,
                 betterlights_combine_mine_idle_size = 80,
                 betterlights_combine_mine_idle_brightness = 0.25,
@@ -394,7 +365,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_physgun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_physgun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_physgun_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_physgun_update_hz", 15, 120, 0)
             panel:CheckBox("Override Weapon Color", "betterlights_physgun_color_override")
             panel:Help("Override Color (RGB)")
             panel:NumSlider("Red", "betterlights_physgun_color_r", 0, 255, 0)
@@ -407,7 +377,6 @@ if CLIENT then
                 betterlights_physgun_decay = 2000,
                 betterlights_physgun_models_elight = 1,
                 betterlights_physgun_models_elight_size_mult = 1.0,
-                betterlights_physgun_update_hz = 30,
                 betterlights_physgun_color_override = 0,
                 betterlights_physgun_color_r = 70,
                 betterlights_physgun_color_g = 130,
@@ -425,7 +394,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_gravitygun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_gravitygun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_gravitygun_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_gravitygun_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_gravitygun_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_gravitygun_color_g", 0, 255, 0)
@@ -437,7 +405,6 @@ if CLIENT then
                 betterlights_gravitygun_decay = 2000,
                 betterlights_gravitygun_models_elight = 1,
                 betterlights_gravitygun_models_elight_size_mult = 1.0,
-                betterlights_gravitygun_update_hz = 30,
                 betterlights_gravitygun_color_r = 255,
                 betterlights_gravitygun_color_g = 140,
                 betterlights_gravitygun_color_b = 40,
@@ -452,7 +419,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_rpg_hold_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_rpg_hold_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_rpg_hold_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_rpg_hold_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_rpg_hold_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_rpg_hold_color_g", 0, 255, 0)
@@ -462,7 +428,6 @@ if CLIENT then
                 betterlights_rpg_hold_size = 24,
                 betterlights_rpg_hold_brightness = 0.22,
                 betterlights_rpg_hold_decay = 2000,
-                betterlights_rpg_hold_update_hz = 30,
                 betterlights_rpg_hold_color_r = 255,
                 betterlights_rpg_hold_color_g = 60,
                 betterlights_rpg_hold_color_b = 60,
@@ -479,7 +444,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_toolgun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_toolgun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_toolgun_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_toolgun_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_toolgun_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_toolgun_color_g", 0, 255, 0)
@@ -491,7 +455,6 @@ if CLIENT then
                 betterlights_toolgun_decay = 2000,
                 betterlights_toolgun_models_elight = 1,
                 betterlights_toolgun_models_elight_size_mult = 1.0,
-                betterlights_toolgun_update_hz = 30,
                 betterlights_toolgun_color_r = 255,
                 betterlights_toolgun_color_g = 255,
                 betterlights_toolgun_color_b = 255,
@@ -506,7 +469,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_heli_bomb_size", 0, 400, 0)
             panel:NumSlider("Brightness", "betterlights_heli_bomb_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_heli_bomb_decay", 0, 5000, 0)
-            panel:NumSlider("Glow Update Hz", "betterlights_heli_bomb_update_hz", 15, 120, 0)
             panel:CheckBox("Add model elight", "betterlights_heli_bomb_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_heli_bomb_models_elight_size_mult", 0, 3, 2)
             panel:Help("Glow Color (RGB)")
@@ -518,7 +480,6 @@ if CLIENT then
             panel:NumSlider("Flash radius", "betterlights_heli_bomb_flash_size", 0, 800, 0)
             panel:NumSlider("Flash brightness", "betterlights_heli_bomb_flash_brightness", 0, 10, 2)
             panel:NumSlider("Flash time (s)", "betterlights_heli_bomb_flash_time", 0, 1, 2)
-            panel:NumSlider("Flash Update Hz", "betterlights_heli_bomb_flash_update_hz", 15, 120, 0)
             panel:Help("Flash Color (RGB)")
             panel:NumSlider("Red", "betterlights_heli_bomb_flash_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_heli_bomb_flash_color_g", 0, 255, 0)
@@ -528,7 +489,6 @@ if CLIENT then
                 betterlights_heli_bomb_size = 140,
                 betterlights_heli_bomb_brightness = 1.4,
                 betterlights_heli_bomb_decay = 2000,
-                betterlights_heli_bomb_update_hz = 30,
                 betterlights_heli_bomb_models_elight = 1,
                 betterlights_heli_bomb_models_elight_size_mult = 1.0,
                 betterlights_heli_bomb_color_r = 255,
@@ -538,7 +498,6 @@ if CLIENT then
                 betterlights_heli_bomb_flash_size = 320,
                 betterlights_heli_bomb_flash_brightness = 5.0,
                 betterlights_heli_bomb_flash_time = 0.18,
-                betterlights_heli_bomb_flash_update_hz = 60,
                 betterlights_heli_bomb_flash_color_r = 255,
                 betterlights_heli_bomb_flash_color_g = 210,
                 betterlights_heli_bomb_flash_color_b = 120,
@@ -553,7 +512,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_magnusson_size", 0, 400, 0)
             panel:NumSlider("Brightness", "betterlights_magnusson_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_magnusson_decay", 0, 5000, 0)
-            panel:NumSlider("Glow Update Hz", "betterlights_magnusson_update_hz", 15, 120, 0)
             panel:CheckBox("Add model elight", "betterlights_magnusson_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_magnusson_models_elight_size_mult", 0, 3, 2)
             panel:Help("Glow Color (RGB)")
@@ -565,7 +523,6 @@ if CLIENT then
             panel:NumSlider("Flash radius", "betterlights_magnusson_flash_size", 0, 800, 0)
             panel:NumSlider("Flash brightness", "betterlights_magnusson_flash_brightness", 0, 10, 2)
             panel:NumSlider("Flash time (s)", "betterlights_magnusson_flash_time", 0, 1, 2)
-            panel:NumSlider("Flash Update Hz", "betterlights_magnusson_flash_update_hz", 15, 120, 0)
             panel:Help("Flash Color (RGB)")
             panel:NumSlider("Red", "betterlights_magnusson_flash_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_magnusson_flash_color_g", 0, 255, 0)
@@ -575,7 +532,6 @@ if CLIENT then
                 betterlights_magnusson_size = 130,
                 betterlights_magnusson_brightness = 0.48,
                 betterlights_magnusson_decay = 2000,
-                betterlights_magnusson_update_hz = 30,
                 betterlights_magnusson_models_elight = 1,
                 betterlights_magnusson_models_elight_size_mult = 1.0,
                 betterlights_magnusson_color_r = 130,
@@ -585,7 +541,6 @@ if CLIENT then
                 betterlights_magnusson_flash_size = 360,
                 betterlights_magnusson_flash_brightness = 2.2,
                 betterlights_magnusson_flash_time = 0.14,
-                betterlights_magnusson_flash_update_hz = 60,
                 betterlights_magnusson_flash_color_r = 180,
                 betterlights_magnusson_flash_color_g = 220,
                 betterlights_magnusson_flash_color_b = 255,
@@ -602,7 +557,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_manhack_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_manhack_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_manhack_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_manhack_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_manhack_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_manhack_color_g", 0, 255, 0)
@@ -614,7 +568,6 @@ if CLIENT then
                 betterlights_manhack_decay = 2000,
                 betterlights_manhack_models_elight = 1,
                 betterlights_manhack_models_elight_size_mult = 1.0,
-                betterlights_manhack_update_hz = 30,
                 betterlights_manhack_color_r = 255,
                 betterlights_manhack_color_g = 60,
                 betterlights_manhack_color_b = 60,
@@ -629,7 +582,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_antlion_grub_size", 0, 400, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_grub_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_grub_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_antlion_grub_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_antlion_grub_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_antlion_grub_color_g", 0, 255, 0)
@@ -639,7 +591,6 @@ if CLIENT then
                 betterlights_antlion_grub_size = 70,
                 betterlights_antlion_grub_brightness = 0.35,
                 betterlights_antlion_grub_decay = 2000,
-                betterlights_antlion_grub_update_hz = 20,
                 betterlights_antlion_grub_color_r = 120,
                 betterlights_antlion_grub_color_g = 255,
                 betterlights_antlion_grub_color_b = 120,
@@ -654,7 +605,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_antlion_guardian_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_guardian_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_guardian_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_antlion_guardian_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_antlion_guardian_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_antlion_guardian_color_g", 0, 255, 0)
@@ -664,7 +614,6 @@ if CLIENT then
                 betterlights_antlion_guardian_size = 180,
                 betterlights_antlion_guardian_brightness = 0.6,
                 betterlights_antlion_guardian_decay = 2000,
-                betterlights_antlion_guardian_update_hz = 20,
                 betterlights_antlion_guardian_color_r = 120,
                 betterlights_antlion_guardian_color_g = 255,
                 betterlights_antlion_guardian_color_b = 140,
@@ -679,7 +628,6 @@ if CLIENT then
             panel:NumSlider("Radius", "betterlights_antlion_worker_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_worker_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_worker_decay", 0, 5000, 0)
-            panel:NumSlider("Update Hz", "betterlights_antlion_worker_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_antlion_worker_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_antlion_worker_color_g", 0, 255, 0)
@@ -689,7 +637,6 @@ if CLIENT then
                 betterlights_antlion_worker_size = 120,
                 betterlights_antlion_worker_brightness = 0.55,
                 betterlights_antlion_worker_decay = 2000,
-                betterlights_antlion_worker_update_hz = 20,
                 betterlights_antlion_worker_color_r = 180,
                 betterlights_antlion_worker_color_g = 240,
                 betterlights_antlion_worker_color_b = 120,
@@ -706,7 +653,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_rollermine_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_rollermine_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_rollermine_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_rollermine_update_hz", 15, 120, 0)
             panel:Help("Colors (RGB) by skin")
             panel:Help("Skin 0 (Default)")
             panel:NumSlider("Red", "betterlights_rollermine_color_r", 0, 255, 0)
@@ -727,7 +673,6 @@ if CLIENT then
                 betterlights_rollermine_decay = 2000,
                 betterlights_rollermine_models_elight = 1,
                 betterlights_rollermine_models_elight_size_mult = 1.0,
-                betterlights_rollermine_update_hz = 30,
                 betterlights_rollermine_color_r = 110,
                 betterlights_rollermine_color_g = 190,
                 betterlights_rollermine_color_b = 255,
@@ -750,7 +695,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_rollermine_hacked_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_rollermine_hacked_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_rollermine_hacked_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_rollermine_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_rollermine_hacked_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_rollermine_hacked_color_g", 0, 255, 0)
@@ -762,7 +706,6 @@ if CLIENT then
                 betterlights_rollermine_hacked_decay = 2000,
                 betterlights_rollermine_hacked_models_elight = 1,
                 betterlights_rollermine_hacked_models_elight_size_mult = 1.0,
-                betterlights_rollermine_update_hz = 30,
                 betterlights_rollermine_hacked_color_r = 255,
                 betterlights_rollermine_hacked_color_g = 160,
                 betterlights_rollermine_hacked_color_b = 60,
@@ -779,7 +722,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_cscanner_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_cscanner_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_cscanner_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_cscanner_update_hz", 15, 120, 0)
             panel:Help("Glow Color (RGB)")
             panel:NumSlider("Red", "betterlights_cscanner_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_cscanner_color_g", 0, 255, 0)
@@ -803,7 +745,6 @@ if CLIENT then
                 betterlights_cscanner_decay = 2000,
                 betterlights_cscanner_models_elight = 1,
                 betterlights_cscanner_models_elight_size_mult = 1.0,
-                betterlights_cscanner_update_hz = 30,
                 betterlights_cscanner_color_r = 180,
                 betterlights_cscanner_color_g = 230,
                 betterlights_cscanner_color_b = 255,
@@ -830,7 +771,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_item_ar2alt_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_item_ar2alt_models_elight")
             panel:NumSlider("Elight radius x", "betterlights_item_ar2alt_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_item_ar2alt_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_item_ar2alt_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_item_ar2alt_color_g", 0, 255, 0)
@@ -842,7 +782,6 @@ if CLIENT then
                 betterlights_item_ar2alt_decay = 1800,
                 betterlights_item_ar2alt_models_elight = 1,
                 betterlights_item_ar2alt_models_elight_size_mult = 1.0,
-                betterlights_item_ar2alt_update_hz = 20,
                 betterlights_item_ar2alt_color_r = 255,
                 betterlights_item_ar2alt_color_g = 220,
                 betterlights_item_ar2alt_color_b = 60,
@@ -859,7 +798,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_item_battery_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_item_battery_models_elight")
             panel:NumSlider("Elight radius x", "betterlights_item_battery_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_item_battery_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_item_battery_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_item_battery_color_g", 0, 255, 0)
@@ -871,7 +809,6 @@ if CLIENT then
                 betterlights_item_battery_decay = 1800,
                 betterlights_item_battery_models_elight = 1,
                 betterlights_item_battery_models_elight_size_mult = 1.0,
-                betterlights_item_battery_update_hz = 20,
                 betterlights_item_battery_color_r = 110,
                 betterlights_item_battery_color_g = 190,
                 betterlights_item_battery_color_b = 255,
@@ -888,7 +825,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_item_healthvial_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_item_healthvial_models_elight")
             panel:NumSlider("Elight radius x", "betterlights_item_healthvial_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_item_healthvial_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_item_healthvial_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_item_healthvial_color_g", 0, 255, 0)
@@ -900,7 +836,6 @@ if CLIENT then
                 betterlights_item_healthvial_decay = 1800,
                 betterlights_item_healthvial_models_elight = 1,
                 betterlights_item_healthvial_models_elight_size_mult = 1.0,
-                betterlights_item_healthvial_update_hz = 20,
                 betterlights_item_healthvial_color_r = 150,
                 betterlights_item_healthvial_color_g = 255,
                 betterlights_item_healthvial_color_b = 150,
@@ -917,7 +852,6 @@ if CLIENT then
             panel:NumSlider("Decay", "betterlights_item_healthkit_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_item_healthkit_models_elight")
             panel:NumSlider("Elight radius x", "betterlights_item_healthkit_models_elight_size_mult", 0, 3, 2)
-            panel:NumSlider("Update Hz", "betterlights_item_healthkit_update_hz", 15, 120, 0)
             panel:Help("Color (RGB)")
             panel:NumSlider("Red", "betterlights_item_healthkit_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_item_healthkit_color_g", 0, 255, 0)
@@ -929,7 +863,6 @@ if CLIENT then
                 betterlights_item_healthkit_decay = 1800,
                 betterlights_item_healthkit_models_elight = 1,
                 betterlights_item_healthkit_models_elight_size_mult = 1.0,
-                betterlights_item_healthkit_update_hz = 20,
                 betterlights_item_healthkit_color_r = 150,
                 betterlights_item_healthkit_color_g = 255,
                 betterlights_item_healthkit_color_b = 150,
@@ -947,7 +880,6 @@ if CLIENT then
                 panel:NumSlider("Suit Decay", "betterlights_suitcharger_decay", 0, 5000, 0)
                 panel:CheckBox("Suit model elight", "betterlights_suitcharger_models_elight")
                 panel:NumSlider("Suit elight radius x", "betterlights_suitcharger_models_elight_size_mult", 0, 3, 2)
-                panel:NumSlider("Suit Update Hz", "betterlights_suitcharger_update_hz", 15, 120, 0)
                 panel:Help("Suit Color (RGB)")
                 panel:NumSlider("Red", "betterlights_suitcharger_color_r", 0, 255, 0)
                 panel:NumSlider("Green", "betterlights_suitcharger_color_g", 0, 255, 0)
@@ -959,7 +891,6 @@ if CLIENT then
                 panel:NumSlider("Health Decay", "betterlights_healthcharger_decay", 0, 5000, 0)
                 panel:CheckBox("Health model elight", "betterlights_healthcharger_models_elight")
                 panel:NumSlider("Health elight radius x", "betterlights_healthcharger_models_elight_size_mult", 0, 3, 2)
-                panel:NumSlider("Health Update Hz", "betterlights_healthcharger_update_hz", 15, 120, 0)
                 panel:Help("Health Color (RGB)")
                 panel:NumSlider("Red", "betterlights_healthcharger_color_r", 0, 255, 0)
                 panel:NumSlider("Green", "betterlights_healthcharger_color_g", 0, 255, 0)
@@ -971,7 +902,6 @@ if CLIENT then
                     betterlights_suitcharger_decay = 1800,
                     betterlights_suitcharger_models_elight = 1,
                     betterlights_suitcharger_models_elight_size_mult = 1.0,
-                    betterlights_suitcharger_update_hz = 20,
                     betterlights_suitcharger_color_r = 255,
                     betterlights_suitcharger_color_g = 180,
                     betterlights_suitcharger_color_b = 80,
@@ -981,7 +911,6 @@ if CLIENT then
                     betterlights_healthcharger_decay = 1800,
                     betterlights_healthcharger_models_elight = 1,
                     betterlights_healthcharger_models_elight_size_mult = 1.0,
-                    betterlights_healthcharger_update_hz = 20,
                     betterlights_healthcharger_color_r = 110,
                     betterlights_healthcharger_color_g = 190,
                     betterlights_healthcharger_color_b = 255,

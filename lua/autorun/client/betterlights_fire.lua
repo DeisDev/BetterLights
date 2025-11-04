@@ -14,7 +14,6 @@ if CLIENT then
     local cvar_flicker_amount = CreateClientConVar("betterlights_fire_flicker_amount", "0.35", true, false, "Flicker intensity (as a fraction of brightness)")
     local cvar_flicker_size_amount = CreateClientConVar("betterlights_fire_flicker_size_amount", "0.12", true, false, "Flicker intensity applied to light radius")
     local cvar_flicker_speed = CreateClientConVar("betterlights_fire_flicker_speed", "11.5", true, false, "Flicker speed (higher = faster flicker)")
-    local cvar_update_hz = CreateClientConVar("betterlights_fire_update_hz", "30", true, false, "Update rate in Hz (15-120)")
 
     -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_fire_color_r", "255", true, false, "Burning entities color - red (0-255)")
@@ -29,15 +28,6 @@ if CLIENT then
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_Fire_DLight", function()
         if not cvar_enable:GetBool() then return end
-
-        -- Refresh cap
-        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "Fire_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
 
         local flames = ents.FindByClass("entityflame")
         if not flames or #flames == 0 then return end

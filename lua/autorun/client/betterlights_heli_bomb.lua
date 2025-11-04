@@ -9,7 +9,6 @@ if CLIENT then
     local cvar_size = CreateClientConVar("betterlights_heli_bomb_size", "140", true, false, "Dynamic light radius for helicopter bombs")
     local cvar_brightness = CreateClientConVar("betterlights_heli_bomb_brightness", "1.4", true, false, "Dynamic light brightness for helicopter bombs")
     local cvar_decay = CreateClientConVar("betterlights_heli_bomb_decay", "2000", true, false, "Dynamic light decay for helicopter bombs")
-    local cvar_update_hz = CreateClientConVar("betterlights_heli_bomb_update_hz", "30", true, false, "Update rate in Hz (15-120) for glow")
     local cvar_models_elight = CreateClientConVar("betterlights_heli_bomb_models_elight", "1", true, false, "Also add an entity light (elight) to light the bomb model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_heli_bomb_models_elight_size_mult", "1.0", true, false, "Multiplier for helicopter bomb elight radius")
     -- Explosion flash controls
@@ -67,15 +66,6 @@ if CLIENT then
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_HeliBomb_DLight", function()
         if not cvar_enable:GetBool() then return end
-
-        -- Refresh cap (glow)
-        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "HeliBomb_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness_base = math.max(0, cvar_brightness:GetFloat())
@@ -139,20 +129,11 @@ if CLIENT then
     end)
 
     -- Render short-lived explosion flashes regardless of steady glow setting
-    local cvar_flash_update_hz = CreateClientConVar("betterlights_heli_bomb_flash_update_hz", "60", true, false, "Update rate in Hz (15-120) for flash fade")
     AddThink("BetterLights_HeliBomb_FlashThink", function()
         if not cvar_flash_enable:GetBool() then return end
         if not BL_HeliBomb_Flashes or #BL_HeliBomb_Flashes == 0 then return end
 
-        -- Refresh cap (flash fade)
-        local hz = math.Clamp(cvar_flash_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
         local now = CurTime()
-        local key = "HeliBomb_FlashThink"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
-        -- reuse 'now'
         local baseSize = math.max(0, cvar_flash_size:GetFloat())
         local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
 

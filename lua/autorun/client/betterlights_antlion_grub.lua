@@ -8,7 +8,6 @@ if CLIENT then
     local cvar_size = CreateClientConVar("betterlights_antlion_grub_size", "70", true, false, "Grub light radius")
     local cvar_brightness = CreateClientConVar("betterlights_antlion_grub_brightness", "0.35", true, false, "Grub light brightness")
     local cvar_decay = CreateClientConVar("betterlights_antlion_grub_decay", "2000", true, false, "Grub light decay")
-    local cvar_update_hz = CreateClientConVar("betterlights_antlion_grub_update_hz", "20", true, false, "Update rate in Hz (15-120)")
 
     -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_antlion_grub_color_r", "120", true, false, "Antlion grub color - red (0-255)")
@@ -42,15 +41,6 @@ if CLIENT then
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_AntlionGrub", function()
         if not cvar_enable:GetBool() then return end
-
-        -- Refresh cap
-        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "AntlionGrub_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
 
         local function update(ent)
             if not IsValid(ent) then goto cont end

@@ -10,7 +10,6 @@ if CLIENT then
     local cvar_decay = CreateClientConVar("betterlights_cscanner_decay", "2000", true, false, "Dynamic light decay for Combine Scanners")
     local cvar_models_elight = CreateClientConVar("betterlights_cscanner_models_elight", "1", true, false, "Also add an entity light (elight) to light the scanner model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_cscanner_models_elight_size_mult", "1.0", true, false, "Multiplier for scanner elight radius")
-    local cvar_update_hz = CreateClientConVar("betterlights_cscanner_update_hz", "30", true, false, "Update rate in Hz (15-120)")
 
     -- Glow color configuration
     local cvar_col_r = CreateClientConVar("betterlights_cscanner_color_r", "180", true, false, "Scanner glow color - red (0-255)")
@@ -54,14 +53,6 @@ if CLIENT then
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_CScanner_DLight", function()
         -- Gather scanners (both types if requested)
-        -- Refresh cap
-        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "CScanner_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
         local entsList = {}
         if BL.ForEach then
             BL.ForEach("npc_cscanner", function(e) table.insert(entsList, e) end)

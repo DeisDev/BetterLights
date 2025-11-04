@@ -8,7 +8,6 @@ if CLIENT then
     local cvar_size = CreateClientConVar("betterlights_rpg_size", "280", true, false, "Dynamic light radius for RPG rockets")
     local cvar_brightness = CreateClientConVar("betterlights_rpg_brightness", "2.2", true, false, "Dynamic light brightness for RPG rockets")
     local cvar_decay = CreateClientConVar("betterlights_rpg_decay", "2000", true, false, "Dynamic light decay for RPG rockets")
-    local cvar_update_hz = CreateClientConVar("betterlights_rpg_update_hz", "30", true, false, "Update rate in Hz (15-120)")
 
     -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_rpg_color_r", "255", true, false, "RPG rocket color - red (0-255)")
@@ -27,15 +26,6 @@ if CLIENT then
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_RPGMissile_DLight", function()
         if not cvar_enable:GetBool() then return end
-
-        -- Refresh cap
-        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "RPGMissile_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())

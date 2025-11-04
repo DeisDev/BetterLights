@@ -8,7 +8,6 @@ if CLIENT then
     local cvar_size = CreateClientConVar("betterlights_grenade_size", "80", true, false, "Dynamic light radius for frag grenades")
     local cvar_brightness = CreateClientConVar("betterlights_grenade_brightness", "0.9", true, false, "Dynamic light brightness for frag grenades")
     local cvar_decay = CreateClientConVar("betterlights_grenade_decay", "1800", true, false, "Dynamic light decay for frag grenades")
-    local cvar_update_hz = CreateClientConVar("betterlights_grenade_update_hz", "30", true, false, "Update rate in Hz (15-120)")
     local cvar_models_elight = CreateClientConVar("betterlights_grenade_models_elight", "1", true, false, "Also add an entity light (elight) to light the grenade model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_grenade_models_elight_size_mult", "1.0", true, false, "Multiplier for grenade elight radius")
 
@@ -27,15 +26,6 @@ if CLIENT then
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_Grenade_DLight", function()
         if not cvar_enable:GetBool() then return end
-
-        -- Refresh cap
-        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "Grenade_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())

@@ -9,7 +9,6 @@ if CLIENT then
     local cvar_size = CreateClientConVar("betterlights_antlion_spit_size", "100", true, false, "Dynamic light radius for Antlion spit")
     local cvar_brightness = CreateClientConVar("betterlights_antlion_spit_brightness", "1.0", true, false, "Dynamic light brightness for Antlion spit")
     local cvar_decay = CreateClientConVar("betterlights_antlion_spit_decay", "1800", true, false, "Dynamic light decay for Antlion spit")
-    local cvar_update_hz = CreateClientConVar("betterlights_antlion_spit_update_hz", "30", true, false, "Update rate in Hz (15-120) for glow")
 
     -- ConVars: impact flash
     local cvar_flash_enable = CreateClientConVar("betterlights_antlion_spit_flash_enable", "1", true, false, "Add a brief light flash when Antlion spit impacts")
@@ -100,15 +99,6 @@ if CLIENT then
     AddThink("BetterLights_AntlionSpit_GlowThink", function()
         if not cvar_enable:GetBool() then return end
 
-        -- Refresh cap (glow)
-        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "AntlionSpit_GlowThink"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
-
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
@@ -146,18 +136,11 @@ if CLIENT then
     end)
 
     -- Render impact flashes
-    local cvar_flash_update_hz = CreateClientConVar("betterlights_antlion_spit_flash_update_hz", "60", true, false, "Update rate in Hz (15-120) for flash fade")
     AddThink("BetterLights_AntlionSpit_FlashThink", function()
         if not cvar_flash_enable:GetBool() then return end
         if not BL_Spit_Flashes or #BL_Spit_Flashes == 0 then return end
-        -- Refresh cap (flash fade)
-        local hz = math.Clamp(cvar_flash_update_hz:GetFloat(), 15, 120)
-        BetterLights._nextTick = BetterLights._nextTick or {}
+
         local now = CurTime()
-        local key = "AntlionSpit_FlashThink"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
         local baseSize = math.max(0, cvar_flash_size:GetFloat())
         local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
 

@@ -10,7 +10,6 @@ if CLIENT then
     local ar2_cvar_decay = CreateClientConVar("betterlights_item_ar2alt_decay", "1800", true, false, "Dynamic light decay for item_ammo_ar2_altfire")
     local ar2_cvar_elight = CreateClientConVar("betterlights_item_ar2alt_models_elight", "1", true, false, "Also add an entity light (elight) for item_ammo_ar2_altfire")
     local ar2_cvar_elight_mult = CreateClientConVar("betterlights_item_ar2alt_models_elight_size_mult", "1.0", true, false, "Multiplier for item_ammo_ar2_altfire elight radius")
-    local ar2_update_hz = CreateClientConVar("betterlights_item_ar2alt_update_hz", "20", true, false, "Update rate in Hz (15-120)")
     local ar2_r = CreateClientConVar("betterlights_item_ar2alt_color_r", "255", true, false, "AR2 alt ammo color - red (0-255)")
     local ar2_g = CreateClientConVar("betterlights_item_ar2alt_color_g", "220", true, false, "AR2 alt ammo color - green (0-255)")
     local ar2_b = CreateClientConVar("betterlights_item_ar2alt_color_b", "60", true, false, "AR2 alt ammo color - blue (0-255)")
@@ -29,7 +28,6 @@ if CLIENT then
     local bat_cvar_decay = CreateClientConVar("betterlights_item_battery_decay", "1800", true, false, "Dynamic light decay for item_battery")
     local bat_cvar_elight = CreateClientConVar("betterlights_item_battery_models_elight", "1", true, false, "Also add an entity light (elight) for item_battery")
     local bat_cvar_elight_mult = CreateClientConVar("betterlights_item_battery_models_elight_size_mult", "1.0", true, false, "Multiplier for item_battery elight radius")
-    local bat_update_hz = CreateClientConVar("betterlights_item_battery_update_hz", "20", true, false, "Update rate in Hz (15-120)")
     local bat_r = CreateClientConVar("betterlights_item_battery_color_r", "110", true, false, "Battery color - red (0-255)")
     local bat_g = CreateClientConVar("betterlights_item_battery_color_g", "190", true, false, "Battery color - green (0-255)")
     local bat_b = CreateClientConVar("betterlights_item_battery_color_b", "255", true, false, "Battery color - blue (0-255)")
@@ -48,7 +46,6 @@ if CLIENT then
     local vial_cvar_decay = CreateClientConVar("betterlights_item_healthvial_decay", "1800", true, false, "Dynamic light decay for item_healthvial")
     local vial_cvar_elight = CreateClientConVar("betterlights_item_healthvial_models_elight", "1", true, false, "Also add an entity light (elight) for item_healthvial")
     local vial_cvar_elight_mult = CreateClientConVar("betterlights_item_healthvial_models_elight_size_mult", "1.0", true, false, "Multiplier for item_healthvial elight radius")
-    local vial_update_hz = CreateClientConVar("betterlights_item_healthvial_update_hz", "20", true, false, "Update rate in Hz (15-120)")
     local vial_r = CreateClientConVar("betterlights_item_healthvial_color_r", "150", true, false, "Health vial color - red (0-255)")
     local vial_g = CreateClientConVar("betterlights_item_healthvial_color_g", "255", true, false, "Health vial color - green (0-255)")
     local vial_b = CreateClientConVar("betterlights_item_healthvial_color_b", "150", true, false, "Health vial color - blue (0-255)")
@@ -67,7 +64,6 @@ if CLIENT then
     local kit_cvar_decay = CreateClientConVar("betterlights_item_healthkit_decay", "1800", true, false, "Dynamic light decay for item_healthkit")
     local kit_cvar_elight = CreateClientConVar("betterlights_item_healthkit_models_elight", "1", true, false, "Also add an entity light (elight) for item_healthkit")
     local kit_cvar_elight_mult = CreateClientConVar("betterlights_item_healthkit_models_elight_size_mult", "1.0", true, false, "Multiplier for item_healthkit elight radius")
-    local kit_update_hz = CreateClientConVar("betterlights_item_healthkit_update_hz", "20", true, false, "Update rate in Hz (15-120)")
     local kit_r = CreateClientConVar("betterlights_item_healthkit_color_r", "150", true, false, "Health kit color - red (0-255)")
     local kit_g = CreateClientConVar("betterlights_item_healthkit_color_g", "255", true, false, "Health kit color - green (0-255)")
     local kit_b = CreateClientConVar("betterlights_item_healthkit_color_b", "150", true, false, "Health kit color - blue (0-255)")
@@ -134,19 +130,6 @@ if CLIENT then
     end
 
     hook.Add("Think", "BetterLights_Pickups_DLight", function()
-        -- Throttle by the lowest of the active pickup rates
-        local hz = 120
-        if ar2_cvar_enable:GetBool() then hz = math.min(hz, math.Clamp(ar2_update_hz:GetFloat(), 15, 120)) end
-        if bat_cvar_enable:GetBool() then hz = math.min(hz, math.Clamp(bat_update_hz:GetFloat(), 15, 120)) end
-        if vial_cvar_enable:GetBool() then hz = math.min(hz, math.Clamp(vial_update_hz:GetFloat(), 15, 120)) end
-        if kit_cvar_enable:GetBool() then hz = math.min(hz, math.Clamp(kit_update_hz:GetFloat(), 15, 120)) end
-        BetterLights = BetterLights or {}
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "Pickups_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
         processClass("item_ammo_ar2_altfire", AR2C, ar2_cvar_enable, ar2_cvar_size, ar2_cvar_brightness, ar2_cvar_decay, ar2_cvar_elight, ar2_cvar_elight_mult)
         processClass("item_battery", BATR, bat_cvar_enable, bat_cvar_size, bat_cvar_brightness, bat_cvar_decay, bat_cvar_elight, bat_cvar_elight_mult)
         processClass("item_healthvial", VIAL, vial_cvar_enable, vial_cvar_size, vial_cvar_brightness, vial_cvar_decay, vial_cvar_elight, vial_cvar_elight_mult)

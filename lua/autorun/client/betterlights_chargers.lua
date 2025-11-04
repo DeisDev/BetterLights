@@ -11,7 +11,6 @@ if CLIENT then
     local sc_decay = CreateClientConVar("betterlights_suitcharger_decay", "1800", true, false, "Glow decay for item_suitcharger")
     local sc_elight = CreateClientConVar("betterlights_suitcharger_models_elight", "1", true, false, "Add elight to light the charger model")
     local sc_elmult = CreateClientConVar("betterlights_suitcharger_models_elight_size_mult", "1.0", true, false, "Elight radius multiplier for item_suitcharger")
-    local sc_update_hz = CreateClientConVar("betterlights_suitcharger_update_hz", "20", true, false, "Update rate in Hz (15-120)")
     local sc_r = CreateClientConVar("betterlights_suitcharger_color_r", "255", true, false, "Suit charger color - red (0-255)")
     local sc_g = CreateClientConVar("betterlights_suitcharger_color_g", "180", true, false, "Suit charger color - green (0-255)")
     local sc_b = CreateClientConVar("betterlights_suitcharger_color_b", "80", true, false, "Suit charger color - blue (0-255)")
@@ -23,7 +22,6 @@ if CLIENT then
     local hc_decay = CreateClientConVar("betterlights_healthcharger_decay", "1800", true, false, "Glow decay for item_healthcharger")
     local hc_elight = CreateClientConVar("betterlights_healthcharger_models_elight", "1", true, false, "Add elight to light the charger model")
     local hc_elmult = CreateClientConVar("betterlights_healthcharger_models_elight_size_mult", "1.0", true, false, "Elight radius multiplier for item_healthcharger")
-    local hc_update_hz = CreateClientConVar("betterlights_healthcharger_update_hz", "20", true, false, "Update rate in Hz (15-120)")
     local hc_r = CreateClientConVar("betterlights_healthcharger_color_r", "110", true, false, "Health charger color - red (0-255)")
     local hc_g = CreateClientConVar("betterlights_healthcharger_color_g", "190", true, false, "Health charger color - green (0-255)")
     local hc_b = CreateClientConVar("betterlights_healthcharger_color_b", "255", true, false, "Health charger color - blue (0-255)")
@@ -99,14 +97,6 @@ if CLIENT then
 
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_Chargers_DLight", function()
-        -- Refresh cap per group: use min of the two to ensure consistent cadence
-        local hz = math.min(math.Clamp(sc_update_hz:GetFloat(), 15, 120), math.Clamp(hc_update_hz:GetFloat(), 15, 120))
-        BetterLights._nextTick = BetterLights._nextTick or {}
-        local now = CurTime()
-        local key = "Chargers_DLight"
-        local nxt = BetterLights._nextTick[key] or 0
-        if now < nxt then return end
-        BetterLights._nextTick[key] = now + (1 / hz)
         process("item_suitcharger", sc_enable, sc_size, sc_bright, sc_decay, sc_elight, sc_elmult, sc_r, sc_g, sc_b)
         process("item_healthcharger", hc_enable, hc_size, hc_bright, hc_decay, hc_elight, hc_elmult, hc_r, hc_g, hc_b)
     end)
