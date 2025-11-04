@@ -4,6 +4,10 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize hot globals
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_antlion_grub_enable", "1", true, false, "Enable green glow on Antlion Grubs")
     local cvar_size = CreateClientConVar("betterlights_antlion_grub_size", "70", true, false, "Grub light radius")
     local cvar_brightness = CreateClientConVar("betterlights_antlion_grub_brightness", "0.35", true, false, "Grub light brightness")
@@ -42,6 +46,7 @@ if CLIENT then
     AddThink("BetterLights_AntlionGrub", function()
         if not cvar_enable:GetBool() then return end
 
+        local r, g, b = getColor()
         local function update(ent)
             if not IsValid(ent) then goto cont end
             if ent.GetNoDraw and ent:GetNoDraw() then goto cont end
@@ -52,7 +57,6 @@ if CLIENT then
             local dl = DynamicLight(ent:EntIndex() + 23000)
             if dl then
                 dl.pos = pos
-                local r, g, b = getColor()
                 dl.r = r
                 dl.g = g
                 dl.b = b

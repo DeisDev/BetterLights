@@ -4,6 +4,11 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize frequently used globals
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
+    local ProjectedTexture = ProjectedTexture
     -- Steady red glow only for helicopter bombs
     local cvar_enable = CreateClientConVar("betterlights_heli_bomb_enable", "1", true, false, "Enable dynamic light for helicopter bombs (grenade_helicopter)")
     local cvar_size = CreateClientConVar("betterlights_heli_bomb_size", "140", true, false, "Dynamic light radius for helicopter bombs")
@@ -62,19 +67,25 @@ if CLIENT then
 
     if BL.TrackClass then BL.TrackClass("grenade_helicopter") end
 
-    -- Central Think registration (fallback to hook.Add("Think", ...))
+    -- Consolidated Think: steady glow + flash rendering in one callback
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_HeliBomb_DLight", function()
-        if not cvar_enable:GetBool() then return end
+    AddThink("BetterLights_HeliBomb", function()
+        local doGlow = cvar_enable:GetBool()
+        local doFlash = cvar_flash_enable:GetBool()
 
-        local size = math.max(0, cvar_size:GetFloat())
-        local brightness_base = math.max(0, cvar_brightness:GetFloat())
-        local decay = math.max(0, cvar_decay:GetFloat())
+        -- Precompute colors once
+        local gr, gg, gb = getGlowColor()
+        local fr, fg, fb = getFlashColor()
 
-        local function update(ent)
-            if IsValid(ent) then
+        if doGlow then
+            local size = math.max(0, cvar_size:GetFloat())
+            local brightness_base = math.max(0, cvar_brightness:GetFloat())
+            local decay = math.max(0, cvar_decay:GetFloat())
+            local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+
+            local function update(ent)
+                if not IsValid(ent) then return end
                 local idx = ent:EntIndex()
-                -- steady red (no pulse; no armed state tracking)
                 local pos
                 if ent.OBBCenter and ent.LocalToWorld then
                     pos = ent:LocalToWorld(ent:OBBCenter())
@@ -84,17 +95,13 @@ if CLIENT then
                     pos = ent:GetPos()
                 end
 
-                -- Steady brightness (no pulsing)
-                local b_eff = brightness_base
-
-                local d = DynamicLight(ent:EntIndex())
+                local d = DynamicLight(idx)
                 if d then
-                    local r, g, b = getGlowColor()
                     d.pos = pos
-                    d.r = r
-                    d.g = g
-                    d.b = b
-                    d.brightness = b_eff
+                    d.r = gr
+                    d.g = gg
+                    d.b = gb
+                    d.brightness = brightness_base
                     d.decay = decay
                     d.size = size
                     d.minlight = 0
@@ -107,61 +114,52 @@ if CLIENT then
                     local el = DynamicLight(idx, true)
                     if el then
                         el.pos = pos
-                        local r, g, b = getGlowColor()
-                        el.r = r
-                        el.g = g
-                        el.b = b
-                        el.brightness = b_eff
+                        el.r = gr
+                        el.g = gg
+                        el.b = gb
+                        el.brightness = brightness_base
                         el.decay = decay
-                        el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
+                        el.size = size * elMult
                         el.minlight = 0
                         el.dietime = CurTime() + 0.1
                     end
                 end
             end
-        end
 
-        if BL.ForEach then
-            BL.ForEach("grenade_helicopter", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("grenade_helicopter")) do update(ent) end
-        end
-    end)
-
-    -- Render short-lived explosion flashes regardless of steady glow setting
-    AddThink("BetterLights_HeliBomb_FlashThink", function()
-        if not cvar_flash_enable:GetBool() then return end
-        if not BL_HeliBomb_Flashes or #BL_HeliBomb_Flashes == 0 then return end
-
-        local now = CurTime()
-        local baseSize = math.max(0, cvar_flash_size:GetFloat())
-        local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
-
-        for i = #BL_HeliBomb_Flashes, 1, -1 do
-            local f = BL_HeliBomb_Flashes[i]
-            if not f or now >= f.die then
-                table.remove(BL_HeliBomb_Flashes, i)
+            if BL.ForEach then
+                BL.ForEach("grenade_helicopter", update)
             else
-                local dur = math.max(0.001, f.die - f.start)
-                local t = (f.die - now) / dur -- 1->0 over lifetime
-                -- Ease-out curve for brightness/size
-                local b_eff = baseBright * t
-                local s_eff = baseSize * (0.4 + 0.6 * t)
+                for _, ent in ipairs(ents.FindByClass("grenade_helicopter")) do update(ent) end
+            end
+        end
 
-                local d = DynamicLight(f.id or (57000 + i))
-                if d then
-                    local r, g, b = getFlashColor()
-                    d.pos = f.pos
-                    d.r = r
-                    d.g = g
-                    d.b = b
-                    d.brightness = b_eff
-                    d.decay = 0
-                    d.size = s_eff
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = now + 0.05
+        if doFlash and BL_HeliBomb_Flashes and #BL_HeliBomb_Flashes > 0 then
+            local now = CurTime()
+            local baseSize = math.max(0, cvar_flash_size:GetFloat())
+            local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
+            for i = #BL_HeliBomb_Flashes, 1, -1 do
+                local f = BL_HeliBomb_Flashes[i]
+                if not f or now >= f.die then
+                    table.remove(BL_HeliBomb_Flashes, i)
+                else
+                    local dur = math.max(0.001, f.die - f.start)
+                    local t = (f.die - now) / dur
+                    local b_eff = baseBright * t
+                    local s_eff = baseSize * (0.4 + 0.6 * t)
+                    local d = DynamicLight(f.id or (57000 + i))
+                    if d then
+                        d.pos = f.pos
+                        d.r = fr
+                        d.g = fg
+                        d.b = fb
+                        d.brightness = b_eff
+                        d.decay = 0
+                        d.size = s_eff
+                        d.minlight = 0
+                        d.noworld = false
+                        d.nomodel = false
+                        d.dietime = now + 0.05
+                    end
                 end
             end
         end

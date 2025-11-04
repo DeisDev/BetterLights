@@ -37,19 +37,21 @@ if CLIENT then
         local dl = DynamicLight(id)
         if not dl then return end
         dl.pos = pos
-    dl.r = col.r
-    dl.g = col.g
-    dl.b = col.b
+        dl.r = col.r
+        dl.g = col.g
+        dl.b = col.b
         dl.brightness = math.max(0, bright)
-        dl.Decay = math.max(0, decay)
+        dl.decay = math.max(0, decay)
         dl.size = math.max(0, size)
-        dl.die = CurTime() + 0.08
+        dl.dietime = CurTime() + 0.08
     end
 
     net.Receive("BetterLights_MuzzleFlash", function()
         if not cvar_enable:GetBool() then return end
         local pos = net.ReadVector()
         local isAR2 = net.ReadBool()
+
+        -- Culling disabled per user request; always spawn the flash light
 
         if isAR2 and cvar_ar2_enable:GetBool() then
             local r, g, b = getAR2Color()

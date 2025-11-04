@@ -15,7 +15,6 @@ if CLIENT then
     local cvar_models_enable = CreateClientConVar("betterlights_combineball_model_light_enable", "1", true, false, "Enable model lighting")
     local cvar_models_elight = CreateClientConVar("betterlights_combineball_models_elight", "0", true, false, "Also add an entity light (elight) for models (useful when world light is disabled)")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_combineball_models_elight_size_mult", "1.0", true, false, "Multiplier for model elight radius")
-    local cvar_update_hz = CreateClientConVar("betterlights_combineball_update_hz", "30", true, false, "Update rate in Hz (0 = every frame)")
 
     -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_combineball_color_r", "80", true, false, "Combine ball color - red (0-255)")
@@ -34,14 +33,8 @@ if CLIENT then
     AddThink("BetterLights_CombineBall_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        -- Optional throttling
-        local hz = math.max(0, cvar_update_hz:GetFloat())
-        if hz > 0 then
-            local now = CurTime()
-            BetterLights._cb_next = BetterLights._cb_next or 0
-            if now < BetterLights._cb_next then return end
-            BetterLights._cb_next = now + (1 / hz)
-        end
+    -- No throttling (always update every frame)
+    local r, g, b = getCombineBallColor()
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
@@ -54,7 +47,6 @@ if CLIENT then
         local function update(ent)
             if IsValid(ent) then
                 local pos = ent:WorldSpaceCenter()
-                local r, g, b = getCombineBallColor()
 
                 -- World dynamic light: optionally also hits models (if wantModels)
                 if wantWorld then

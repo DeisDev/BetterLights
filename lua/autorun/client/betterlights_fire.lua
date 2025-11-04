@@ -4,6 +4,10 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize frequently used globals
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_fire_enable", "1", true, false, "Enable dynamic light for entities that are on fire")
     local cvar_size = CreateClientConVar("betterlights_fire_size", "160", true, false, "Dynamic light radius for burning entities")
     local cvar_brightness = CreateClientConVar("betterlights_fire_brightness", "5.2", true, false, "Dynamic light brightness for burning entities")
@@ -14,6 +18,7 @@ if CLIENT then
     local cvar_flicker_amount = CreateClientConVar("betterlights_fire_flicker_amount", "0.35", true, false, "Flicker intensity (as a fraction of brightness)")
     local cvar_flicker_size_amount = CreateClientConVar("betterlights_fire_flicker_size_amount", "0.12", true, false, "Flicker intensity applied to light radius")
     local cvar_flicker_speed = CreateClientConVar("betterlights_fire_flicker_speed", "11.5", true, false, "Flicker speed (higher = faster flicker)")
+    -- removed update_hz throttling entirely (always update every frame)
 
     -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_fire_color_r", "255", true, false, "Burning entities color - red (0-255)")
@@ -26,11 +31,12 @@ if CLIENT then
     end
 
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+
+    if BL.TrackClass then BL.TrackClass("entityflame") end
     AddThink("BetterLights_Fire_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        local flames = ents.FindByClass("entityflame")
-        if not flames or #flames == 0 then return end
+    -- No throttling (always update every frame)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
@@ -39,7 +45,10 @@ if CLIENT then
         -- Track which target entities we've already lit this frame to avoid duplicate lights
         local seenTargets = {}
 
-        for _, flame in ipairs(flames) do
+    -- Precompute color once per frame
+    local cr, cg, cb = getColor()
+
+    local function handleFlame(flame)
             if IsValid(flame) then
                 local target = flame:GetParent()
                 if not IsValid(target) then
@@ -76,42 +85,51 @@ if CLIENT then
                     s_eff = math.max(0, size * smult)
                 end
 
-                local dlight = DynamicLight(lightIndex)
-                if dlight then
-                    dlight.pos = pos
-                    local r, g, b = getColor()
-                    dlight.r = r
-                    dlight.g = g
-                    dlight.b = b
-                    dlight.brightness = b_eff
-                    dlight.decay = decay
-                    dlight.size = s_eff
-                    dlight.minlight = 0
-                    dlight.noworld = false
-                    dlight.nomodel = false
-                    dlight.dietime = CurTime() + 0.1
+                -- DLight (world/model)
+                do
+                    local dlight = DynamicLight(lightIndex)
+                    if dlight then
+                        dlight.pos = pos
+                        dlight.r = cr
+                        dlight.g = cg
+                        dlight.b = cb
+                        dlight.brightness = b_eff
+                        dlight.decay = decay
+                        dlight.size = s_eff
+                        dlight.minlight = 0
+                        dlight.noworld = false
+                        dlight.nomodel = false
+                        dlight.dietime = CurTime() + 0.16
+                    end
                 end
 
-                -- Add an elight to ensure models (like the burning entity itself) are lit
+                -- ELight (model-only)
                 if cvar_models_elight:GetBool() then
                     local el = DynamicLight(lightIndex, true) -- elight: lights models, not world
-                    if el then
-                        el.pos = pos
-                        local r, g, b = getColor()
-                        el.r = r
-                        el.g = g
-                        el.b = b
+                        if el then
+                            el.pos = pos
+                            el.r = cr
+                            el.g = cg
+                            el.b = cb
                         el.brightness = b_eff
                         el.decay = decay
                         el.size = s_eff * math.max(0, cvar_models_elight_size_mult:GetFloat())
                         el.minlight = 0
                         -- noworld/nomodel flags are ignored for elights; elights never light world
-                        el.dietime = CurTime() + 0.1
+                        el.dietime = CurTime() + 0.16
                     end
                 end
 
                 ::continue_flame::
             end
+        end
+
+        if BL.ForEach then
+            BL.ForEach("entityflame", handleFlame)
+        else
+            local flames = ents.FindByClass("entityflame")
+            if not flames or #flames == 0 then return end
+            for _, flame in ipairs(flames) do handleFlame(flame) end
         end
     end)
 end

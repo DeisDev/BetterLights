@@ -4,6 +4,10 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize hot globals
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_manhack_enable", "1", true, false, "Enable dynamic light for Manhacks (npc_manhack)")
     local cvar_size = CreateClientConVar("betterlights_manhack_size", "70", true, false, "Dynamic light radius for Manhacks")
     local cvar_brightness = CreateClientConVar("betterlights_manhack_brightness", "0.6", true, false, "Dynamic light brightness for Manhacks")
@@ -27,6 +31,7 @@ if CLIENT then
     AddThink("BetterLights_Manhack_DLight", function()
         if not cvar_enable:GetBool() then return end
 
+        local r, g, b = getColor()
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
@@ -46,7 +51,6 @@ if CLIENT then
                 local d = DynamicLight(idx)
                 if d then
                     d.pos = pos
-                    local r, g, b = getColor()
                     d.r = r
                     d.g = g
                     d.b = b
@@ -63,7 +67,6 @@ if CLIENT then
                     local el = DynamicLight(idx, true)
                     if el then
                         el.pos = pos
-                        local r, g, b = getColor()
                         el.r = r
                         el.g = g
                         el.b = b

@@ -9,6 +9,16 @@ if CLIENT then
     BL._classes = BL._classes or {}      -- set of classnames to track
     BL._tracked = BL._tracked or {}      -- classname -> set { [ent]=true }
     BL._removeHandlers = BL._removeHandlers or {} -- classname -> { fn, ... }
+    BL._tickers = BL._tickers or {}              -- name -> next time
+    BL._attachCache = BL._attachCache or {}      -- model -> { [name]=id }
+    BL._pixHandles = BL._pixHandles or {}        -- key -> pixelvis handle
+
+    -- Global culling controls
+    local cvar_cull_enable   = CreateClientConVar("betterlights_cull_enable", "1", true, false, "Cull lights that are not visible in the player's view")
+    local cvar_cull_maxdist  = CreateClientConVar("betterlights_cull_maxdist", "2200", true, false, "Maximum distance at which lights are updated (units)")
+    local cvar_cull_minfrac  = CreateClientConVar("betterlights_cull_minfrac", "0.025", true, false, "Minimum util.PixelVisible fraction to consider a light visible")
+    -- -1 allows behind; 0 = only in front hemisphere; 0.2 = narrower cone
+    local cvar_cull_fov_cos  = CreateClientConVar("betterlights_cull_fov_cos", "0.0", true, false, "Minimum dot(viewForward, dirToLight) required (-1..1)")
 
     function BL.AddThink(name, fn)
         if not isfunction(fn) then return end
@@ -17,6 +27,19 @@ if CLIENT then
 
     function BL.RemoveThink(name)
         BL._thinks[name] = nil
+    end
+
+    -- Throttle helper: return true when it's time to update again
+    -- hz > 0 means updates per second; hz <= 0 updates every frame
+    function BL.ShouldTick(name, hz)
+        if not hz or hz <= 0 then return true end
+        local now = CurTime()
+        local nextt = BL._tickers[name] or 0
+        if now >= nextt then
+            BL._tickers[name] = now + (1 / hz)
+            return true
+        end
+        return false
     end
 
     -- Utility unique light id for ephemeral flashes
@@ -71,6 +94,92 @@ if CLIENT then
         else
             return ent:GetPos()
         end
+    end
+
+    -- Attachment helpers with per-model id cache to avoid repeated string lookups
+    -- names: array of possible attachment names to try in order
+    function BL.LookupAttachmentCached(ent, names)
+        if not (IsValid(ent) and ent.LookupAttachment and ent.GetModel) then return nil end
+        local mdl = ent:GetModel() or ""
+        local cache = BL._attachCache[mdl]
+        if not cache then
+            cache = {}
+            BL._attachCache[mdl] = cache
+        end
+        for i = 1, #names do
+            local name = names[i]
+            local id = cache[name]
+            if id == nil then
+                local lid = ent:LookupAttachment(name)
+                cache[name] = lid or false
+                id = cache[name]
+            end
+            if id and id ~= false and id > 0 then
+                return id
+            end
+        end
+        return nil
+    end
+
+    function BL.GetAttachmentPos(ent, names)
+        local id = BL.LookupAttachmentCached(ent, names)
+        if id and ent.GetAttachment then
+            local att = ent:GetAttachment(id)
+            if att and att.Pos then return att.Pos end
+        end
+        return nil
+    end
+
+    -- Lightweight trace builder that reuses a table per key to reduce GC
+    local _tracePools = {}
+    function BL.TraceLineReuse(key, data)
+        local t = _tracePools[key]
+        if not t then
+            t = {}
+            _tracePools[key] = t
+        end
+        -- manual copy (avoid table.clear to be safe in Lua 5.1)
+        t.start = data.start
+        t.endpos = data.endpos
+        t.filter = data.filter
+        t.mask = data.mask
+        t.mins = data.mins
+        t.maxs = data.maxs
+        return util.TraceLine(t)
+    end
+
+    -- Visibility culling helper
+    -- key: stable identifier per light stream (string/number)
+    -- pos: Vector of light position; radius: approximate light radius
+    function BL.ShouldRenderAt(key, pos, radius)
+        if not cvar_cull_enable:GetBool() then return true end
+        if not pos then return true end
+        local lp = LocalPlayer()
+        if not IsValid(lp) then return true end
+        local eye = lp:EyePos()
+        local to = pos - eye
+        local distSqr = to:LengthSqr()
+        local maxd = cvar_cull_maxdist:GetFloat()
+        if maxd > 0 and distSqr > (maxd * maxd) then return false end
+        local fwd = lp:EyeAngles():Forward()
+        local fovCos = math.Clamp(cvar_cull_fov_cos:GetFloat(), -1, 1)
+        local dot = to:GetNormalized():Dot(fwd)
+        if dot < fovCos then return false end
+        -- Pixel visibility test (occlusion-aware)
+        local k = tostring(key)
+        local handle = BL._pixHandles[k]
+        if not handle and util.GetPixelVisibleHandle then
+            handle = util.GetPixelVisibleHandle()
+            BL._pixHandles[k] = handle
+        end
+        -- Heuristic: skip expensive pixel visibility for elights (model-only) using the ":e" suffix convention
+        local isElightKey = string.sub(k, -2) == ":e"
+        if (not isElightKey) and handle and util.PixelVisible then
+            local r = math.max(4, (tonumber(radius) or 0) * 0.25)
+            local frac = util.PixelVisible(pos, r, handle) or 0
+            if frac < cvar_cull_minfrac:GetFloat() then return false end
+        end
+        return true
     end
 
     -- Single aggregator Think

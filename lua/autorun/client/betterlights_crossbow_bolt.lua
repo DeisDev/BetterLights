@@ -4,6 +4,10 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize hot globals
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_bolt_enable", "1", true, false, "Enable dynamic light for crossbow bolts")
     local cvar_size = CreateClientConVar("betterlights_bolt_size", "220", true, false, "Dynamic light radius for crossbow bolts")
     local cvar_brightness = CreateClientConVar("betterlights_bolt_brightness", "0.96", true, false, "Dynamic light brightness for crossbow bolts")
@@ -25,6 +29,7 @@ if CLIENT then
     AddThink("BetterLights_CrossbowBolt_DLight", function()
         if not cvar_enable:GetBool() then return end
 
+        local r, g, b = getColor()
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
@@ -34,7 +39,6 @@ if CLIENT then
                 local dlight = DynamicLight(ent:EntIndex())
                 if dlight then
                     dlight.pos = ent:WorldSpaceCenter()
-                    local r, g, b = getColor()
                     dlight.r = r
                     dlight.g = g
                     dlight.b = b

@@ -4,6 +4,18 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+
+    -- Localize hot globals for per-frame performance
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
+    local ProjectedTexture = ProjectedTexture
+    local ents = ents
+    local Vector = Vector
+    local Color = Color
+    local table_insert = table.insert
+    local ipairs = ipairs
+    local pairs = pairs
     local cvar_enable = CreateClientConVar("betterlights_cscanner_enable", "1", true, false, "Enable dynamic light for Combine Scanners (npc_cscanner)")
     local cvar_size = CreateClientConVar("betterlights_cscanner_size", "120", true, false, "Dynamic light radius for Combine Scanners")
     local cvar_brightness = CreateClientConVar("betterlights_cscanner_brightness", "0.7", true, false, "Dynamic light brightness for Combine Scanners")
@@ -52,29 +64,48 @@ if CLIENT then
 
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_CScanner_DLight", function()
+        local now = CurTime()
+
         -- Gather scanners (both types if requested)
         local entsList = {}
+        local includeClaw = cvar_sl_include_claw:GetBool()
         if BL.ForEach then
-            BL.ForEach("npc_cscanner", function(e) table.insert(entsList, e) end)
-            if cvar_sl_include_claw:GetBool() then
-                BL.ForEach("npc_clawscanner", function(e) table.insert(entsList, e) end)
+            BL.ForEach("npc_cscanner", function(e) table_insert(entsList, e) end)
+            if includeClaw then
+                BL.ForEach("npc_clawscanner", function(e) table_insert(entsList, e) end)
             end
         else
             entsList = ents.FindByClass("npc_cscanner") or {}
-            if cvar_sl_include_claw:GetBool() then
+            if includeClaw then
                 local claws = ents.FindByClass("npc_clawscanner")
                 if claws and #claws > 0 then
-                    for _, e in ipairs(claws) do table.insert(entsList, e) end
+                    for _, e in ipairs(claws) do table_insert(entsList, e) end
                 end
             end
         end
 
+        -- Frame-constant settings and precomputed colors
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+        local r, g, b = getGlowColor()
+        local dietime = now + 0.1
 
+        -- Searchlight frame-constants
+        local sl_enable = cvar_sl_enable:GetBool()
+        local sl_near = math.max(0.1, cvar_sl_near:GetFloat())
+        local sl_far = math.max(1, cvar_sl_far:GetFloat())
+        local sl_fov = math.Clamp(cvar_sl_fov:GetFloat(), 1, 175)
+        local sl_bright = cvar_sl_brightness:GetFloat()
+        local sl_r, sl_g, sl_b = getSearchlightColor()
+        local sl_shadows = cvar_sl_shadows:GetBool()
+
+        -- Track which entities we saw this frame (for projector cleanup)
+        local seen = {}
         for _, ent in ipairs(entsList) do
             if IsValid(ent) then
+                seen[ent] = true
                 local idx = ent:EntIndex()
                 local pos
                 if ent.OBBCenter and ent.LocalToWorld then
@@ -88,7 +119,6 @@ if CLIENT then
                 if cvar_enable:GetBool() then
                     local d = DynamicLight(idx)
                     if d then
-                        local r, g, b = getGlowColor()
                         d.pos = pos
                         d.r = r
                         d.g = g
@@ -99,28 +129,27 @@ if CLIENT then
                         d.minlight = 0
                         d.noworld = false
                         d.nomodel = false
-                        d.dietime = CurTime() + 0.1
+                        d.dietime = dietime
                     end
 
                     if cvar_models_elight:GetBool() then
                         local el = DynamicLight(idx, true)
                         if el then
-                            local r, g, b = getGlowColor()
                             el.pos = pos
                             el.r = r
                             el.g = g
                             el.b = b
                             el.brightness = brightness
                             el.decay = decay
-                            el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
+                            el.size = size * el_mult
                             el.minlight = 0
-                            el.dietime = CurTime() + 0.1
+                            el.dietime = dietime
                         end
                     end
                 end
 
                 -- Searchlight (ProjectedTexture)
-                if cvar_sl_enable:GetBool() then
+                if sl_enable then
                     local lamp = scannerProjectors[ent]
                     if not lamp or not lamp:IsValid() then
                         lamp = ProjectedTexture()
@@ -143,13 +172,12 @@ if CLIENT then
 
                         lamp:SetPos(origin)
                         lamp:SetAngles(ang)
-                        lamp:SetNearZ(math.max(0.1, cvar_sl_near:GetFloat()))
-                        lamp:SetFarZ(math.max(1, cvar_sl_far:GetFloat()))
-                        lamp:SetFOV(math.Clamp(cvar_sl_fov:GetFloat(), 1, 175))
-                        lamp:SetBrightness(cvar_sl_brightness:GetFloat())
-                        local rr, gg, bb = getSearchlightColor()
-                        lamp:SetColor(Color(rr, gg, bb))
-                        lamp:SetEnableShadows(cvar_sl_shadows:GetBool())
+                        lamp:SetNearZ(sl_near)
+                        lamp:SetFarZ(sl_far)
+                        lamp:SetFOV(sl_fov)
+                        lamp:SetBrightness(sl_bright)
+                        lamp:SetColor(Color(sl_r, sl_g, sl_b))
+                        lamp:SetEnableShadows(sl_shadows)
                         lamp:Update()
                     end
                 end
@@ -158,13 +186,7 @@ if CLIENT then
 
         -- Cleanup projectors for invalid/removed entities or when disabled
         for ent, lamp in pairs(scannerProjectors) do
-            local removeIt = (not cvar_sl_enable:GetBool()) or (not IsValid(ent))
-            if not removeIt then
-                -- If the entity isn't in the current scanner list (e.g., killed), remove
-                local found = false
-                for _, e in ipairs(entsList) do if e == ent then found = true break end end
-                if not found then removeIt = true end
-            end
+            local removeIt = (not sl_enable) or (not IsValid(ent)) or (not seen[ent])
             if removeIt then
                 if lamp and lamp.IsValid and lamp:IsValid() then lamp:Remove() end
                 scannerProjectors[ent] = nil

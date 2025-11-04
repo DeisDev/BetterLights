@@ -4,6 +4,11 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize frequently used globals
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
+    local util = util
     local cvar_enable = CreateClientConVar("betterlights_physgun_enable", "1", true, false, "Enable dynamic light for the physgun matching your weapon color")
     local cvar_size = CreateClientConVar("betterlights_physgun_size", "33", true, false, "Dynamic light radius for the physgun")
     local cvar_brightness = CreateClientConVar("betterlights_physgun_brightness", "0.3", true, false, "Dynamic light brightness for the physgun")
@@ -36,31 +41,20 @@ if CLIENT then
         return math.floor(r), math.floor(g), math.floor(b)
     end
 
+    local ATTACH_NAMES = { "muzzle", "fork", "muzzle_flash", "laser" }
     local function getPhysgunLightPos(ply, wep)
         -- Try viewmodel muzzle in first person, then worldmodel attachments, then fallbacks
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
-                local names = { "muzzle", "fork", "muzzle_flash", "laser" }
-                for _, name in ipairs(names) do
-                    local id = vm:LookupAttachment(name)
-                    if id and id > 0 then
-                        local att = vm:GetAttachment(id)
-                        if att and att.Pos then return att.Pos end
-                    end
-                end
+                local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(vm, ATTACH_NAMES)
+                if pos then return pos end
             end
         end
 
         if IsValid(wep) then
-            local names = { "muzzle", "fork", "muzzle_flash", "laser" }
-            for _, name in ipairs(names) do
-                local id = wep.LookupAttachment and wep:LookupAttachment(name)
-                if id and id > 0 then
-                    local att = wep.GetAttachment and wep:GetAttachment(id)
-                    if att and att.Pos then return att.Pos end
-                end
-            end
+            local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(wep, ATTACH_NAMES)
+            if pos then return pos end
             if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end
         end
 
@@ -81,7 +75,9 @@ if CLIENT then
         local wep = ply:GetActiveWeapon()
         if not IsValid(wep) or wep:GetClass() ~= "weapon_physgun" then return end
 
-        local size = math.max(0, cvar_size:GetFloat())
+    -- No throttling (always update every frame)
+
+    local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
@@ -91,11 +87,11 @@ if CLIENT then
         -- World light position (for dlight): place just in front of nearby walls to avoid clipping into geometry
         local eye = ply:EyePos()
         local fwd = ply:EyeAngles():Forward()
-        local tr = util.TraceLine({
+        local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("physgun", {
             start = eye,
             endpos = eye + fwd * 48,
             filter = { ply, wep }
-        })
+        })) or util.TraceLine({ start = eye, endpos = eye + fwd * 48, filter = { ply, wep } })
         local pos_world = tr.Hit and (tr.HitPos + tr.HitNormal * 6) or (eye + fwd * 24)
         
         -- Fallback if model pos failed
@@ -105,21 +101,25 @@ if CLIENT then
         -- Use a stable index separate from other features (offset from player index)
         local idx = ply:EntIndex() + 1440
 
-        local d = DynamicLight(idx)
-        if d then
-            d.pos = pos_world
-            d.r = r
-            d.g = g
-            d.b = b
-            d.brightness = brightness
-            d.decay = decay
-            d.size = size
-            d.minlight = 0
-            d.noworld = false
-            d.nomodel = false
-            d.dietime = CurTime() + 0.1
+        -- DLight (world/model)
+        do
+            local d = DynamicLight(idx)
+            if d then
+                d.pos = pos_world
+                d.r = r
+                d.g = g
+                d.b = b
+                d.brightness = brightness
+                d.decay = decay
+                d.size = size
+                d.minlight = 0
+                d.noworld = false
+                d.nomodel = false
+                d.dietime = CurTime() + 0.16
+            end
         end
 
+        -- ELight (model-only)
         if cvar_models_elight:GetBool() then
             local el = DynamicLight(idx, true)
             if el then
@@ -131,7 +131,7 @@ if CLIENT then
                 el.decay = decay
                 el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
                 el.minlight = 0
-                el.dietime = CurTime() + 0.1
+                el.dietime = CurTime() + 0.16
             end
         end
     end)

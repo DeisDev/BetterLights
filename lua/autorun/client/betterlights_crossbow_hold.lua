@@ -20,30 +20,28 @@ if CLIENT then
                math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
     end
 
+    local ATTACH_NAMES = { "muzzle", "bolt", "tip", "flash", "spark" }
     local function getHeldCrossbowPos(ply, wep)
         -- Prefer viewmodel attachment when in first-person
-        local vm = IsValid(ply) and ply:GetViewModel() or nil
-        if IsValid(vm) then
-            local idx = vm:LookupAttachment("muzzle") or 0
-            if idx <= 0 then idx = 1 end
-            local att = vm:GetAttachment(idx)
-            if att and att.Pos then return att.Pos end
+        if IsValid(ply) and ply == LocalPlayer() then
+            local vm = ply:GetViewModel()
+            if IsValid(vm) then
+                local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(vm, ATTACH_NAMES)
+                if pos then return pos end
+            end
         end
 
         -- Fallback to world model attachment
         if IsValid(wep) then
-            local idx = wep:LookupAttachment("muzzle") or 0
-            if idx > 0 then
-                local att = wep:GetAttachment(idx)
-                if att and att.Pos then return att.Pos end
-            end
+            local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(wep, ATTACH_NAMES)
+            if pos then return pos end
             -- Fallback to weapon position
             if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end
             return wep:GetPos()
         end
 
         -- Final fallback: player view position slightly forward
-        return LocalPlayer():EyePos() + LocalPlayer():EyeAngles():Forward() * 20
+        return ply:EyePos() + (ply.EyeAngles and ply:EyeAngles():Forward() * 20 or Vector(20, 0, 0))
     end
 
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
@@ -94,11 +92,11 @@ if CLIENT then
         -- World light (dlight) position: trace from EyePos so it doesn't clip into nearby walls
         local eye = ply:EyePos()
         local fwd = ply:EyeAngles():Forward()
-        local tr = util.TraceLine({
+        local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("xbow_hold", {
             start = eye,
             endpos = eye + fwd * 48,
             filter = { ply, wep }
-        })
+        })) or util.TraceLine({ start = eye, endpos = eye + fwd * 48, filter = { ply, wep } })
         local pos_world = tr.Hit and (tr.HitPos + tr.HitNormal * 6) or (eye + fwd * 24)
 
         -- Fallback if model pos failed

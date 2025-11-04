@@ -4,6 +4,15 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize frequently used globals to reduce global table lookups per frame
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
+    local ipairs = ipairs
+    local pairs = pairs
+    local insert = table.insert
+    local remove = table.remove
+    local timer_Simple = timer.Simple
     -- ConVars: in-flight glow
     local cvar_enable = CreateClientConVar("betterlights_antlion_spit_enable", "1", true, false, "Enable dynamic light for Antlion spit projectiles (grenade_spit)")
     local cvar_size = CreateClientConVar("betterlights_antlion_spit_size", "100", true, false, "Dynamic light radius for Antlion spit")
@@ -45,7 +54,7 @@ if CLIENT then
     hook.Add("OnEntityCreated", "BetterLights_AntlionSpit_TrackSpawn", function(ent)
         -- Keep this for older GMod without our core loaded very early
         if BetterLights and BetterLights._classes and BetterLights._classes[TARGET_CLASS] then return end
-        timer.Simple(0, function()
+    timer_Simple(0, function()
             if not IsValid(ent) then return end
             local cls = (ent.GetClass and ent:GetClass()) or ""
             if cls == TARGET_CLASS then
@@ -55,7 +64,7 @@ if CLIENT then
     end)
 
     -- Seed existing on load
-    timer.Simple(0, function()
+    timer_Simple(0, function()
         if BL.ForEach then
             BL.ForEach(TARGET_CLASS, function(ent) BL_Spit_Tracked[ent] = { spawn = CurTime() } end)
         else
@@ -93,81 +102,107 @@ if CLIENT then
         end
     end)
 
-    -- Continuous glow while in flight
-    -- Use centralized Think aggregator (fallback to hook.Add("Think", ...))
+    -- Consolidated Think: handle both in-flight glow and queued impact flashes
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_AntlionSpit_GlowThink", function()
-        if not cvar_enable:GetBool() then return end
+    AddThink("BetterLights_AntlionSpit", function()
+        local doGlow = cvar_enable:GetBool()
+        local doFlash = cvar_flash_enable:GetBool()
 
-        local size = math.max(0, cvar_size:GetFloat())
-        local brightness = math.max(0, cvar_brightness:GetFloat())
-        local decay = math.max(0, cvar_decay:GetFloat())
+        -- Precompute colors once per frame
+        local gr, gg, gb = getGlowColor()
+        local fr, fg, fb = getFlashColor()
 
-        for ent, info in pairs(BL_Spit_Tracked) do
-            if not IsValid(ent) then
-                BL_Spit_Tracked[ent] = nil
+        if doGlow then
+            local size = math.max(0, cvar_size:GetFloat())
+            local brightness = math.max(0, cvar_brightness:GetFloat())
+            local decay = math.max(0, cvar_decay:GetFloat())
+
+            -- Iterate currently tracked grenade_spit via core; ensure BL_Spit_Tracked has spawn times
+            if BL.ForEach then
+                BL.ForEach(TARGET_CLASS, function(ent)
+                    if not IsValid(ent) then return end
+                    if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = { spawn = CurTime() } end
+
+                    local pos
+                    if ent.LocalToWorld and ent.OBBCenter then
+                        pos = ent:LocalToWorld(ent:OBBCenter())
+                    elseif ent.WorldSpaceCenter then
+                        pos = ent:WorldSpaceCenter()
+                    else
+                        pos = ent:GetPos()
+                    end
+
+                    local d = DynamicLight(ent:EntIndex())
+                    if d then
+                        d.pos = pos
+                        d.r = gr
+                        d.g = gg
+                        d.b = gb
+                        d.brightness = brightness
+                        d.decay = decay
+                        d.size = size
+                        d.minlight = 0
+                        d.noworld = false
+                        d.nomodel = false
+                        d.dietime = CurTime() + 0.1
+                    end
+                end)
             else
-                local pos
-                if ent.LocalToWorld and ent.OBBCenter then
-                    pos = ent:LocalToWorld(ent:OBBCenter())
-                elseif ent.WorldSpaceCenter then
-                    pos = ent:WorldSpaceCenter()
-                else
-                    pos = ent:GetPos()
-                end
-
-                local d = DynamicLight(ent:EntIndex())
-                if d then
-                    local r, g, b = getGlowColor()
-                    d.pos = pos
-                    d.r = r
-                    d.g = g
-                    d.b = b
-                    d.brightness = brightness
-                    d.decay = decay
-                    d.size = size
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = CurTime() + 0.1
+                for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do
+                    if IsValid(ent) then
+                        if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = { spawn = CurTime() } end
+                        local d = DynamicLight(ent:EntIndex())
+                        if d then
+                            local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
+                            d.pos = pos
+                            d.r = gr
+                            d.g = gg
+                            d.b = gb
+                            d.brightness = brightness
+                            d.decay = decay
+                            d.size = size
+                            d.minlight = 0
+                            d.noworld = false
+                            d.nomodel = false
+                            d.dietime = CurTime() + 0.1
+                        end
+                    end
                 end
             end
+            -- Cleanup invalids in our spawn-time map
+            for ent, _ in pairs(BL_Spit_Tracked) do if not IsValid(ent) then BL_Spit_Tracked[ent] = nil end end
         end
-    end)
 
-    -- Render impact flashes
-    AddThink("BetterLights_AntlionSpit_FlashThink", function()
-        if not cvar_flash_enable:GetBool() then return end
-        if not BL_Spit_Flashes or #BL_Spit_Flashes == 0 then return end
+        -- Impact flashes
+        if doFlash and BL_Spit_Flashes and #BL_Spit_Flashes > 0 then
+            local now = CurTime()
+            local baseSize = math.max(0, cvar_flash_size:GetFloat())
+            local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
 
-        local now = CurTime()
-        local baseSize = math.max(0, cvar_flash_size:GetFloat())
-        local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
+            for i = #BL_Spit_Flashes, 1, -1 do
+                local f = BL_Spit_Flashes[i]
+                if not f or now >= f.die then
+                    remove(BL_Spit_Flashes, i)
+                else
+                    local dur = math.max(0.001, f.die - f.start)
+                    local t = (f.die - now) / dur -- 1 -> 0
+                    local b_eff = baseBright * t
+                    local s_eff = baseSize * (0.5 + 0.5 * t)
 
-        for i = #BL_Spit_Flashes, 1, -1 do
-            local f = BL_Spit_Flashes[i]
-            if not f or now >= f.die then
-                table.remove(BL_Spit_Flashes, i)
-            else
-                local dur = math.max(0.001, f.die - f.start)
-                local t = (f.die - now) / dur -- 1 -> 0
-                local b_eff = baseBright * t
-                local s_eff = baseSize * (0.5 + 0.5 * t)
-
-                local d = DynamicLight(f.id or (59400 + i))
-                if d then
-                    local r, g, b = getFlashColor()
-                    d.pos = f.pos
-                    d.r = r
-                    d.g = g
-                    d.b = b
-                    d.brightness = b_eff
-                    d.decay = 0
-                    d.size = s_eff
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = now + 0.05
+                    local d = DynamicLight(f.id or (59400 + i))
+                    if d then
+                        d.pos = f.pos
+                        d.r = fr
+                        d.g = fg
+                        d.b = fb
+                        d.brightness = b_eff
+                        d.decay = 0
+                        d.size = s_eff
+                        d.minlight = 0
+                        d.noworld = false
+                        d.nomodel = false
+                        d.dietime = now + 0.05
+                    end
                 end
             end
         end

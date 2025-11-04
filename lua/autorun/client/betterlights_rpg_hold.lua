@@ -20,31 +20,20 @@ if CLIENT then
                math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
     end
 
+    local ATTACH_NAMES = { "muzzle", "laser", "muzzle_flash" }
     local function getRPGModelLightPos(ply, wep)
         -- Prefer viewmodel attachments for first person, then worldmodel
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
-                local names = { "muzzle", "laser", "muzzle_flash" }
-                for _, name in ipairs(names) do
-                    local id = vm:LookupAttachment(name)
-                    if id and id > 0 then
-                        local att = vm:GetAttachment(id)
-                        if att and att.Pos then return att.Pos end
-                    end
-                end
+                local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(vm, ATTACH_NAMES)
+                if pos then return pos end
             end
         end
 
         if IsValid(wep) then
-            local names = { "muzzle", "laser", "muzzle_flash" }
-            for _, name in ipairs(names) do
-                local id = wep.LookupAttachment and wep:LookupAttachment(name)
-                if id and id > 0 then
-                    local att = wep.GetAttachment and wep:GetAttachment(id)
-                    if att and att.Pos then return att.Pos end
-                end
-            end
+            local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(wep, ATTACH_NAMES)
+            if pos then return pos end
             if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end
         end
 
@@ -108,11 +97,11 @@ if CLIENT then
         -- World light: place at the laser dot (aim hit point) using a long trace
         local startPos = ply.EyePos and ply:EyePos() or (ply.GetShootPos and ply:GetShootPos()) or wep:GetPos()
         local dir = ply.GetAimVector and ply:GetAimVector() or (ply.EyeAngles and ply:EyeAngles():Forward()) or Vector(1,0,0)
-        local tr = util.TraceLine({
+        local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("rpg_hold", {
             start = startPos,
             endpos = startPos + dir * 8192,
             filter = { ply, wep }
-        })
+        })) or util.TraceLine({ start = startPos, endpos = startPos + dir * 8192, filter = { ply, wep } })
         local pos_world
         if tr.Hit then
             pos_world = tr.HitPos + tr.HitNormal * 6

@@ -4,6 +4,10 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    -- Localize hot globals
+    local CurTime = CurTime
+    local IsValid = IsValid
+    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_grenade_enable", "1", true, false, "Enable dim red light on frag grenades (npc_grenade_frag)")
     local cvar_size = CreateClientConVar("betterlights_grenade_size", "80", true, false, "Dynamic light radius for frag grenades")
     local cvar_brightness = CreateClientConVar("betterlights_grenade_brightness", "0.9", true, false, "Dynamic light brightness for frag grenades")
@@ -27,7 +31,8 @@ if CLIENT then
     AddThink("BetterLights_Grenade_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        local size = math.max(0, cvar_size:GetFloat())
+    local r, g, b = getColor()
+    local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
@@ -48,7 +53,6 @@ if CLIENT then
                 local d = DynamicLight(idx)
                 if d then
                     d.pos = pos
-                    local r, g, b = getColor()
                     d.r = r
                     d.g = g
                     d.b = b
@@ -65,7 +69,6 @@ if CLIENT then
                     local el = DynamicLight(idx, true) -- elight for models
                     if el then
                         el.pos = pos
-                        local r, g, b = getColor()
                         el.r = r
                         el.g = g
                         el.b = b
