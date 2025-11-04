@@ -2,12 +2,15 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     local cvar_enable = CreateClientConVar("betterlights_cscanner_enable", "1", true, false, "Enable dynamic light for Combine Scanners (npc_cscanner)")
     local cvar_size = CreateClientConVar("betterlights_cscanner_size", "120", true, false, "Dynamic light radius for Combine Scanners")
     local cvar_brightness = CreateClientConVar("betterlights_cscanner_brightness", "0.7", true, false, "Dynamic light brightness for Combine Scanners")
     local cvar_decay = CreateClientConVar("betterlights_cscanner_decay", "2000", true, false, "Dynamic light decay for Combine Scanners")
     local cvar_models_elight = CreateClientConVar("betterlights_cscanner_models_elight", "1", true, false, "Also add an entity light (elight) to light the scanner model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_cscanner_models_elight_size_mult", "1.0", true, false, "Multiplier for scanner elight radius")
+    local cvar_update_hz = CreateClientConVar("betterlights_cscanner_update_hz", "30", true, false, "Update rate in Hz (15-120)")
 
     -- Glow color configuration
     local cvar_col_r = CreateClientConVar("betterlights_cscanner_color_r", "180", true, false, "Scanner glow color - red (0-255)")
@@ -41,16 +44,39 @@ if CLIENT then
     -- Keep projected textures per-entity (keyed by the entity for robust cleanup)
     local scannerProjectors = {}
 
-    hook.Add("Think", "BetterLights_CScanner_DLight", function()
+    if BL.TrackClass then
+        BL.TrackClass("npc_cscanner")
+        if GetConVar and GetConVar("betterlights_scanner_searchlight_include_clawscanner") then
+            BL.TrackClass("npc_clawscanner")
+        end
+    end
+
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_CScanner_DLight", function()
         -- Gather scanners (both types if requested)
-        local entsList = ents.FindByClass("npc_cscanner")
-        if cvar_sl_include_claw:GetBool() then
-            local claws = ents.FindByClass("npc_clawscanner")
-            if claws and #claws > 0 then
-                for _, e in ipairs(claws) do table.insert(entsList, e) end
+        -- Refresh cap
+        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+        BetterLights._nextTick = BetterLights._nextTick or {}
+        local now = CurTime()
+        local key = "CScanner_DLight"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
+        local entsList = {}
+        if BL.ForEach then
+            BL.ForEach("npc_cscanner", function(e) table.insert(entsList, e) end)
+            if cvar_sl_include_claw:GetBool() then
+                BL.ForEach("npc_clawscanner", function(e) table.insert(entsList, e) end)
+            end
+        else
+            entsList = ents.FindByClass("npc_cscanner") or {}
+            if cvar_sl_include_claw:GetBool() then
+                local claws = ents.FindByClass("npc_clawscanner")
+                if claws and #claws > 0 then
+                    for _, e in ipairs(claws) do table.insert(entsList, e) end
+                end
             end
         end
-        entsList = entsList or {}
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())

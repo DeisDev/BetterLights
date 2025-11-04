@@ -2,11 +2,14 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     -- ConVars
     local cvar_enable = CreateClientConVar("betterlights_magnusson_enable", "1", true, false, "Enable dynamic light for Magnusson devices (Strider Busters)")
     local cvar_size = CreateClientConVar("betterlights_magnusson_size", "130", true, false, "Dynamic light radius for Magnusson devices")
     local cvar_brightness = CreateClientConVar("betterlights_magnusson_brightness", "0.48", true, false, "Dynamic light brightness for Magnusson devices")
     local cvar_decay = CreateClientConVar("betterlights_magnusson_decay", "2000", true, false, "Dynamic light decay for Magnusson devices")
+    local cvar_update_hz = CreateClientConVar("betterlights_magnusson_update_hz", "30", true, false, "Update rate in Hz (15-120) for glow")
     local cvar_models_elight = CreateClientConVar("betterlights_magnusson_models_elight", "1", true, false, "Also add an entity light (elight) to light the device model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_magnusson_models_elight_size_mult", "1.0", true, false, "Multiplier for Magnusson device elight radius")
 
@@ -41,25 +44,13 @@ if CLIENT then
     local BL_Magnusson_Flashes = BL_Magnusson_Flashes or {}
     local BL_Magnusson_Tracked = BL_Magnusson_Tracked or {} -- maps ent -> spawnTime
 
-    -- Track magnusson devices as they spawn
-    hook.Add("OnEntityCreated", "BetterLights_Magnusson_TrackSpawn", function(ent)
-        -- Delay one tick to ensure class/model available
-        timer.Simple(0, function()
-            if not IsValid(ent) then return end
-            local cls = (ent.GetClass and ent:GetClass()) or ""
-            if cls == TARGET_CLASS then
-                BL_Magnusson_Tracked[ent] = CurTime()
-            end
-        end)
-    end)
-
-    -- Initial population (after load)
+    -- Use core tracking for class
+    if BL.TrackClass then BL.TrackClass(TARGET_CLASS) end
+    -- Seed from core on load
     timer.Simple(0, function()
-        for _, ent in ipairs(ents.GetAll()) do
-            local cls = (ent.GetClass and ent:GetClass()) or ""
-            if cls == TARGET_CLASS then
-                BL_Magnusson_Tracked[ent] = CurTime()
-            end
+        if BL.ForEach then BL.ForEach(TARGET_CLASS, function(ent) if IsValid(ent) then BL_Magnusson_Tracked[ent] = CurTime() end end)
+        else
+            for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do BL_Magnusson_Tracked[ent] = CurTime() end
         end
     end)
 
@@ -95,15 +86,25 @@ if CLIENT then
     end)
 
     -- Steady glow while active
-    hook.Add("Think", "BetterLights_Magnusson_DLight", function()
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_Magnusson_DLight", function()
         if not cvar_enable:GetBool() then return end
+
+        -- Refresh cap (glow)
+        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+        BetterLights._nextTick = BetterLights._nextTick or {}
+        local now = CurTime()
+        local key = "Magnusson_DLight"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
         -- Iterate tracked devices
-        for ent, spawnTime in pairs(BL_Magnusson_Tracked) do
+    for ent, spawnTime in pairs(BL_Magnusson_Tracked) do
             if not IsValid(ent) then
                 BL_Magnusson_Tracked[ent] = nil
             else
@@ -158,11 +159,18 @@ if CLIENT then
     end)
 
     -- Render short-lived explosion flashes
-    hook.Add("Think", "BetterLights_Magnusson_FlashThink", function()
+    local cvar_flash_update_hz = CreateClientConVar("betterlights_magnusson_flash_update_hz", "60", true, false, "Update rate in Hz (15-120) for flash fade")
+    AddThink("BetterLights_Magnusson_FlashThink", function()
         if not cvar_flash_enable:GetBool() then return end
         if not BL_Magnusson_Flashes or #BL_Magnusson_Flashes == 0 then return end
-
+        -- Refresh cap (flash fade)
+        local hz = math.Clamp(cvar_flash_update_hz:GetFloat(), 15, 120)
+        BetterLights._nextTick = BetterLights._nextTick or {}
         local now = CurTime()
+        local key = "Magnusson_FlashThink"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
         local baseSize = math.max(0, cvar_flash_size:GetFloat())
         local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
 

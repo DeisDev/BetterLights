@@ -2,10 +2,13 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     local cvar_enable = CreateClientConVar("betterlights_bolt_enable", "1", true, false, "Enable dynamic light for crossbow bolts")
     local cvar_size = CreateClientConVar("betterlights_bolt_size", "220", true, false, "Dynamic light radius for crossbow bolts")
     local cvar_brightness = CreateClientConVar("betterlights_bolt_brightness", "0.96", true, false, "Dynamic light brightness for crossbow bolts")
     local cvar_decay = CreateClientConVar("betterlights_bolt_decay", "2000", true, false, "Dynamic light decay for crossbow bolts")
+    local cvar_update_hz = CreateClientConVar("betterlights_bolt_update_hz", "30", true, false, "Update rate in Hz (15-120)")
 
     -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_bolt_color_r", "255", true, false, "Crossbow bolt color - red (0-255)")
@@ -17,17 +20,26 @@ if CLIENT then
                math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
     end
 
-    hook.Add("Think", "BetterLights_CrossbowBolt_DLight", function()
+    if BL.TrackClass then BL.TrackClass("crossbow_bolt") end
+
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_CrossbowBolt_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        local bolts = ents.FindByClass("crossbow_bolt")
-        if not bolts or #bolts == 0 then return end
+        -- Refresh cap
+        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+        BetterLights._nextTick = BetterLights._nextTick or {}
+        local now = CurTime()
+        local key = "CrossbowBolt_DLight"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
-        for _, ent in ipairs(bolts) do
+        local function update(ent)
             if IsValid(ent) then
                 local dlight = DynamicLight(ent:EntIndex())
                 if dlight then
@@ -45,6 +57,12 @@ if CLIENT then
                     dlight.dietime = CurTime() + 0.1
                 end
             end
+        end
+
+        if BL.ForEach then
+            BL.ForEach("crossbow_bolt", update)
+        else
+            for _, ent in ipairs(ents.FindByClass("crossbow_bolt")) do update(ent) end
         end
     end)
 end

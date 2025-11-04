@@ -2,10 +2,13 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     local cvar_enable = CreateClientConVar("betterlights_grenade_enable", "1", true, false, "Enable dim red light on frag grenades (npc_grenade_frag)")
     local cvar_size = CreateClientConVar("betterlights_grenade_size", "80", true, false, "Dynamic light radius for frag grenades")
     local cvar_brightness = CreateClientConVar("betterlights_grenade_brightness", "0.9", true, false, "Dynamic light brightness for frag grenades")
     local cvar_decay = CreateClientConVar("betterlights_grenade_decay", "1800", true, false, "Dynamic light decay for frag grenades")
+    local cvar_update_hz = CreateClientConVar("betterlights_grenade_update_hz", "30", true, false, "Update rate in Hz (15-120)")
     local cvar_models_elight = CreateClientConVar("betterlights_grenade_models_elight", "1", true, false, "Also add an entity light (elight) to light the grenade model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_grenade_models_elight_size_mult", "1.0", true, false, "Multiplier for grenade elight radius")
 
@@ -19,17 +22,26 @@ if CLIENT then
                math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
     end
 
-    hook.Add("Think", "BetterLights_Grenade_DLight", function()
+    if BL.TrackClass then BL.TrackClass("npc_grenade_frag") end
+
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_Grenade_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        local grenades = ents.FindByClass("npc_grenade_frag")
-        if not grenades or #grenades == 0 then return end
+        -- Refresh cap
+        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+        BetterLights._nextTick = BetterLights._nextTick or {}
+        local now = CurTime()
+        local key = "Grenade_DLight"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
-        for _, n in ipairs(grenades) do
+        local function update(n)
             if IsValid(n) then
                 -- Position at the grenade's center so it lights itself and nearby surfaces
                 local pos
@@ -75,6 +87,12 @@ if CLIENT then
                     end
                 end
             end
+        end
+
+        if BL.ForEach then
+            BL.ForEach("npc_grenade_frag", update)
+        else
+            for _, n in ipairs(ents.FindByClass("npc_grenade_frag")) do update(n) end
         end
     end)
 end

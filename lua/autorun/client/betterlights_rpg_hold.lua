@@ -2,10 +2,13 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     local cvar_enable = CreateClientConVar("betterlights_rpg_hold_enable", "1", true, false, "Enable subtle red lights on the RPG while held")
     local cvar_size = CreateClientConVar("betterlights_rpg_hold_size", "24", true, false, "Dynamic light radius for held RPG lights")
     local cvar_brightness = CreateClientConVar("betterlights_rpg_hold_brightness", "0.22", true, false, "Dynamic light brightness for held RPG lights")
     local cvar_decay = CreateClientConVar("betterlights_rpg_hold_decay", "2000", true, false, "Dynamic light decay for held RPG lights")
+    local cvar_update_hz = CreateClientConVar("betterlights_rpg_hold_update_hz", "30", true, false, "Update rate in Hz (15-120)")
     -- Elight removed per request; weapon/hand glow now uses a hand-attached world dlight
 
     -- Color configuration (subtle red)
@@ -89,8 +92,17 @@ if CLIENT then
         return getRPGModelLightPos(ply, wep)
     end
 
-    hook.Add("Think", "BetterLights_RPG_Held_DLight", function()
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_RPG_Held_DLight", function()
         if not cvar_enable:GetBool() then return end
+    -- Refresh cap
+    local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+    BetterLights._nextTick = BetterLights._nextTick or {}
+    local now = CurTime()
+    local key = "RPG_Held_DLight"
+    local nxt = BetterLights._nextTick[key] or 0
+    if now < nxt then return end
+    BetterLights._nextTick[key] = now + (1 / hz)
 
         local ply = LocalPlayer()
         if not IsValid(ply) then return end

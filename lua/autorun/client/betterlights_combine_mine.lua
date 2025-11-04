@@ -2,11 +2,14 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     local cvar_enable = CreateClientConVar("betterlights_combine_mine_enable", "1", true, false, "Enable dynamic light for Combine Mines when the player is nearby")
     local cvar_range = CreateClientConVar("betterlights_combine_mine_range", "260", true, false, "Distance at which the mine starts glowing (units)")
     local cvar_size_alert = CreateClientConVar("betterlights_combine_mine_size", "140", true, false, "Dynamic light radius for alert mines")
     local cvar_brightness_alert = CreateClientConVar("betterlights_combine_mine_brightness", "1.2", true, false, "Dynamic light brightness for alert mines")
     local cvar_decay = CreateClientConVar("betterlights_combine_mine_decay", "2000", true, false, "Dynamic light decay for Combine Mines")
+    local cvar_update_hz = CreateClientConVar("betterlights_combine_mine_update_hz", "30", true, false, "Update rate in Hz (15-120)")
 
     local cvar_idle_enable = CreateClientConVar("betterlights_combine_mine_idle_enable", "1", true, false, "Also emit a very dim idle glow when out of range")
     local cvar_size_idle = CreateClientConVar("betterlights_combine_mine_idle_size", "80", true, false, "Dynamic light radius for idle mines")
@@ -37,11 +40,19 @@ if CLIENT then
                math.Clamp(math.floor(cvar_alert_b:GetFloat() + 0.5), 0, 255)
     end
 
-    hook.Add("Think", "BetterLights_CombineMine_DLight", function()
-        if not cvar_enable:GetBool() then return end
+    if BL.TrackClass then BL.TrackClass("combine_mine") end
 
-        local mines = ents.FindByClass("combine_mine")
-        if not mines or #mines == 0 then return end
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_CombineMine_DLight", function()
+        if not cvar_enable:GetBool() then return end
+    -- Refresh cap
+    local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+    BetterLights._nextTick = BetterLights._nextTick or {}
+    local now = CurTime()
+    local key = "CombineMine_DLight"
+    local nxt = BetterLights._nextTick[key] or 0
+    if now < nxt then return end
+    BetterLights._nextTick[key] = now + (1 / hz)
 
         local lp = LocalPlayer()
         if not IsValid(lp) then return end
@@ -50,7 +61,7 @@ if CLIENT then
         local range = math.max(0, cvar_range:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
-        for _, mine in ipairs(mines) do
+        local function update(mine)
             if IsValid(mine) then
                 local pos
                 if mine.OBBCenter and mine.LocalToWorld then
@@ -117,6 +128,12 @@ if CLIENT then
                     end
                 end
             end
+        end
+
+        if BL.ForEach then
+            BL.ForEach("combine_mine", update)
+        else
+            for _, mine in ipairs(ents.FindByClass("combine_mine")) do update(mine) end
         end
     end)
 end

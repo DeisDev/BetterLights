@@ -7,6 +7,7 @@ if CLIENT then
     local cvar_size = CreateClientConVar("betterlights_explosion_flash_size", "380", true, false, "Generic explosion flash radius")
     local cvar_brightness = CreateClientConVar("betterlights_explosion_flash_brightness", "4.6", true, false, "Generic explosion flash brightness")
     local cvar_time = CreateClientConVar("betterlights_explosion_flash_time", "0.18", true, false, "Generic explosion flash duration (seconds)")
+    local cvar_update_hz = CreateClientConVar("betterlights_explosion_flash_update_hz", "60", true, false, "Update rate in Hz (15-120) for flash fade")
     -- Color config (incremental RGB support)
     local cvar_r = CreateClientConVar("betterlights_explosion_flash_color_r", "255", true, false, "Explosion flash color - red component (0-255)")
     local cvar_g = CreateClientConVar("betterlights_explosion_flash_color_g", "210", true, false, "Explosion flash color - green component (0-255)")
@@ -85,7 +86,15 @@ if CLIENT then
     hook.Add("Think", "BetterLights_ExplosionFlash_Think", function()
         if not cvar_enable:GetBool() then return end
         if not flashes or #flashes == 0 then return end
+        -- Refresh cap
+        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+        BetterLights = BetterLights or {}
+        BetterLights._nextTick = BetterLights._nextTick or {}
         local now = CurTime()
+        local key = "ExplosionFlash_Think"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
         local baseSize = math.max(0, cvar_size:GetFloat())
         local baseBright = math.max(0, cvar_brightness:GetFloat())
         local cr, cg, cb = getFlashColor()

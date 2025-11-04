@@ -2,11 +2,14 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     -- ConVars: in-flight glow
     local cvar_enable = CreateClientConVar("betterlights_antlion_spit_enable", "1", true, false, "Enable dynamic light for Antlion spit projectiles (grenade_spit)")
     local cvar_size = CreateClientConVar("betterlights_antlion_spit_size", "100", true, false, "Dynamic light radius for Antlion spit")
     local cvar_brightness = CreateClientConVar("betterlights_antlion_spit_brightness", "1.0", true, false, "Dynamic light brightness for Antlion spit")
     local cvar_decay = CreateClientConVar("betterlights_antlion_spit_decay", "1800", true, false, "Dynamic light decay for Antlion spit")
+    local cvar_update_hz = CreateClientConVar("betterlights_antlion_spit_update_hz", "30", true, false, "Update rate in Hz (15-120) for glow")
 
     -- ConVars: impact flash
     local cvar_flash_enable = CreateClientConVar("betterlights_antlion_spit_flash_enable", "1", true, false, "Add a brief light flash when Antlion spit impacts")
@@ -39,7 +42,10 @@ if CLIENT then
     local BL_Spit_Flashes = BL_Spit_Flashes or {}
 
     -- Track newly created spit
+    if BL.TrackClass then BL.TrackClass(TARGET_CLASS) end
     hook.Add("OnEntityCreated", "BetterLights_AntlionSpit_TrackSpawn", function(ent)
+        -- Keep this for older GMod without our core loaded very early
+        if BetterLights and BetterLights._classes and BetterLights._classes[TARGET_CLASS] then return end
         timer.Simple(0, function()
             if not IsValid(ent) then return end
             local cls = (ent.GetClass and ent:GetClass()) or ""
@@ -51,9 +57,11 @@ if CLIENT then
 
     -- Seed existing on load
     timer.Simple(0, function()
-        for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do
-            if IsValid(ent) then
-                BL_Spit_Tracked[ent] = { spawn = CurTime() }
+        if BL.ForEach then
+            BL.ForEach(TARGET_CLASS, function(ent) BL_Spit_Tracked[ent] = { spawn = CurTime() } end)
+        else
+            for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do
+                if IsValid(ent) then BL_Spit_Tracked[ent] = { spawn = CurTime() } end
             end
         end
     end)
@@ -87,8 +95,19 @@ if CLIENT then
     end)
 
     -- Continuous glow while in flight
-    hook.Add("Think", "BetterLights_AntlionSpit_GlowThink", function()
+    -- Use centralized Think aggregator (fallback to hook.Add("Think", ...))
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_AntlionSpit_GlowThink", function()
         if not cvar_enable:GetBool() then return end
+
+        -- Refresh cap (glow)
+        local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+        BetterLights._nextTick = BetterLights._nextTick or {}
+        local now = CurTime()
+        local key = "AntlionSpit_GlowThink"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
@@ -127,11 +146,18 @@ if CLIENT then
     end)
 
     -- Render impact flashes
-    hook.Add("Think", "BetterLights_AntlionSpit_FlashThink", function()
+    local cvar_flash_update_hz = CreateClientConVar("betterlights_antlion_spit_flash_update_hz", "60", true, false, "Update rate in Hz (15-120) for flash fade")
+    AddThink("BetterLights_AntlionSpit_FlashThink", function()
         if not cvar_flash_enable:GetBool() then return end
         if not BL_Spit_Flashes or #BL_Spit_Flashes == 0 then return end
-
+        -- Refresh cap (flash fade)
+        local hz = math.Clamp(cvar_flash_update_hz:GetFloat(), 15, 120)
+        BetterLights._nextTick = BetterLights._nextTick or {}
         local now = CurTime()
+        local key = "AntlionSpit_FlashThink"
+        local nxt = BetterLights._nextTick[key] or 0
+        if now < nxt then return end
+        BetterLights._nextTick[key] = now + (1 / hz)
         local baseSize = math.max(0, cvar_flash_size:GetFloat())
         local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
 

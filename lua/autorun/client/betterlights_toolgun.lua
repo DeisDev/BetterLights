@@ -2,10 +2,13 @@
 -- Client-side only
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
     local cvar_enable = CreateClientConVar("betterlights_toolgun_enable", "1", true, false, "Enable small white dynamic light for the Tool Gun (gmod_tool)")
     local cvar_size = CreateClientConVar("betterlights_toolgun_size", "28", true, false, "Dynamic light radius for the Tool Gun")
     local cvar_brightness = CreateClientConVar("betterlights_toolgun_brightness", "0.225", true, false, "Dynamic light brightness for the Tool Gun")
     local cvar_decay = CreateClientConVar("betterlights_toolgun_decay", "2000", true, false, "Dynamic light decay for the Tool Gun")
+    local cvar_update_hz = CreateClientConVar("betterlights_toolgun_update_hz", "30", true, false, "Update rate in Hz (15-120)")
     local cvar_models_elight = CreateClientConVar("betterlights_toolgun_models_elight", "1", true, false, "Also add an entity light (elight) to light the Tool Gun model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_toolgun_models_elight_size_mult", "1.0", true, false, "Multiplier for Tool Gun elight radius")
 
@@ -54,8 +57,17 @@ if CLIENT then
         return IsValid(wep) and wep:GetPos() or Vector(0, 0, 0)
     end
 
-    hook.Add("Think", "BetterLights_ToolGun_DLight", function()
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_ToolGun_DLight", function()
         if not cvar_enable:GetBool() then return end
+    -- Refresh cap
+    local hz = math.Clamp(cvar_update_hz:GetFloat(), 15, 120)
+    BetterLights._nextTick = BetterLights._nextTick or {}
+    local now = CurTime()
+    local key = "ToolGun_DLight"
+    local nxt = BetterLights._nextTick[key] or 0
+    if now < nxt then return end
+    BetterLights._nextTick[key] = now + (1 / hz)
 
         local ply = LocalPlayer()
         if not IsValid(ply) then return end
