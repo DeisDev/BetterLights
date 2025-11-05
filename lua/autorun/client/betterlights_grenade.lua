@@ -19,11 +19,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_grenade_color_r", "255", true, false, "Frag grenade color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_grenade_color_g", "40", true, false, "Frag grenade color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_grenade_color_b", "40", true, false, "Frag grenade color - blue (0-255)")
-    local function getColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     if BL.TrackClass then BL.TrackClass("npc_grenade_frag") end
 
@@ -31,54 +26,28 @@ if CLIENT then
     AddThink("BetterLights_Grenade_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-    local r, g, b = getColor()
-    local size = math.max(0, cvar_size:GetFloat())
+        -- Cache ConVar values once per frame
+        local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        local doElight = cvar_models_elight:GetBool()
+        local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
 
         local function update(n)
-            if IsValid(n) then
-                -- Position at the grenade's center so it lights itself and nearby surfaces
-                local pos
-                if n.OBBCenter and n.LocalToWorld then
-                    pos = n:LocalToWorld(n:OBBCenter())
-                elseif n.WorldSpaceCenter then
-                    pos = n:WorldSpaceCenter()
-                else
-                    pos = n:GetPos()
-                end
+            if not IsValid(n) then return end
 
-                local idx = n:EntIndex()
+            local pos = BL.GetEntityCenter(n)
+            if not pos then return end
 
-                local d = DynamicLight(idx)
-                if d then
-                    d.pos = pos
-                    d.r = r
-                    d.g = g
-                    d.b = b
-                    d.brightness = brightness
-                    d.decay = decay
-                    d.size = size
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = CurTime() + 0.1
-                end
+            local idx = n:EntIndex()
 
-                if cvar_models_elight:GetBool() then
-                    local el = DynamicLight(idx, true) -- elight for models
-                    if el then
-                        el.pos = pos
-                        el.r = r
-                        el.g = g
-                        el.b = b
-                        el.brightness = brightness
-                        el.decay = decay
-                        el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
-                        el.minlight = 0
-                        el.dietime = CurTime() + 0.1
-                    end
-                end
+            -- Create world light
+            BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
+
+            -- Create entity light if enabled
+            if doElight then
+                BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * elMult, true)
             end
         end
 

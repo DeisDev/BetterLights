@@ -2,6 +2,9 @@
 -- Client-only receiver; server gathers hits and broadcasts them.
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
+    
     -- Client config
     local cvar_enable = CreateClientConVar("betterlights_bullet_impact_enable", "1", true, false, "Enable subtle dynamic light on bullet impacts")
     local cvar_size = CreateClientConVar("betterlights_bullet_impact_size", "60", true, false, "Dynamic light radius for generic bullet impacts")
@@ -19,17 +22,6 @@ if CLIENT then
     local cvar_ar2_col_r = CreateClientConVar("betterlights_bullet_impact_ar2_color_r", "110", true, false, "AR2 bullet impact color - red (0-255)")
     local cvar_ar2_col_g = CreateClientConVar("betterlights_bullet_impact_ar2_color_g", "190", true, false, "AR2 bullet impact color - green (0-255)")
     local cvar_ar2_col_b = CreateClientConVar("betterlights_bullet_impact_ar2_color_b", "255", true, false, "AR2 bullet impact color - blue (0-255)")
-
-    local function getGenericColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
-    local function getAR2Color()
-        return math.Clamp(math.floor(cvar_ar2_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_ar2_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_ar2_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     -- Ensure each impact gets a unique DynamicLight ID so multiple pellets don't overwrite each other.
     local __bl_dl_counter = 0
@@ -54,10 +46,10 @@ if CLIENT then
         local isAR2 = net.ReadBool()
 
         if isAR2 and cvar_ar2_enable:GetBool() then
-            local r, g, b = getAR2Color()
+            local r, g, b = BL.GetColorFromCvars(cvar_ar2_col_r, cvar_ar2_col_g, cvar_ar2_col_b)
             spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_ar2_size:GetFloat(), cvar_ar2_brightness:GetFloat(), cvar_decay:GetFloat())
         else
-            local r, g, b = getGenericColor()
+            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
             spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_size:GetFloat(), cvar_brightness:GetFloat(), cvar_decay:GetFloat())
         end
     end)

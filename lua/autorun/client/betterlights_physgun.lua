@@ -22,25 +22,6 @@ if CLIENT then
     local cvar_col_g = CreateClientConVar("betterlights_physgun_color_g", "130", true, false, "Physgun override color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_physgun_color_b", "255", true, false, "Physgun override color - blue (0-255)")
 
-    local function getPhysgunColorRGB()
-        if cvar_col_override:GetBool() then
-            local r = math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255)
-            local g = math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255)
-            local b = math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-            return r, g, b
-        end
-        local ply = LocalPlayer()
-        if not IsValid(ply) then return 70, 130, 255 end -- fallback cyan-ish
-        local v = ply.GetWeaponColor and ply:GetWeaponColor()
-        if not v then return 70, 130, 255 end
-        -- Clamp to [0,1] and convert to 0-255
-        local r = math.Clamp(v.x or v.X or 0, 0, 1) * 255
-        local g = math.Clamp(v.y or v.Y or 0, 0, 1) * 255
-        local b = math.Clamp(v.z or v.Z or 0, 0, 1) * 255
-        -- Ensure minimum visibility
-        return math.floor(r), math.floor(g), math.floor(b)
-    end
-
     local ATTACH_NAMES = { "muzzle", "fork", "muzzle_flash", "laser" }
     local function getPhysgunLightPos(ply, wep)
         -- Try viewmodel muzzle in first person, then worldmodel attachments, then fallbacks
@@ -71,15 +52,31 @@ if CLIENT then
 
         local ply = LocalPlayer()
         if not IsValid(ply) then return end
+        if not BL.IsPlayerHoldingWeapon("weapon_physgun") then return end
 
         local wep = ply:GetActiveWeapon()
-        if not IsValid(wep) or wep:GetClass() ~= "weapon_physgun" then return end
 
-    -- No throttling (always update every frame)
-
-    local size = math.max(0, cvar_size:GetFloat())
+        local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local doElight = cvar_models_elight:GetBool()
+        local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+
+        -- Get color: either override or weapon color
+        local r, g, b
+        if cvar_col_override:GetBool() then
+            r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        else
+            -- Use weapon color
+            local v = ply.GetWeaponColor and ply:GetWeaponColor()
+            if v then
+                r = math.floor(math.Clamp(v.x or v.X or 0, 0, 1) * 255)
+                g = math.floor(math.Clamp(v.y or v.Y or 0, 0, 1) * 255)
+                b = math.floor(math.Clamp(v.z or v.Z or 0, 0, 1) * 255)
+            else
+                r, g, b = 70, 130, 255 -- fallback cyan-ish
+            end
+        end
 
         -- Model light position (for elight): use viewmodel/worldmodel attachments when possible
         local pos_model = getPhysgunLightPos(ply, wep)
@@ -96,31 +93,28 @@ if CLIENT then
         
         -- Fallback if model pos failed
         if not pos_model then pos_model = pos_world end
-        local r, g, b = getPhysgunColorRGB()
 
         -- Use a stable index separate from other features (offset from player index)
         local idx = ply:EntIndex() + 1440
 
         -- DLight (world/model)
-        do
-            local d = DynamicLight(idx)
-            if d then
-                d.pos = pos_world
-                d.r = r
-                d.g = g
-                d.b = b
-                d.brightness = brightness
-                d.decay = decay
-                d.size = size
-                d.minlight = 0
-                d.noworld = false
-                d.nomodel = false
-                d.dietime = CurTime() + 0.16
-            end
+        local d = DynamicLight(idx)
+        if d then
+            d.pos = pos_world
+            d.r = r
+            d.g = g
+            d.b = b
+            d.brightness = brightness
+            d.decay = decay
+            d.size = size
+            d.minlight = 0
+            d.noworld = false
+            d.nomodel = false
+            d.dietime = CurTime() + 0.16
         end
 
         -- ELight (model-only)
-        if cvar_models_elight:GetBool() then
+        if doElight then
             local el = DynamicLight(idx, true)
             if el then
                 el.pos = pos_model
@@ -129,7 +123,7 @@ if CLIENT then
                 el.b = b
                 el.brightness = brightness
                 el.decay = decay
-                el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
+                el.size = size * elMult
                 el.minlight = 0
                 el.dietime = CurTime() + 0.16
             end

@@ -16,7 +16,7 @@ if CLIENT then
     local cvar_flash_enable = CreateClientConVar("betterlights_magnusson_flash_enable", "1", true, false, "Add a brief light flash when a Magnusson device explodes")
     local cvar_flash_size = CreateClientConVar("betterlights_magnusson_flash_size", "360", true, false, "Explosion flash radius for Magnusson devices")
     local cvar_flash_brightness = CreateClientConVar("betterlights_magnusson_flash_brightness", "2.2", true, false, "Explosion flash brightness for Magnusson devices")
-    local cvar_flash_time = CreateClientConVar("betterlights_magnusson_flash_time", "0.14", true, false, "Duration of the explosion flash (seconds)")
+    local cvar_flash_time = CreateClientConVar("betterlights_magnusson_flash_time", "2.0", true, false, "Duration of the explosion flash (seconds)")
 
     -- Color configuration (light blue by default)
     local cvar_col_r = CreateClientConVar("betterlights_magnusson_color_r", "130", true, false, "Magnusson device glow color - red (0-255)")
@@ -25,16 +25,6 @@ if CLIENT then
     local cvar_flash_r = CreateClientConVar("betterlights_magnusson_flash_color_r", "180", true, false, "Magnusson flash color - red (0-255)")
     local cvar_flash_g = CreateClientConVar("betterlights_magnusson_flash_color_g", "220", true, false, "Magnusson flash color - green (0-255)")
     local cvar_flash_b = CreateClientConVar("betterlights_magnusson_flash_color_b", "255", true, false, "Magnusson flash color - blue (0-255)")
-    local function getGlowColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
-    local function getFlashColor()
-        return math.Clamp(math.floor(cvar_flash_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_b:GetFloat() + 0.5), 0, 255)
-    end
 
     -- Exact classname for Strider Buster in GMod
     local TARGET_CLASS = "weapon_striderbuster"
@@ -45,12 +35,22 @@ if CLIENT then
 
     -- Use core tracking for class
     if BL.TrackClass then BL.TrackClass(TARGET_CLASS) end
+    
     -- Seed from core on load
     timer.Simple(0, function()
         if BL.ForEach then BL.ForEach(TARGET_CLASS, function(ent) if IsValid(ent) then BL_Magnusson_Tracked[ent] = CurTime() end end)
         else
             for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do BL_Magnusson_Tracked[ent] = CurTime() end
         end
+    end)
+
+    -- Track newly created devices
+    hook.Add("OnEntityCreated", "BetterLights_Magnusson_Track", function(ent)
+        timer.Simple(0, function()
+            if IsValid(ent) and ent:GetClass() == TARGET_CLASS then
+                BL_Magnusson_Tracked[ent] = CurTime()
+            end
+        end)
     end)
 
     -- Flash on removal (explosion)
@@ -61,23 +61,17 @@ if CLIENT then
         if BL_Magnusson_Tracked[ent] ~= nil then
             BL_Magnusson_Tracked[ent] = nil
         end
-    local class = (ent.GetClass and ent:GetClass()) or ""
-    if class ~= TARGET_CLASS then return end
+        local class = (ent.GetClass and ent:GetClass()) or ""
+        if class ~= TARGET_CLASS then return end
         if not cvar_flash_enable:GetBool() then return end
 
-    -- Avoid spawn flashes: only flash if it existed for some time
-    local now = CurTime()
-    local spawnTime = BL_Magnusson_Tracked[ent] or (ent.GetCreationTime and ent:GetCreationTime()) or now
-    if (now - spawnTime) < 0.2 then return end
+        -- Avoid spawn flashes: only flash if it existed for some time
+        local now = CurTime()
+        local spawnTime = BL_Magnusson_Tracked[ent] or (ent.GetCreationTime and ent:GetCreationTime()) or now
+        if (now - spawnTime) < 0.2 then return end
 
-        local pos
-        if ent.OBBCenter and ent.LocalToWorld then
-            pos = ent:LocalToWorld(ent:OBBCenter())
-        elseif ent.WorldSpaceCenter then
-            pos = ent:WorldSpaceCenter()
-        else
-            pos = ent:GetPos()
-        end
+        local pos = BL.GetEntityCenter(ent)
+        if not pos then return end
 
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
@@ -92,9 +86,14 @@ if CLIENT then
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local doElight = cvar_models_elight:GetBool()
+        local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+
+        -- Cache colors once per frame
+        local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         -- Iterate tracked devices
-    for ent, spawnTime in pairs(BL_Magnusson_Tracked) do
+        for ent, spawnTime in pairs(BL_Magnusson_Tracked) do
             if not IsValid(ent) then
                 BL_Magnusson_Tracked[ent] = nil
             else
@@ -102,47 +101,17 @@ if CLIENT then
                 if cls ~= TARGET_CLASS then
                     BL_Magnusson_Tracked[ent] = nil
                 else
-                local idx = ent:EntIndex()
-                local pos
-                if ent.OBBCenter and ent.LocalToWorld then
-                    pos = ent:LocalToWorld(ent:OBBCenter())
-                elseif ent.WorldSpaceCenter then
-                    pos = ent:WorldSpaceCenter()
-                else
-                    pos = ent:GetPos()
-                end
+                    local idx = ent:EntIndex()
+                    local pos = BL.GetEntityCenter(ent)
+                    if pos then
+                        -- Create world light
+                        BL.CreateDLight(idx, pos, gr, gg, gb, brightness, decay, size, false)
 
-                local d = DynamicLight(idx)
-                if d then
-                    local r, g, b = getGlowColor()
-                    d.pos = pos
-                    d.r = r
-                    d.g = g
-                    d.b = b
-                    d.brightness = brightness
-                    d.decay = decay
-                    d.size = size
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = CurTime() + 0.1
-                end
-
-                if cvar_models_elight:GetBool() then
-                    local el = DynamicLight(idx, true)
-                    if el then
-                        el.pos = pos
-                        local r, g, b = getGlowColor()
-                        el.r = r
-                        el.g = g
-                        el.b = b
-                        el.brightness = brightness
-                        el.decay = decay
-                        el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
-                        el.minlight = 0
-                        el.dietime = CurTime() + 0.1
+                        -- Create entity light if enabled
+                        if doElight then
+                            BL.CreateDLight(idx, pos, gr, gg, gb, brightness, decay, size * elMult, true)
+                        end
                     end
-                end
                 end
             end
         end
@@ -157,6 +126,9 @@ if CLIENT then
         local baseSize = math.max(0, cvar_flash_size:GetFloat())
         local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
 
+        -- Cache flash color once per frame
+        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
+
         for i = #BL_Magnusson_Flashes, 1, -1 do
             local f = BL_Magnusson_Flashes[i]
             if not f or now >= f.die then
@@ -169,11 +141,10 @@ if CLIENT then
 
                 local d = DynamicLight(f.id or (60000 + i))
                 if d then
-                    local r, g, b = getFlashColor()
                     d.pos = f.pos
-                    d.r = r
-                    d.g = g
-                    d.b = b
+                    d.r = fr
+                    d.g = fg
+                    d.b = fb
                     d.brightness = b_eff
                     d.decay = 0
                     d.size = s_eff

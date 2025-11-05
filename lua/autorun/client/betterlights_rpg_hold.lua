@@ -14,11 +14,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_rpg_hold_color_r", "255", true, false, "RPG (Held) color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_rpg_hold_color_g", "60", true, false, "RPG (Held) color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_rpg_hold_color_b", "60", true, false, "RPG (Held) color - blue (0-255)")
-    local function getColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     local ATTACH_NAMES = { "muzzle", "laser", "muzzle_flash" }
     local function getRPGModelLightPos(ply, wep)
@@ -86,13 +81,15 @@ if CLIENT then
 
         local ply = LocalPlayer()
         if not IsValid(ply) then return end
+        if not BL.IsPlayerHoldingWeapon("weapon_rpg") then return end
 
         local wep = ply:GetActiveWeapon()
-        if not IsValid(wep) or wep:GetClass() ~= "weapon_rpg" then return end
-
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+
+        -- Cache color once per frame
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         -- World light: place at the laser dot (aim hit point) using a long trace
         local startPos = ply.EyePos and ply:EyePos() or (ply.GetShootPos and ply:GetShootPos()) or wep:GetPos()
@@ -108,8 +105,6 @@ if CLIENT then
         else
             pos_world = startPos + dir * 1024
         end
-
-        local r, g, b = getColor()
 
         -- Stable index per player
         local idx = ply:EntIndex() + 1520

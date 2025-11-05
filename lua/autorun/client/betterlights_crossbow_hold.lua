@@ -14,11 +14,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_crossbow_hold_color_r", "255", true, false, "Crossbow (held) color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_crossbow_hold_color_g", "140", true, false, "Crossbow (held) color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_crossbow_hold_color_b", "40", true, false, "Crossbow (held) color - blue (0-255)")
-    local function getColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     local ATTACH_NAMES = { "muzzle", "bolt", "tip", "flash", "spark" }
     local function getHeldCrossbowPos(ply, wep)
@@ -50,13 +45,15 @@ if CLIENT then
 
         local ply = LocalPlayer()
         if not IsValid(ply) or not ply:Alive() then return end
+        if not BL.IsPlayerHoldingWeapon("weapon_crossbow") then return end
 
         local wep = ply:GetActiveWeapon()
-        if not IsValid(wep) or wep:GetClass() ~= "weapon_crossbow" then return end
-
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+
+        -- Cache color once per frame
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         if cvar_require_loaded:GetBool() then
             -- Determine if the crossbow currently has a bolt loaded
@@ -105,7 +102,6 @@ if CLIENT then
         local dlight = DynamicLight(ply:EntIndex() + 1337) -- offset to avoid collisions
         if dlight then
             dlight.pos = pos_world
-            local r, g, b = getColor()
             dlight.r = r
             dlight.g = g
             dlight.b = b

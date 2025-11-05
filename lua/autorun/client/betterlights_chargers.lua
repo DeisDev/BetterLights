@@ -26,13 +26,6 @@ if CLIENT then
     local hc_g = CreateClientConVar("betterlights_healthcharger_color_g", "190", true, false, "Health charger color - green (0-255)")
     local hc_b = CreateClientConVar("betterlights_healthcharger_color_b", "255", true, false, "Health charger color - blue (0-255)")
 
-    local function readRGB(r, g, b)
-        local cr = math.Clamp(math.floor(r:GetFloat() + 0.5), 0, 255)
-        local cg = math.Clamp(math.floor(g:GetFloat() + 0.5), 0, 255)
-        local cb = math.Clamp(math.floor(b:GetFloat() + 0.5), 0, 255)
-        return cr, cg, cb
-    end
-
     local function process(class, en, sz, br, de, el, elmult, rcv, gcv, bcv)
         if not en:GetBool() then return end
         local list
@@ -45,50 +38,26 @@ if CLIENT then
             list = ents.FindByClass(class)
             if not list or #list == 0 then return end
         end
+        
+        -- Cache ConVar values once per entity type
         local size = math.max(0, sz:GetFloat())
         local brightness = math.max(0, br:GetFloat())
         local decay = math.max(0, de:GetFloat())
         local el_mult = math.max(0, elmult:GetFloat())
-        local cr, cg, cb = readRGB(rcv, gcv, bcv)
+        local cr, cg, cb = BL.GetColorFromCvars(rcv, gcv, bcv)
+        local doElight = el:GetBool()
+        
         for _, ent in ipairs(list) do
             if IsValid(ent) then
                 local idx = ent:EntIndex()
-                local pos
-                if ent.OBBCenter and ent.LocalToWorld then
-                    pos = ent:LocalToWorld(ent:OBBCenter())
-                elseif ent.WorldSpaceCenter then
-                    pos = ent:WorldSpaceCenter()
-                else
-                    pos = ent:GetPos()
-                end
+                local pos = BL.GetEntityCenter(ent)
+                if pos then
+                    -- Create world light
+                    BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size, false)
 
-                local d = DynamicLight(idx)
-                if d then
-                    d.pos = pos
-                    d.r = cr
-                    d.g = cg
-                    d.b = cb
-                    d.brightness = brightness
-                    d.decay = decay
-                    d.size = size
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = CurTime() + 0.1
-                end
-
-                if el:GetBool() then
-                    local elx = DynamicLight(idx, true)
-                    if elx then
-                        elx.pos = pos
-                        elx.r = cr
-                        elx.g = cg
-                        elx.b = cb
-                        elx.brightness = brightness
-                        elx.decay = decay
-                        elx.size = size * el_mult
-                        elx.minlight = 0
-                        elx.dietime = CurTime() + 0.1
+                    -- Create entity light if enabled
+                    if doElight then
+                        BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size * el_mult, true)
                     end
                 end
             end

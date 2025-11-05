@@ -355,6 +355,31 @@ if CLIENT then
             })
         end)
 
+        -- Resistance Mine (friendly)
+    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CombineMineResistance", "Resistance Mine", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Idle blue glow; green alert glow when you're within range")
+            panel:CheckBox("Enable", "betterlights_combine_mine_resistance_enable")
+            panel:Help("Alert Settings")
+            panel:NumSlider("Alert radius size", "betterlights_combine_mine_resistance_size", 0, 400, 0)
+            panel:NumSlider("Alert brightness", "betterlights_combine_mine_resistance_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "betterlights_combine_mine_resistance_decay", 0, 5000, 0)
+            panel:Help("Alert Color (RGB)")
+            panel:NumSlider("Red", "betterlights_combine_mine_resistance_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_combine_mine_resistance_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_combine_mine_resistance_color_b", 0, 255, 0)
+            panel:Help("Note: Uses same detection range and idle settings as hostile Combine Mine")
+            addResetButton(panel, {
+                betterlights_combine_mine_resistance_enable = 1,
+                betterlights_combine_mine_resistance_size = 140,
+                betterlights_combine_mine_resistance_brightness = 1.0,
+                betterlights_combine_mine_resistance_decay = 2000,
+                betterlights_combine_mine_resistance_color_r = 60,
+                betterlights_combine_mine_resistance_color_g = 255,
+                betterlights_combine_mine_resistance_color_b = 100,
+            })
+        end)
+
         -- Physgun
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_Physgun", "Physics Gun", "", "", function(panel)
             panel:ClearControls()

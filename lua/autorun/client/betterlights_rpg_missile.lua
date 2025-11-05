@@ -20,11 +20,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_rpg_color_r", "255", true, false, "RPG rocket color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_rpg_color_g", "170", true, false, "RPG rocket color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_rpg_color_b", "60", true, false, "RPG rocket color - blue (0-255)")
-    local function getColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     -- Impact flash configuration
     local cvar_flash_enable = CreateClientConVar("betterlights_rpg_flash_enable", "1", true, false, "Add a brief light flash when an RPG rocket explodes")
@@ -34,11 +29,6 @@ if CLIENT then
     local cvar_flash_r = CreateClientConVar("betterlights_rpg_flash_color_r", "255", true, false, "RPG flash color - red (0-255)")
     local cvar_flash_g = CreateClientConVar("betterlights_rpg_flash_color_g", "210", true, false, "RPG flash color - green (0-255)")
     local cvar_flash_b = CreateClientConVar("betterlights_rpg_flash_color_b", "120", true, false, "RPG flash color - blue (0-255)")
-    local function getFlashColor()
-        return math.Clamp(math.floor(cvar_flash_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_b:GetFloat() + 0.5), 0, 255)
-    end
 
     -- Track ephemeral RPG explosion flashes and a recent list for suppression
     local BL_RPG_Flashes = BL_RPG_Flashes or {}
@@ -81,31 +71,18 @@ if CLIENT then
         local doGlow = cvar_enable:GetBool()
         local doFlash = cvar_flash_enable:GetBool()
 
-        -- Precompute colors and settings once per frame
-        local r, g, b = getColor()
+        -- Cache colors and settings once per frame
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
-        local fr, fg, fb = getFlashColor()
+        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
 
         if doGlow then
             local function update(ent)
-                if IsValid(ent) then
-                    local dlight = DynamicLight(ent:EntIndex())
-                    if dlight then
-                        dlight.pos = ent:WorldSpaceCenter()
-                        dlight.r = r
-                        dlight.g = g
-                        dlight.b = b
-                        dlight.brightness = brightness
-                        dlight.decay = decay
-                        dlight.size = size
-                        dlight.minlight = 0
-                        dlight.noworld = false
-                        dlight.nomodel = false
-                        dlight.dietime = CurTime() + 0.1
-                    end
-                end
+                if not IsValid(ent) then return end
+                local pos = ent:WorldSpaceCenter()
+                BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
             end
 
             if BL.ForEach then

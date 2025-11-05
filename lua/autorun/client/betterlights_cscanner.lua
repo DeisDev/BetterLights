@@ -27,11 +27,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_cscanner_color_r", "180", true, false, "Scanner glow color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_cscanner_color_g", "230", true, false, "Scanner glow color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_cscanner_color_b", "255", true, false, "Scanner glow color - blue (0-255)")
-    local function getGlowColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     -- Directional searchlight (projected texture) settings
     local cvar_sl_enable = CreateClientConVar("betterlights_cscanner_searchlight_enable", "1", true, false, "Add a directional, shadow-casting searchlight to scanners")
@@ -46,11 +41,6 @@ if CLIENT then
     local cvar_sl_r = CreateClientConVar("betterlights_cscanner_searchlight_color_r", "255", true, false, "Scanner searchlight color - red (0-255)")
     local cvar_sl_g = CreateClientConVar("betterlights_cscanner_searchlight_color_g", "255", true, false, "Scanner searchlight color - green (0-255)")
     local cvar_sl_b = CreateClientConVar("betterlights_cscanner_searchlight_color_b", "255", true, false, "Scanner searchlight color - blue (0-255)")
-    local function getSearchlightColor()
-        return math.Clamp(math.floor(cvar_sl_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_sl_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_sl_b:GetFloat() + 0.5), 0, 255)
-    end
 
     -- Keep projected textures per-entity (keyed by the entity for robust cleanup)
     local scannerProjectors = {}
@@ -89,7 +79,7 @@ if CLIENT then
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
         local el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
-        local r, g, b = getGlowColor()
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
         local dietime = now + 0.1
 
         -- Searchlight frame-constants
@@ -98,7 +88,7 @@ if CLIENT then
         local sl_far = math.max(1, cvar_sl_far:GetFloat())
         local sl_fov = math.Clamp(cvar_sl_fov:GetFloat(), 1, 175)
         local sl_bright = cvar_sl_brightness:GetFloat()
-        local sl_r, sl_g, sl_b = getSearchlightColor()
+        local sl_r, sl_g, sl_b = BL.GetColorFromCvars(cvar_sl_r, cvar_sl_g, cvar_sl_b)
         local sl_shadows = cvar_sl_shadows:GetBool()
 
         -- Track which entities we saw this frame (for projector cleanup)
@@ -107,44 +97,15 @@ if CLIENT then
             if IsValid(ent) then
                 seen[ent] = true
                 local idx = ent:EntIndex()
-                local pos
-                if ent.OBBCenter and ent.LocalToWorld then
-                    pos = ent:LocalToWorld(ent:OBBCenter())
-                elseif ent.WorldSpaceCenter then
-                    pos = ent:WorldSpaceCenter()
-                else
-                    pos = ent:GetPos()
-                end
+                local pos = BL.GetEntityCenter(ent)
 
                 if cvar_enable:GetBool() then
-                    local d = DynamicLight(idx)
-                    if d then
-                        d.pos = pos
-                        d.r = r
-                        d.g = g
-                        d.b = b
-                        d.brightness = brightness
-                        d.decay = decay
-                        d.size = size
-                        d.minlight = 0
-                        d.noworld = false
-                        d.nomodel = false
-                        d.dietime = dietime
-                    end
+                    -- Create world light
+                    BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
 
+                    -- Create entity light if enabled
                     if cvar_models_elight:GetBool() then
-                        local el = DynamicLight(idx, true)
-                        if el then
-                            el.pos = pos
-                            el.r = r
-                            el.g = g
-                            el.b = b
-                            el.brightness = brightness
-                            el.decay = decay
-                            el.size = size * el_mult
-                            el.minlight = 0
-                            el.dietime = dietime
-                        end
+                        BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
                     end
                 end
 

@@ -17,11 +17,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_bolt_color_r", "255", true, false, "Crossbow bolt color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_bolt_color_g", "140", true, false, "Crossbow bolt color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_bolt_color_b", "40", true, false, "Crossbow bolt color - blue (0-255)")
-    local function getColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     if BL.TrackClass then BL.TrackClass("crossbow_bolt") end
 
@@ -29,28 +24,16 @@ if CLIENT then
     AddThink("BetterLights_CrossbowBolt_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        local r, g, b = getColor()
+        -- Cache ConVar values once per frame
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         local function update(ent)
-            if IsValid(ent) then
-                local dlight = DynamicLight(ent:EntIndex())
-                if dlight then
-                    dlight.pos = ent:WorldSpaceCenter()
-                    dlight.r = r
-                    dlight.g = g
-                    dlight.b = b
-                    dlight.brightness = brightness
-                    dlight.decay = decay
-                    dlight.size = size
-                    dlight.minlight = 0
-                    dlight.noworld = false
-                    dlight.nomodel = false
-                    dlight.dietime = CurTime() + 0.1
-                end
-            end
+            if not IsValid(ent) then return end
+            local pos = ent:WorldSpaceCenter()
+            BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
         end
 
         if BL.ForEach then

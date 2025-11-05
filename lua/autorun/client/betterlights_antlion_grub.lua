@@ -17,25 +17,15 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_antlion_grub_color_r", "120", true, false, "Antlion grub color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_antlion_grub_color_g", "255", true, false, "Antlion grub color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_antlion_grub_color_b", "120", true, false, "Antlion grub color - blue (0-255)")
-    local function getColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     local function getAbdomenPos(ent)
         if not IsValid(ent) then return end
         -- Try common attachment names first
-        local names = { "glow", "glow1", "abdomen", "light", "lum" }
-        for _, name in ipairs(names) do
-            local idx = ent:LookupAttachment(name)
-            if idx and idx > 0 then
-                local att = ent:GetAttachment(idx)
-                if att and att.Pos then return att.Pos end
-            end
-        end
+        local pos = BL.GetAttachmentPos(ent, { "glow", "glow1", "abdomen", "light", "lum" })
+        if pos then return pos end
         -- Fallback to OBB center slightly offset forward
-        local center = ent:LocalToWorld(ent:OBBCenter())
+        local center = BL.GetEntityCenter(ent)
+        if not center then return nil end
         local fwd = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
         return center + fwd * 2
     end
@@ -46,27 +36,20 @@ if CLIENT then
     AddThink("BetterLights_AntlionGrub", function()
         if not cvar_enable:GetBool() then return end
 
-        local r, g, b = getColor()
+        -- Cache ConVar values once per frame
+        local size = math.max(0, cvar_size:GetFloat())
+        local brightness = math.max(0, cvar_brightness:GetFloat())
+        local decay = math.max(0, cvar_decay:GetFloat())
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+
         local function update(ent)
-            if not IsValid(ent) then goto cont end
-            if ent.GetNoDraw and ent:GetNoDraw() then goto cont end
+            if not IsValid(ent) then return end
+            if ent.GetNoDraw and ent:GetNoDraw() then return end
 
             local pos = getAbdomenPos(ent)
-            if not pos then goto cont end
+            if not pos then return end
 
-            local dl = DynamicLight(ent:EntIndex() + 23000)
-            if dl then
-                dl.pos = pos
-                dl.r = r
-                dl.g = g
-                dl.b = b
-                dl.brightness = math.max(0, cvar_brightness:GetFloat())
-                dl.decay = math.max(0, cvar_decay:GetFloat())
-                dl.size = math.max(0, cvar_size:GetFloat())
-                dl.dietime = CurTime() + 0.05
-            end
-
-            ::cont::
+            BL.CreateDLight(ent:EntIndex() + 23000, pos, r, g, b, brightness, decay, size, false)
         end
 
         if BL.ForEach then

@@ -32,16 +32,6 @@ if CLIENT then
     local cvar_flash_r = CreateClientConVar("betterlights_antlion_spit_flash_color_r", "180", true, false, "Antlion spit flash color - red (0-255)")
     local cvar_flash_g = CreateClientConVar("betterlights_antlion_spit_flash_color_g", "255", true, false, "Antlion spit flash color - green (0-255)")
     local cvar_flash_b = CreateClientConVar("betterlights_antlion_spit_flash_color_b", "120", true, false, "Antlion spit flash color - blue (0-255)")
-    local function getGlowColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
-    local function getFlashColor()
-        return math.Clamp(math.floor(cvar_flash_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_b:GetFloat() + 0.5), 0, 255)
-    end
 
     local TARGET_CLASS = "grenade_spit"
 
@@ -86,14 +76,7 @@ if CLIENT then
             local lived = now - (data.spawn or now)
             if lived < 0.05 then return end -- avoid spawn artifacts
 
-            local pos
-            if ent and ent.LocalToWorld and ent.OBBCenter then
-                pos = ent:LocalToWorld(ent:OBBCenter())
-            elseif ent and ent.WorldSpaceCenter then
-                pos = ent:WorldSpaceCenter()
-            else
-                pos = ent and ent.GetPos and ent:GetPos() or nil
-            end
+            local pos = BL.GetEntityCenter(ent)
             if not pos then return end
 
             local dur = math.max(0, cvar_flash_time:GetFloat())
@@ -108,9 +91,9 @@ if CLIENT then
         local doGlow = cvar_enable:GetBool()
         local doFlash = cvar_flash_enable:GetBool()
 
-        -- Precompute colors once per frame
-        local gr, gg, gb = getGlowColor()
-        local fr, fg, fb = getFlashColor()
+        -- Cache colors once per frame
+        local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
 
         if doGlow then
             local size = math.max(0, cvar_size:GetFloat())
@@ -123,48 +106,18 @@ if CLIENT then
                     if not IsValid(ent) then return end
                     if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = { spawn = CurTime() } end
 
-                    local pos
-                    if ent.LocalToWorld and ent.OBBCenter then
-                        pos = ent:LocalToWorld(ent:OBBCenter())
-                    elseif ent.WorldSpaceCenter then
-                        pos = ent:WorldSpaceCenter()
-                    else
-                        pos = ent:GetPos()
-                    end
+                    local pos = BL.GetEntityCenter(ent)
+                    if not pos then return end
 
-                    local d = DynamicLight(ent:EntIndex())
-                    if d then
-                        d.pos = pos
-                        d.r = gr
-                        d.g = gg
-                        d.b = gb
-                        d.brightness = brightness
-                        d.decay = decay
-                        d.size = size
-                        d.minlight = 0
-                        d.noworld = false
-                        d.nomodel = false
-                        d.dietime = CurTime() + 0.1
-                    end
+                    BL.CreateDLight(ent:EntIndex(), pos, gr, gg, gb, brightness, decay, size, false)
                 end)
             else
                 for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do
                     if IsValid(ent) then
                         if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = { spawn = CurTime() } end
-                        local d = DynamicLight(ent:EntIndex())
-                        if d then
-                            local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
-                            d.pos = pos
-                            d.r = gr
-                            d.g = gg
-                            d.b = gb
-                            d.brightness = brightness
-                            d.decay = decay
-                            d.size = size
-                            d.minlight = 0
-                            d.noworld = false
-                            d.nomodel = false
-                            d.dietime = CurTime() + 0.1
+                        local pos = BL.GetEntityCenter(ent)
+                        if pos then
+                            BL.CreateDLight(ent:EntIndex(), pos, gr, gg, gb, brightness, decay, size, false)
                         end
                     end
                 end

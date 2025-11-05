@@ -29,16 +29,6 @@ if CLIENT then
     local cvar_flash_r = CreateClientConVar("betterlights_heli_bomb_flash_color_r", "255", true, false, "Heli bomb flash color - red (0-255)")
     local cvar_flash_g = CreateClientConVar("betterlights_heli_bomb_flash_color_g", "210", true, false, "Heli bomb flash color - green (0-255)")
     local cvar_flash_b = CreateClientConVar("betterlights_heli_bomb_flash_color_b", "120", true, false, "Heli bomb flash color - blue (0-255)")
-    local function getGlowColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
-    local function getFlashColor()
-        return math.Clamp(math.floor(cvar_flash_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_flash_b:GetFloat() + 0.5), 0, 255)
-    end
 
     -- Track ephemeral explosion flashes
     local BL_HeliBomb_Flashes = BL_HeliBomb_Flashes or {}
@@ -50,14 +40,8 @@ if CLIENT then
         if ent:GetClass() ~= "grenade_helicopter" then return end
         if not cvar_flash_enable:GetBool() then return end
 
-        local pos
-        if ent.OBBCenter and ent.LocalToWorld then
-            pos = ent:LocalToWorld(ent:OBBCenter())
-        elseif ent.WorldSpaceCenter then
-            pos = ent:WorldSpaceCenter()
-        else
-            pos = ent:GetPos()
-        end
+        local pos = BL.GetEntityCenter(ent)
+        if not pos then return end
 
         local now = CurTime()
         local dur = math.max(0, cvar_flash_time:GetFloat())
@@ -73,56 +57,29 @@ if CLIENT then
         local doGlow = cvar_enable:GetBool()
         local doFlash = cvar_flash_enable:GetBool()
 
-        -- Precompute colors once
-        local gr, gg, gb = getGlowColor()
-        local fr, fg, fb = getFlashColor()
+        -- Cache colors once per frame
+        local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
 
         if doGlow then
             local size = math.max(0, cvar_size:GetFloat())
             local brightness_base = math.max(0, cvar_brightness:GetFloat())
             local decay = math.max(0, cvar_decay:GetFloat())
             local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+            local doElight = cvar_models_elight:GetBool()
 
             local function update(ent)
                 if not IsValid(ent) then return end
                 local idx = ent:EntIndex()
-                local pos
-                if ent.OBBCenter and ent.LocalToWorld then
-                    pos = ent:LocalToWorld(ent:OBBCenter())
-                elseif ent.WorldSpaceCenter then
-                    pos = ent:WorldSpaceCenter()
-                else
-                    pos = ent:GetPos()
-                end
+                local pos = BL.GetEntityCenter(ent)
+                if not pos then return end
 
-                local d = DynamicLight(idx)
-                if d then
-                    d.pos = pos
-                    d.r = gr
-                    d.g = gg
-                    d.b = gb
-                    d.brightness = brightness_base
-                    d.decay = decay
-                    d.size = size
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = CurTime() + 0.1
-                end
+                -- Create world light
+                BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size, false)
 
-                if cvar_models_elight:GetBool() then
-                    local el = DynamicLight(idx, true)
-                    if el then
-                        el.pos = pos
-                        el.r = gr
-                        el.g = gg
-                        el.b = gb
-                        el.brightness = brightness_base
-                        el.decay = decay
-                        el.size = size * elMult
-                        el.minlight = 0
-                        el.dietime = CurTime() + 0.1
-                    end
+                -- Create entity light if enabled
+                if doElight then
+                    BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size * elMult, true)
                 end
             end
 

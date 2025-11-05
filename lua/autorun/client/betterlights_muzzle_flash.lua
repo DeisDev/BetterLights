@@ -2,6 +2,9 @@
 -- Spawns a brief DynamicLight at the muzzle when a weapon fires.
 
 if CLIENT then
+    BetterLights = BetterLights or {}
+    local BL = BetterLights
+    
     local cvar_enable = CreateClientConVar("betterlights_muzzle_enable", "1", true, false, "Enable muzzle flash light on firing")
     local cvar_size = CreateClientConVar("betterlights_muzzle_size", "250", true, false, "Muzzle flash radius")
     local cvar_brightness = CreateClientConVar("betterlights_muzzle_brightness", "2.00", true, false, "Muzzle flash brightness")
@@ -18,17 +21,6 @@ if CLIENT then
     local cvar_ar2_col_r = CreateClientConVar("betterlights_muzzle_ar2_color_r", "110", true, false, "AR2 muzzle flash color - red (0-255)")
     local cvar_ar2_col_g = CreateClientConVar("betterlights_muzzle_ar2_color_g", "190", true, false, "AR2 muzzle flash color - green (0-255)")
     local cvar_ar2_col_b = CreateClientConVar("betterlights_muzzle_ar2_color_b", "255", true, false, "AR2 muzzle flash color - blue (0-255)")
-
-    local function getGenericColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
-    local function getAR2Color()
-        return math.Clamp(math.floor(cvar_ar2_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_ar2_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_ar2_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     local __bl_muzzle_counter = 0
     local function spawnFlashAt(pos, col, size, bright, decay)
@@ -51,13 +43,12 @@ if CLIENT then
         local pos = net.ReadVector()
         local isAR2 = net.ReadBool()
 
-        -- Culling disabled per user request; always spawn the flash light
 
         if isAR2 and cvar_ar2_enable:GetBool() then
-            local r, g, b = getAR2Color()
+            local r, g, b = BL.GetColorFromCvars(cvar_ar2_col_r, cvar_ar2_col_g, cvar_ar2_col_b)
             spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_ar2_size:GetFloat(), cvar_ar2_brightness:GetFloat(), cvar_decay:GetFloat())
         else
-            local r, g, b = getGenericColor()
+            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
             spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_size:GetFloat(), cvar_brightness:GetFloat(), cvar_decay:GetFloat())
         end
     end)

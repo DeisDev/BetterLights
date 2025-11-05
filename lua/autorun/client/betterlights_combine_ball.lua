@@ -20,12 +20,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_combineball_color_r", "80", true, false, "Combine ball color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_combineball_color_g", "180", true, false, "Combine ball color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_combineball_color_b", "255", true, false, "Combine ball color - blue (0-255)")
-    local function getCombineBallColor()
-        local r = math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255)
-        local g = math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255)
-        local b = math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-        return r, g, b
-    end
 
     if BL.TrackClass then BL.TrackClass("prop_combine_ball") end
 
@@ -33,73 +27,70 @@ if CLIENT then
     AddThink("BetterLights_CombineBall_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-    -- No throttling (always update every frame)
-    local r, g, b = getCombineBallColor()
-
+        -- Cache ConVar values once per frame
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
         local wantWorld = cvar_world_enable:GetBool()
         local wantModels = cvar_models_enable:GetBool()
         local wantElight = cvar_models_elight:GetBool()
         local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
 
         local function update(ent)
-            if IsValid(ent) then
-                local pos = ent:WorldSpaceCenter()
+            if not IsValid(ent) then return end
+            local pos = ent:WorldSpaceCenter()
 
-                -- World dynamic light: optionally also hits models (if wantModels)
-                if wantWorld then
-                    local dl = DynamicLight(ent:EntIndex())
-                    if dl then
-                        dl.pos = pos
-                        dl.r = r
-                        dl.g = g
-                        dl.b = b
-                        dl.brightness = brightness
-                        dl.decay = decay
-                        dl.size = size
-                        dl.minlight = 0
-                        dl.noworld = false
-                        dl.nomodel = not wantModels -- world-only when models disabled
-                        dl.dietime = CurTime() + 0.1
+            -- World dynamic light: optionally also hits models (if wantModels)
+            if wantWorld then
+                local dl = DynamicLight(ent:EntIndex())
+                if dl then
+                    dl.pos = pos
+                    dl.r = r
+                    dl.g = g
+                    dl.b = b
+                    dl.brightness = brightness
+                    dl.decay = decay
+                    dl.size = size
+                    dl.minlight = 0
+                    dl.noworld = false
+                    dl.nomodel = not wantModels -- world-only when models disabled
+                    dl.dietime = CurTime() + 0.1
+                end
+            end
+
+            -- Model-only lighting when world is disabled, or if explicitly requested via elight
+            if wantModels and (not wantWorld) then
+                if wantElight then
+                    local el = DynamicLight(ent:EntIndex(), true)
+                    if el then
+                        el.pos = pos
+                        el.r = r
+                        el.g = g
+                        el.b = b
+                        el.brightness = brightness
+                        el.decay = decay
+                        el.size = size * elMult
+                        el.minlight = 0
+                        el.dietime = CurTime() + 0.1
+                    end
+                else
+                    -- If elight is disabled, use a dlight restricted to models-only
+                    local dlm = DynamicLight(ent:EntIndex())
+                    if dlm then
+                        dlm.pos = pos
+                        dlm.r = r
+                        dlm.g = g
+                        dlm.b = b
+                        dlm.brightness = brightness
+                        dlm.decay = decay
+                        dlm.size = size
+                        dlm.minlight = 0
+                        dlm.noworld = true
+                        dlm.nomodel = false
+                        dlm.dietime = CurTime() + 0.1
                     end
                 end
-
-                -- Model-only lighting when world is disabled, or if explicitly requested via elight
-                if wantModels and (not wantWorld) then
-                    if wantElight then
-                        local el = DynamicLight(ent:EntIndex(), true)
-                        if el then
-                            el.pos = pos
-                            el.r = r
-                            el.g = g
-                            el.b = b
-                            el.brightness = brightness
-                            el.decay = decay
-                            el.size = size * elMult
-                            el.minlight = 0
-                            el.dietime = CurTime() + 0.1
-                        end
-                    else
-                        -- If elight is disabled, use a dlight restricted to models-only
-                        local dlm = DynamicLight(ent:EntIndex())
-                        if dlm then
-                            dlm.pos = pos
-                            dlm.r = r
-                            dlm.g = g
-                            dlm.b = b
-                            dlm.brightness = brightness
-                            dlm.decay = decay
-                            dlm.size = size
-                            dlm.minlight = 0
-                            dlm.noworld = true
-                            dlm.nomodel = false
-                            dlm.dietime = CurTime() + 0.1
-                        end
-                    end
-                end
-            
             end
         end
 

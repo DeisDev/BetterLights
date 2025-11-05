@@ -20,11 +20,6 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_gravitygun_color_r", "255", true, false, "Gravity gun color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_gravitygun_color_g", "140", true, false, "Gravity gun color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_gravitygun_color_b", "40", true, false, "Gravity gun color - blue (0-255)")
-    local function getColor()
-        return math.Clamp(math.floor(cvar_col_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_col_b:GetFloat() + 0.5), 0, 255)
-    end
 
     local ATTACH_NAMES = { "muzzle", "core", "fork", "claw", "muzzle_flash" }
     local function getGravgunLightPos(ply, wep)
@@ -56,15 +51,18 @@ if CLIENT then
 
         local ply = LocalPlayer()
         if not IsValid(ply) then return end
+        if not BL.IsPlayerHoldingWeapon("weapon_physcannon") then return end
 
         local wep = ply:GetActiveWeapon()
-        if not IsValid(wep) or wep:GetClass() ~= "weapon_physcannon" then return end
 
-    -- No throttling (always update every frame)
-
-    local size = math.max(0, cvar_size:GetFloat())
+        local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local doElight = cvar_models_elight:GetBool()
+        local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+
+        -- Cache color once per frame
+        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         -- Model light position (for elight): use viewmodel/worldmodel attachments when possible
         local pos_model = getGravgunLightPos(ply, wep)
@@ -85,27 +83,24 @@ if CLIENT then
         -- Use a stable index separate from other features (offset from player index)
         local idx = ply:EntIndex() + 1460
 
-        local r, g, b = getColor()
         -- DLight (world/model)
-        do
-            local d = DynamicLight(idx)
-            if d then
-                d.pos = pos_world
-                d.r = r
-                d.g = g
-                d.b = b
-                d.brightness = brightness
-                d.decay = decay
-                d.size = size
-                d.minlight = 0
-                d.noworld = false
-                d.nomodel = false
-                d.dietime = CurTime() + 0.16
-            end
+        local d = DynamicLight(idx)
+        if d then
+            d.pos = pos_world
+            d.r = r
+            d.g = g
+            d.b = b
+            d.brightness = brightness
+            d.decay = decay
+            d.size = size
+            d.minlight = 0
+            d.noworld = false
+            d.nomodel = false
+            d.dietime = CurTime() + 0.16
         end
 
         -- ELight (model-only)
-        if cvar_models_elight:GetBool() then
+        if doElight then
             local el = DynamicLight(idx, true)
             if el then
                 el.pos = pos_model
@@ -114,7 +109,7 @@ if CLIENT then
                 el.b = b
                 el.brightness = brightness
                 el.decay = decay
-                el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
+                el.size = size * elMult
                 el.minlight = 0
                 el.dietime = CurTime() + 0.16
             end

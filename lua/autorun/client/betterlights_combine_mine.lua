@@ -1,14 +1,22 @@
 -- BetterLights: Combine Mine (hopper mine) proximity light
--- Client-side only
+-- Supports both combine_mine (red/hostile) and combine_mine_resistance (green/friendly)
 
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    
+    -- Hostile mine (combine_mine) convars
     local cvar_enable = CreateClientConVar("betterlights_combine_mine_enable", "1", true, false, "Enable dynamic light for Combine Mines when the player is nearby")
     local cvar_range = CreateClientConVar("betterlights_combine_mine_range", "260", true, false, "Distance at which the mine starts glowing (units)")
     local cvar_size_alert = CreateClientConVar("betterlights_combine_mine_size", "140", true, false, "Dynamic light radius for alert mines")
     local cvar_brightness_alert = CreateClientConVar("betterlights_combine_mine_brightness", "1.2", true, false, "Dynamic light brightness for alert mines")
     local cvar_decay = CreateClientConVar("betterlights_combine_mine_decay", "2000", true, false, "Dynamic light decay for Combine Mines")
+    
+    -- Resistance mine (combine_mine_resistance) convars
+    local cvar_res_enable = CreateClientConVar("betterlights_combine_mine_resistance_enable", "1", true, false, "Enable dynamic light for Resistance Mines")
+    local cvar_res_size = CreateClientConVar("betterlights_combine_mine_resistance_size", "140", true, false, "Dynamic light radius for Resistance Mines")
+    local cvar_res_brightness = CreateClientConVar("betterlights_combine_mine_resistance_brightness", "1.0", true, false, "Dynamic light brightness for Resistance Mines")
+    local cvar_res_decay = CreateClientConVar("betterlights_combine_mine_resistance_decay", "2000", true, false, "Dynamic light decay for Resistance Mines")
 
     local cvar_idle_enable = CreateClientConVar("betterlights_combine_mine_idle_enable", "1", true, false, "Also emit a very dim idle glow when out of range")
     local cvar_size_idle = CreateClientConVar("betterlights_combine_mine_idle_size", "80", true, false, "Dynamic light radius for idle mines")
@@ -28,103 +36,118 @@ if CLIENT then
     local cvar_alert_r = CreateClientConVar("betterlights_combine_mine_alert_color_r", "255", true, false, "Combine mine alert color - red (0-255)")
     local cvar_alert_g = CreateClientConVar("betterlights_combine_mine_alert_color_g", "60", true, false, "Combine mine alert color - green (0-255)")
     local cvar_alert_b = CreateClientConVar("betterlights_combine_mine_alert_color_b", "60", true, false, "Combine mine alert color - blue (0-255)")
-    local function getIdleColor()
-        return math.Clamp(math.floor(cvar_idle_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_idle_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_idle_b:GetFloat() + 0.5), 0, 255)
-    end
-    local function getAlertColor()
-        return math.Clamp(math.floor(cvar_alert_r:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_alert_g:GetFloat() + 0.5), 0, 255),
-               math.Clamp(math.floor(cvar_alert_b:GetFloat() + 0.5), 0, 255)
+
+    -- Resistance mine color (green)
+    local cvar_res_r = CreateClientConVar("betterlights_combine_mine_resistance_color_r", "60", true, false, "Resistance mine color - red (0-255)")
+    local cvar_res_g = CreateClientConVar("betterlights_combine_mine_resistance_color_g", "255", true, false, "Resistance mine color - green (0-255)")
+    local cvar_res_b = CreateClientConVar("betterlights_combine_mine_resistance_color_b", "100", true, false, "Resistance mine color - blue (0-255)")
+
+    local cvar_debug = CreateClientConVar("betterlights_combine_mine_debug", "0", true, false, "Debug mine type detection (prints to console)")
+
+    -- Detect if a mine is friendly/resistance using unified detection helper
+    local function isFriendlyMine(ent)
+        return BL.DetectEntityVariant(ent, {
+            debugName = "friendly mine",
+            debugCvar = cvar_debug,
+            classes = { "combine_mine_resistance" },
+            nwBools = { "friendly", "resistance", "is_friendly", "IsFriendly", "is_resistance", "rebel" },
+            saveTableKeys = { "m_bFriendly", "friendly", "resistance", "m_bResistance", "is_friendly" },
+            checkDisposition = true,
+            skin = function(s) return s == 1 or s == 2 end  -- Resistance mines use skin 1 or 2
+        })
     end
 
-    if BL.TrackClass then BL.TrackClass("combine_mine") end
+    if BL.TrackClass then 
+        BL.TrackClass("combine_mine")
+        BL.TrackClass("combine_mine_resistance")
+    end
 
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_CombineMine_DLight", function()
-        if not cvar_enable:GetBool() then return end
+        if not cvar_enable:GetBool() and not cvar_res_enable:GetBool() then return end
 
         local lp = LocalPlayer()
         if not IsValid(lp) then return end
         local eye = lp:EyePos()
 
+        -- Cache ConVar values once per frame for hostile mines
         local range = math.max(0, cvar_range:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
+        local size_alert = math.max(0, cvar_size_alert:GetFloat())
+        local size_idle = math.max(0, cvar_size_idle:GetFloat())
+        local brightness_alert = math.max(0, cvar_brightness_alert:GetFloat())
+        local brightness_idle = math.max(0, cvar_brightness_idle:GetFloat())
+        local idle_r, idle_g, idle_b = BL.GetColorFromCvars(cvar_idle_r, cvar_idle_g, cvar_idle_b)
+        local alert_r, alert_g, alert_b = BL.GetColorFromCvars(cvar_alert_r, cvar_alert_g, cvar_alert_b)
+        local doPulse = cvar_pulse_enable:GetBool()
+        local pulseAmt = math.max(0, cvar_pulse_amount:GetFloat())
+        local pulseSpd = cvar_pulse_speed:GetFloat()
+        local doElight = cvar_models_elight:GetBool()
+        local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+        local now = CurTime()
 
-        local function update(mine)
-            if IsValid(mine) then
-                local pos
-                if mine.OBBCenter and mine.LocalToWorld then
-                    pos = mine:LocalToWorld(mine:OBBCenter())
-                elseif mine.WorldSpaceCenter then
-                    pos = mine:WorldSpaceCenter()
-                else
-                    pos = mine:GetPos()
+        -- Cache resistance mine values
+        local res_size = math.max(0, cvar_res_size:GetFloat())
+        local res_brightness = math.max(0, cvar_res_brightness:GetFloat())
+        local res_decay = math.max(0, cvar_res_decay:GetFloat())
+        local res_r, res_g, res_b = BL.GetColorFromCvars(cvar_res_r, cvar_res_g, cvar_res_b)
+
+        -- Unified update function that detects mine type
+        local function updateMine(mine)
+            if not IsValid(mine) then return end
+            
+            -- Check if this is a friendly/resistance mine
+            local isFriendly = isFriendlyMine(mine)
+            
+            -- Skip based on settings
+            if isFriendly and not cvar_res_enable:GetBool() then return end
+            if not isFriendly and not cvar_enable:GetBool() then return end
+
+            local pos = BL.GetEntityCenter(mine)
+            if not pos then return end
+
+            local r, g, b, size, brightness, useDecay
+            
+            -- Check proximity for both hostile and friendly mines
+            local dist = eye:DistToSqr(pos)
+            local inRange = dist <= (range * range)
+            
+            if isFriendly then
+                -- Resistance mine: idle blue -> alert green
+                size = inRange and res_size or size_idle
+                brightness = inRange and res_brightness or brightness_idle
+                r, g, b = inRange and res_r or idle_r, inRange and res_g or idle_g, inRange and res_b or idle_b
+                useDecay = res_decay
+            else
+                -- Hostile mine: idle blue -> alert red
+                size = inRange and size_alert or size_idle
+                brightness = inRange and brightness_alert or brightness_idle
+                r, g, b = inRange and alert_r or idle_r, inRange and alert_g or idle_g, inRange and alert_b or idle_b
+                useDecay = decay
+                
+                -- Optional pulse on alert (only for hostile mines)
+                if inRange and doPulse then
+                    local osc = 0.5 + 0.5 * math.sin(now * pulseSpd + mine:EntIndex())
+                    brightness = math.max(0, brightness * (1 - pulseAmt + pulseAmt * (0.6 + 0.4 * osc)))
                 end
+            end
 
-                local dist = eye:DistToSqr(pos)
-                local inRange = dist <= (range * range)
+            -- World light
+            BL.CreateDLight(mine:EntIndex(), pos, r, g, b, brightness, useDecay, size, false)
 
-                -- Choose params per state
-                local size = inRange and math.max(0, cvar_size_alert:GetFloat()) or math.max(0, cvar_size_idle:GetFloat())
-                local brightness = inRange and math.max(0, cvar_brightness_alert:GetFloat()) or math.max(0, cvar_brightness_idle:GetFloat())
-                local col
-                if inRange then
-                    local r, g, b = getAlertColor()
-                    col = { r = r, g = g, b = b }
-                else
-                    local r, g, b = getIdleColor()
-                    col = { r = r, g = g, b = b }
-                end
-
-                -- Optional pulse on alert
-                if inRange and cvar_pulse_enable:GetBool() then
-                    local t = CurTime()
-                    local amt = math.max(0, cvar_pulse_amount:GetFloat())
-                    local spd = cvar_pulse_speed:GetFloat()
-                    local osc = 0.5 + 0.5 * math.sin(t * spd + mine:EntIndex())
-                    brightness = math.max(0, brightness * (1 - amt + amt * (0.6 + 0.4 * osc)))
-                end
-
-                -- World light (dlight)
-                local d = DynamicLight(mine:EntIndex())
-                if d then
-                    d.pos = pos
-                    d.r = col.r
-                    d.g = col.g
-                    d.b = col.b
-                    d.brightness = brightness
-                    d.decay = decay
-                    d.size = size
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = CurTime() + 0.1
-                end
-
-                -- Model light (elight)
-                if cvar_models_elight:GetBool() then
-                    local el = DynamicLight(mine:EntIndex(), true)
-                    if el then
-                        el.pos = pos
-                        el.r = col.r
-                        el.g = col.g
-                        el.b = col.b
-                        el.brightness = brightness
-                        el.decay = decay
-                        el.size = size * math.max(0, cvar_models_elight_size_mult:GetFloat())
-                        el.minlight = 0
-                        el.dietime = CurTime() + 0.1
-                    end
-                end
+            -- Model light (elight)
+            if doElight then
+                BL.CreateDLight(mine:EntIndex(), pos, r, g, b, brightness, useDecay, size * elMult, true)
             end
         end
 
+        -- Process all combine_mine entities
         if BL.ForEach then
-            BL.ForEach("combine_mine", update)
+            BL.ForEach("combine_mine", updateMine)
+            BL.ForEach("combine_mine_resistance", updateMine)
         else
-            for _, mine in ipairs(ents.FindByClass("combine_mine")) do update(mine) end
+            for _, mine in ipairs(ents.FindByClass("combine_mine")) do updateMine(mine) end
+            for _, mine in ipairs(ents.FindByClass("combine_mine_resistance")) do updateMine(mine) end
         end
     end)
 end
