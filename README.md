@@ -1,4 +1,4 @@
-# BetterLights
+# BetterLights v3.0
 
 A comprehensive dynamic lighting framework for Garry's Mod that adds realistic lights to entities, weapons, and effects.
 
