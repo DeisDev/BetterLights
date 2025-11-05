@@ -125,5 +125,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 - Testing checklist
 
 ## License
-This addon is licensed under Apache 2.0
-See [LICENSE.md](LICENSE.MD) for licensing information.
+This addon is licensed under Apache 2.0.
+See [LICENSE.md](LICENSE.md) for licensing information.
