@@ -1,0 +1,82 @@
+[b]Better Lights v3.0[/b]
+
+[i]High-performance dynamic lighting framework for Garry's Mod[/i]
+
+[img]https://i.imgur.com/VJ5aKv7.gif[/img]
+
+[b]Overview[/b]
+
+Better Lights adds configurable dynamic lighting to Garry's Mod: muzzle flashes, bullet impacts, projectiles, NPCs, items, fires, and explosions — with extensive v3.0 optimizations for improved performance and multiplayer compatibility.
+
+[b]I HIGHLY RECOMMEND YOU PLAY THIS MOD ON THE 64-BIT BRANCH[/b]
+
+The 64-Bit branch is what this addon was developed, tested, and targeted for. In most cases, your game will run significantly better on this branch.
+
+[b]What's New in v3.0[/b]
+
+[list]
+[*][b]Major Performance Improvements[/b] — ~350 lines of duplicate code eliminated, unified flash system, memory pooling
+[*][b]66% Network Overhead Reduction[/b] — Consolidated network messages for better multiplayer performance
+[*][b]Developer Framework[/b] — Comprehensive API for adding lights to custom entities and weapons
+[*][b]Helper Functions[/b] — Simplified entity detection and ConVar management
+[*][b]26 Total Optimizations[/b] — Entity tracking, attachment caching, smart throttling, and more
+[/list] 
+
+[b]Configuration[/b]
+
+Open the spawn menu tab: [b]Better Lights[/b].  
+Each feature includes options for Enable, Color, Size, Brightness, Decay, and Reset to Defaults.
+
+[b]Highlights[/b]
+
+[list]
+[*][b]Weapons[/b] — Realistic muzzle flashes and weapon glows (Physgun, Gravity Gun, Tool Gun, Crossbow, RPG)
+[*][b]Projectiles[/b] — Dynamic light trails for AR2 orbs, RPGs, grenades, bolts, Magnusson devices, and more
+[*][b]NPCs[/b] — Scanners, manhacks, rollermines (with hacked detection), and all antlion variants emit fitting glows
+[*][b]Items[/b] — Health kits, batteries, and pickups emit subtle colored lights
+[*][b]Fire & Explosions[/b] — Flickering flames and bright flashes with optimized unified system
+[*][b]Variant Detection[/b] — Automatically detects friendly vs hostile NPCs (rollermines, mines, etc.)
+[/list]
+
+[img]https://i.imgur.com/7tkSj2C.gif[/img]  
+[img]https://i.imgur.com/Nfgu4bJ.gif[/img]  
+[img]https://i.imgur.com/U5wAcKx.gif[/img]  
+[img]https://i.imgur.com/98AMEjC.gif[/img]
+
+[b]For Developers[/b]
+
+Better Lights v3.0 is now a complete framework for adding dynamic lighting to custom entities and weapons:
+
+[list]
+[*]Comprehensive API with helper functions
+[*]Unified flash management system
+[*]Entity tracking and variant detection
+[*]Performance-optimized patterns
+[*]Full documentation in GitHub repository
+[/list]
+
+Check the [url=https://github.com/DeisDev/BetterLights]GitHub repository[/url] for API documentation and examples!
+
+[b]Compatibility & Performance[/b]
+
+[list]
+[*]Most effects are client-side with minimal performance impact
+[*]Server-synced lights (muzzle flashes, impacts) visible to nearby players with optimized networking
+[*]Works with popular weapon packs like ARC9
+[*]v3.0 optimizations: Unified flash system, memory pooling, entity tracking
+[*]May conflict with other lighting mods, but you can disable each module individually
+[/list]
+
+If you like this addon, please [b]rate and favorite[/b] it!
+
+Feedback, suggestions, or issues? Leave a comment. I read every one.
+
+[b]GitHub:[/b] Full source code, API documentation, and contribution guidelines available on [url=https://github.com/DeisDev/BetterLights]GitHub[/url].
+
+See more of my addons [url=https://steamcommunity.com/workshop/filedetails/?id=3551812511]here[/url].
+
+[img]https://i.imgur.com/7jzy9bl.png[/img]
+
+[spoiler]
+keywords: better lights, lighting, dynamic lights, gmod lights, gmod lighting, muzzle flash, bullet impact, glow, elight, dlight, garrysmod, garry's mod, npc light, weapon glow, projectile light, flashlight, physgun light, toolgun light, gravity gun light, ar2 orb, rpg rocket, rollermine, scanner, manhack, healthkit glow, item glow, lighting mod, lighting framework, developer api, optimized lighting, performance, v3.0
+[/spoiler]
