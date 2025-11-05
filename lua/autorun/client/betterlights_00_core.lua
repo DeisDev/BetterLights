@@ -12,6 +12,166 @@ if CLIENT then
     BL._removeHandlers = BL._removeHandlers or {}
     BL._tickers = BL._tickers or {}
     BL._attachCache = BL._attachCache or {}
+    BL._networkHandlers = BL._networkHandlers or {}
+
+    -- Network message constants (must match server)
+    local NET_MUZZLE_FLASH = 1
+    local NET_BULLET_IMPACT = 2
+    
+    -- Register a network message handler
+    function BL.AddNetworkHandler(msgType, fn)
+        if not isfunction(fn) then return end
+        BL._networkHandlers[msgType] = fn
+    end
+    
+    -- Consolidated network message receiver
+    net.Receive("BetterLights_Event", function()
+        local msgType = net.ReadUInt(4)
+        local handler = BL._networkHandlers[msgType]
+        if handler then
+            handler()
+        end
+    end)
+    
+    -- Export constants for modules to use
+    BL.NET_MUZZLE_FLASH = NET_MUZZLE_FLASH
+    BL.NET_BULLET_IMPACT = NET_BULLET_IMPACT
+    
+    -- Memory pooling for flash tables
+    BL._flashPool = BL._flashPool or {}
+    BL._flashPoolSize = 0
+    BL._flashPoolMax = 100 -- Max pooled objects
+    
+    -- Get a flash table from the pool or create new one
+    function BL.GetFlashTable()
+        if BL._flashPoolSize > 0 then
+            local flash = BL._flashPool[BL._flashPoolSize]
+            BL._flashPool[BL._flashPoolSize] = nil
+            BL._flashPoolSize = BL._flashPoolSize - 1
+            return flash
+        end
+        return {}
+    end
+    
+    -- Return a flash table to the pool for reuse
+    function BL.RecycleFlashTable(flash)
+        if BL._flashPoolSize < BL._flashPoolMax then
+            -- Clear the table
+            for k in pairs(flash) do
+                flash[k] = nil
+            end
+            BL._flashPoolSize = BL._flashPoolSize + 1
+            BL._flashPool[BL._flashPoolSize] = flash
+        end
+    end
+    
+    -- Flash lifecycle management
+    BL._activeFlashes = BL._activeFlashes or {}
+    BL._flashIdCounter = BL._flashIdCounter or 0
+    
+    -- Create and register a timed flash effect
+    function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
+        local now = CurTime()
+        BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
+        local flash = BL.GetFlashTable()
+        flash.pos = pos
+        flash.r = r
+        flash.g = g
+        flash.b = b
+        flash.baseSize = size
+        flash.baseBrightness = brightness
+        flash.start = now
+        flash.die = now + duration
+        flash.id = (baseId or 60000) + BL._flashIdCounter
+        table.insert(BL._activeFlashes, flash)
+        return flash
+    end
+    
+    -- Update all active flashes (call from Think hook)
+    function BL.UpdateFlashes()
+        if #BL._activeFlashes == 0 then return end
+        local now = CurTime()
+        for i = #BL._activeFlashes, 1, -1 do
+            local f = BL._activeFlashes[i]
+            if not f or now >= f.die then
+                if f then BL.RecycleFlashTable(f) end
+                table.remove(BL._activeFlashes, i)
+            else
+                local dur = math.max(0.001, f.die - f.start)
+                local t = (f.die - now) / dur
+                local brightness = f.baseBrightness * t
+                local size = f.baseSize * (0.4 + 0.6 * t)
+                
+                local dl = DynamicLight(f.id)
+                if dl then
+                    dl.pos = f.pos
+                    dl.r = f.r
+                    dl.g = f.g
+                    dl.b = f.b
+                    dl.brightness = brightness
+                    dl.decay = 0
+                    dl.size = size
+                    dl.minlight = 0
+                    dl.noworld = false
+                    dl.nomodel = false
+                    dl.dietime = now + 0.05
+                end
+            end
+        end
+    end
+    
+    -- ConVar creation helper - creates a standard set of ConVars for a module
+    function BL.CreateConVarSet(prefix, defaults)
+        defaults = defaults or {}
+        local cvars = {}
+        
+        if defaults.enable ~= nil then
+            cvars.enable = CreateClientConVar(prefix .. "_enable", tostring(defaults.enable), true, false, defaults.enableDesc or "Enable this lighting effect")
+        end
+        
+        if defaults.size then
+            cvars.size = CreateClientConVar(prefix .. "_size", tostring(defaults.size), true, false, defaults.sizeDesc or "Light radius")
+        end
+        
+        if defaults.brightness then
+            cvars.brightness = CreateClientConVar(prefix .. "_brightness", tostring(defaults.brightness), true, false, defaults.brightnessDesc or "Light brightness")
+        end
+        
+        if defaults.decay then
+            cvars.decay = CreateClientConVar(prefix .. "_decay", tostring(defaults.decay), true, false, defaults.decayDesc or "Light decay")
+        end
+        
+        if defaults.r and defaults.g and defaults.b then
+            cvars.r = CreateClientConVar(prefix .. "_color_r", tostring(defaults.r), true, false, defaults.rDesc or "Red (0-255)")
+            cvars.g = CreateClientConVar(prefix .. "_color_g", tostring(defaults.g), true, false, defaults.gDesc or "Green (0-255)")
+            cvars.b = CreateClientConVar(prefix .. "_color_b", tostring(defaults.b), true, false, defaults.bDesc or "Blue (0-255)")
+        end
+        
+        return cvars
+    end
+    
+    -- Entity class checking helper
+    function BL.IsEntityClass(ent, classes)
+        if not IsValid(ent) then return false end
+        if not ent.GetClass then return false end
+        local cls = ent:GetClass()
+        if type(classes) == "string" then
+            return cls == classes
+        elseif type(classes) == "table" then
+            for _, checkClass in ipairs(classes) do
+                if cls == checkClass then return true end
+            end
+        end
+        return false
+    end
+    
+    -- Model matching helper (case-insensitive substring match)
+    function BL.MatchesModel(ent, pattern)
+        if not IsValid(ent) then return false end
+        if not ent.GetModel then return false end
+        local mdl = string.lower(ent:GetModel() or "")
+        return string.find(mdl, string.lower(pattern), 1, true) ~= nil
+    end
 
     -- Register a Think function to be called every frame
     function BL.AddThink(name, fn)
@@ -320,6 +480,10 @@ if CLIENT then
 
     -- Core Think loop: executes all registered Think functions every frame
     hook.Add("Think", "BetterLights_CoreThink", function()
+        -- Update global flash manager first
+        BL.UpdateFlashes()
+        
+        -- Execute all registered Think functions
         for name, fn in pairs(BL._thinks) do
             local ok, err = pcall(fn)
             if not ok then

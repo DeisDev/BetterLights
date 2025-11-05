@@ -30,95 +30,59 @@ if CLIENT then
     local cvar_flash_g = CreateClientConVar("betterlights_heli_bomb_flash_color_g", "210", true, false, "Heli bomb flash color - green (0-255)")
     local cvar_flash_b = CreateClientConVar("betterlights_heli_bomb_flash_color_b", "120", true, false, "Heli bomb flash color - blue (0-255)")
 
-    -- Track ephemeral explosion flashes
-    local BL_HeliBomb_Flashes = BL_HeliBomb_Flashes or {}
-
     -- Capture bomb removal to trigger a flash at its last known position
     hook.Add("EntityRemoved", "BetterLights_HeliBomb_FlashOnRemoval", function(ent, fullUpdate)
         if fullUpdate then return end
-        if not ent or not ent.GetClass then return end
-        if ent:GetClass() ~= "grenade_helicopter" then return end
+        if not BL.IsEntityClass(ent, "grenade_helicopter") then return end
         if not cvar_flash_enable:GetBool() then return end
 
         local pos = BL.GetEntityCenter(ent)
         if not pos then return end
 
-        local now = CurTime()
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
-        table.insert(BL_HeliBomb_Flashes, { pos = pos, start = now, die = now + dur, id = 56000 + (now * 1000 % 4000) })
+        
+        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
+        local flashSize = math.max(0, cvar_flash_size:GetFloat())
+        local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
+        BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 56000)
     end)
 
     if BL.TrackClass then BL.TrackClass("grenade_helicopter") end
 
-    -- Consolidated Think: steady glow + flash rendering in one callback
+    -- Consolidated Think: steady glow only (flash rendering handled by core)
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_HeliBomb", function()
-        local doGlow = cvar_enable:GetBool()
-        local doFlash = cvar_flash_enable:GetBool()
+        if not cvar_enable:GetBool() then return end
 
         -- Cache colors once per frame
         local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
 
-        if doGlow then
-            local size = math.max(0, cvar_size:GetFloat())
-            local brightness_base = math.max(0, cvar_brightness:GetFloat())
-            local decay = math.max(0, cvar_decay:GetFloat())
-            local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
-            local doElight = cvar_models_elight:GetBool()
+        local size = math.max(0, cvar_size:GetFloat())
+        local brightness_base = math.max(0, cvar_brightness:GetFloat())
+        local decay = math.max(0, cvar_decay:GetFloat())
+        local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+        local doElight = cvar_models_elight:GetBool()
 
-            local function update(ent)
-                if not IsValid(ent) then return end
-                local idx = ent:EntIndex()
-                local pos = BL.GetEntityCenter(ent)
-                if not pos then return end
+        local function update(ent)
+            if not IsValid(ent) then return end
+            local idx = ent:EntIndex()
+            local pos = BL.GetEntityCenter(ent)
+            if not pos then return end
 
-                -- Create world light
-                BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size, false)
+            -- Create world light
+            BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size, false)
 
-                -- Create entity light if enabled
-                if doElight then
-                    BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size * elMult, true)
-                end
-            end
-
-            if BL.ForEach then
-                BL.ForEach("grenade_helicopter", update)
-            else
-                for _, ent in ipairs(ents.FindByClass("grenade_helicopter")) do update(ent) end
+            -- Create entity light if enabled
+            if doElight then
+                BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size * elMult, true)
             end
         end
 
-        if doFlash and BL_HeliBomb_Flashes and #BL_HeliBomb_Flashes > 0 then
-            local now = CurTime()
-            local baseSize = math.max(0, cvar_flash_size:GetFloat())
-            local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
-            for i = #BL_HeliBomb_Flashes, 1, -1 do
-                local f = BL_HeliBomb_Flashes[i]
-                if not f or now >= f.die then
-                    table.remove(BL_HeliBomb_Flashes, i)
-                else
-                    local dur = math.max(0.001, f.die - f.start)
-                    local t = (f.die - now) / dur
-                    local b_eff = baseBright * t
-                    local s_eff = baseSize * (0.4 + 0.6 * t)
-                    local d = DynamicLight(f.id or (57000 + i))
-                    if d then
-                        d.pos = f.pos
-                        d.r = fr
-                        d.g = fg
-                        d.b = fb
-                        d.brightness = b_eff
-                        d.decay = 0
-                        d.size = s_eff
-                        d.minlight = 0
-                        d.noworld = false
-                        d.nomodel = false
-                        d.dietime = now + 0.05
-                    end
-                end
-            end
+        if BL.ForEach then
+            BL.ForEach("grenade_helicopter", update)
+        else
+            for _, ent in ipairs(ents.FindByClass("grenade_helicopter")) do update(ent) end
         end
     end)
 end

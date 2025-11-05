@@ -22,34 +22,23 @@ if CLIENT then
     local cvar_ar2_col_g = CreateClientConVar("betterlights_muzzle_ar2_color_g", "190", true, false, "AR2 muzzle flash color - green (0-255)")
     local cvar_ar2_col_b = CreateClientConVar("betterlights_muzzle_ar2_color_b", "255", true, false, "AR2 muzzle flash color - blue (0-255)")
 
-    local __bl_muzzle_counter = 0
-    local function spawnFlashAt(pos, col, size, bright, decay)
-        __bl_muzzle_counter = (__bl_muzzle_counter + 1) % 4096
-        local id = 61000 + __bl_muzzle_counter
-        local dl = DynamicLight(id)
-        if not dl then return end
-        dl.pos = pos
-        dl.r = col.r
-        dl.g = col.g
-        dl.b = col.b
-        dl.brightness = math.max(0, bright)
-        dl.decay = math.max(0, decay)
-        dl.size = math.max(0, size)
-        dl.dietime = CurTime() + 0.08
-    end
-
-    net.Receive("BetterLights_MuzzleFlash", function()
+    -- Register network handler for muzzle flashes
+    BL.AddNetworkHandler(BL.NET_MUZZLE_FLASH, function()
         if not cvar_enable:GetBool() then return end
         local pos = net.ReadVector()
         local isAR2 = net.ReadBool()
 
-
+        local duration = 0.08
         if isAR2 and cvar_ar2_enable:GetBool() then
             local r, g, b = BL.GetColorFromCvars(cvar_ar2_col_r, cvar_ar2_col_g, cvar_ar2_col_b)
-            spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_ar2_size:GetFloat(), cvar_ar2_brightness:GetFloat(), cvar_decay:GetFloat())
+            local size = cvar_ar2_size:GetFloat()
+            local brightness = cvar_ar2_brightness:GetFloat()
+            BL.CreateFlash(pos, r, g, b, size, brightness, duration, 61000)
         else
             local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-            spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_size:GetFloat(), cvar_brightness:GetFloat(), cvar_decay:GetFloat())
+            local size = cvar_size:GetFloat()
+            local brightness = cvar_brightness:GetFloat()
+            BL.CreateFlash(pos, r, g, b, size, brightness, duration, 61000)
         end
     end)
 end

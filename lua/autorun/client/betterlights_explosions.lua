@@ -22,7 +22,6 @@ if CLIENT then
     local cvar_detect_mine = CreateClientConVar("betterlights_explosion_detect_mines", "1", true, false, "Detect combine mine explosions (combine_mine)")
 
     local recent = recent or {}
-    local flashes = flashes or {}
 
     local function shouldSuppress(pos)
         local now = CurTime()
@@ -42,8 +41,14 @@ if CLIENT then
         local dur = math.max(0, cvar_time:GetFloat())
         if dur <= 0 then return end
         if shouldSuppress(pos) then return end
+        
+        local r, g, b = BL.GetColorFromCvars(cvar_r, cvar_g, cvar_b)
+        local size = math.max(0, cvar_size:GetFloat())
+        local brightness = math.max(0, cvar_brightness:GetFloat())
+        
+        BL.CreateFlash(pos, r, g, b, size, brightness, dur, 61000)
+        
         local now = CurTime()
-        table.insert(flashes, { pos = pos, start = now, die = now + dur, id = 61000 + (now * 1000 % 3000) })
         table.insert(recent, { pos = pos, t = now })
     end
 
@@ -62,24 +67,17 @@ if CLIENT then
 
     -- Detect explosive barrels by removal
     local function isExplosiveBarrel(ent)
-        if not IsValid(ent) then return false end
-        if not ent.GetModel then return false end
-        local m = string.lower(ent:GetModel() or "")
-        return string.find(m, "oildrum001_explosive", 1, true) ~= nil
+        return BL.MatchesModel(ent, "oildrum001_explosive")
     end
 
     -- Detect scanners (they explode when destroyed)
     local function isScanner(ent)
-        if not IsValid(ent) then return false end
-        local cls = ent.GetClass and ent:GetClass() or ""
-        return cls == "npc_cscanner" or cls == "npc_clawscanner"
+        return BL.IsEntityClass(ent, {"npc_cscanner", "npc_clawscanner"})
     end
 
     -- Detect combine mines (they explode when triggered)
     local function isCombineMine(ent)
-        if not IsValid(ent) then return false end
-        local cls = ent.GetClass and ent:GetClass() or ""
-        return cls == "combine_mine"
+        return BL.IsEntityClass(ent, "combine_mine")
     end
 
     -- Track scanners and mines to detect when they're destroyed (not just removed)
@@ -106,8 +104,7 @@ if CLIENT then
         
         -- Check for explosive barrels
         if cvar_detect_barrel:GetBool() then
-            local cls = ent.GetClass and ent:GetClass() or ""
-            if (cls == "prop_physics" or cls == "prop_physics_multiplayer") and isExplosiveBarrel(ent) then
+            if BL.IsEntityClass(ent, {"prop_physics", "prop_physics_multiplayer"}) and isExplosiveBarrel(ent) then
                 local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
                 spawnFlashAt(pos)
             end
@@ -136,8 +133,9 @@ if CLIENT then
         end
     end)
 
-    -- Render and decay flashes
-    hook.Add("Think", "BetterLights_ExplosionFlash_Think", function()
+    -- Update tracked entity positions using BL.AddThink
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_Explosion_Track", function()
         -- Update tracked scanner and mine positions
         if cvar_detect_scanner:GetBool() then
             for ent, data in pairs(trackedScanners) do
@@ -163,42 +161,6 @@ if CLIENT then
         else
             -- Clear tracking if disabled
             trackedMines = {}
-        end
-        
-        if not cvar_enable:GetBool() then return end
-        if not flashes or #flashes == 0 then return end
-        
-        local now = CurTime()
-        local baseSize = math.max(0, cvar_size:GetFloat())
-        local baseBright = math.max(0, cvar_brightness:GetFloat())
-        
-        -- Cache color once per frame
-        local cr, cg, cb = BL.GetColorFromCvars(cvar_r, cvar_g, cvar_b)
-
-        for i = #flashes, 1, -1 do
-            local f = flashes[i]
-            if not f or now >= f.die then
-                table.remove(flashes, i)
-            else
-                local dur = math.max(0.001, f.die - f.start)
-                local t = (f.die - now) / dur
-                local b_eff = baseBright * t
-                local s_eff = baseSize * (0.4 + 0.6 * t)
-                local d = DynamicLight(f.id or (62000 + i))
-                if d then
-                    d.pos = f.pos
-                    d.r = cr
-                    d.g = cg
-                    d.b = cb
-                    d.brightness = b_eff
-                    d.decay = 0
-                    d.size = s_eff
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = now + 0.05
-                end
-            end
         end
     end)
 end

@@ -35,9 +35,8 @@ if CLIENT then
 
     local TARGET_CLASS = "grenade_spit"
 
-    -- Tracking
+    -- Tracking spawned spit projectiles
     local BL_Spit_Tracked = BL_Spit_Tracked or {} -- ent -> { spawn = time }
-    local BL_Spit_Flashes = BL_Spit_Flashes or {}
 
     -- Track newly created spit
     if BL.TrackClass then BL.TrackClass(TARGET_CLASS) end
@@ -81,19 +80,21 @@ if CLIENT then
 
             local dur = math.max(0, cvar_flash_time:GetFloat())
             if dur <= 0 then return end
-            table.insert(BL_Spit_Flashes, { pos = pos, start = now, die = now + dur, id = 59200 + (now * 1000 % 3000) })
+            
+            local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
+            local flashSize = math.max(0, cvar_flash_size:GetFloat())
+            local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
+            BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 59200)
         end
     end)
 
-    -- Consolidated Think: handle both in-flight glow and queued impact flashes
+    -- Consolidated Think: handle in-flight glow
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_AntlionSpit", function()
         local doGlow = cvar_enable:GetBool()
-        local doFlash = cvar_flash_enable:GetBool()
 
         -- Cache colors once per frame
         local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
 
         if doGlow then
             local size = math.max(0, cvar_size:GetFloat())
@@ -124,40 +125,6 @@ if CLIENT then
             end
             -- Cleanup invalids in our spawn-time map
             for ent, _ in pairs(BL_Spit_Tracked) do if not IsValid(ent) then BL_Spit_Tracked[ent] = nil end end
-        end
-
-        -- Impact flashes
-        if doFlash and BL_Spit_Flashes and #BL_Spit_Flashes > 0 then
-            local now = CurTime()
-            local baseSize = math.max(0, cvar_flash_size:GetFloat())
-            local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
-
-            for i = #BL_Spit_Flashes, 1, -1 do
-                local f = BL_Spit_Flashes[i]
-                if not f or now >= f.die then
-                    remove(BL_Spit_Flashes, i)
-                else
-                    local dur = math.max(0.001, f.die - f.start)
-                    local t = (f.die - now) / dur -- 1 -> 0
-                    local b_eff = baseBright * t
-                    local s_eff = baseSize * (0.5 + 0.5 * t)
-
-                    local d = DynamicLight(f.id or (59400 + i))
-                    if d then
-                        d.pos = f.pos
-                        d.r = fr
-                        d.g = fg
-                        d.b = fb
-                        d.brightness = b_eff
-                        d.decay = 0
-                        d.size = s_eff
-                        d.minlight = 0
-                        d.noworld = false
-                        d.nomodel = false
-                        d.dietime = now + 0.05
-                    end
-                end
-            end
         end
     end)
 end

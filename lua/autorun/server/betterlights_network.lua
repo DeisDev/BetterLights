@@ -1,9 +1,15 @@
--- BetterLights: Bullet impact server dispatcher
--- Captures bullet impacts via the bullet callback and broadcasts to clients in PVS.
+-- BetterLights: Network Message Consolidation
+-- Single network message system for all server-to-client communications
 
 if SERVER then
-    util.AddNetworkString("BetterLights_BulletImpact")
-
+    -- Single network string for all BetterLights messages
+    util.AddNetworkString("BetterLights_Event")
+    
+    -- Message type constants
+    local MSG_MUZZLE_FLASH = 1
+    local MSG_BULLET_IMPACT = 2
+    
+    -- Shared AR2 detection function
     local function isAR2Shot(shooter, bullet)
         if bullet and type(bullet.TracerName) == "string" and bullet.TracerName ~= "" then
             local tn = string.lower(bullet.TracerName)
@@ -23,7 +29,23 @@ if SERVER then
         end
         return false
     end
+    
+    -- Muzzle Flash Handler
+    hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", function(ent, bullet)
+        if not IsValid(ent) then return end
+        if not bullet then return end
 
+        local src = bullet.Src or (IsValid(ent) and ent.GetShootPos and ent:GetShootPos()) or ent:GetPos()
+        if not src then return end
+
+        net.Start("BetterLights_Event")
+            net.WriteUInt(MSG_MUZZLE_FLASH, 4) -- 4 bits = up to 16 message types
+            net.WriteVector(src)
+            net.WriteBool(isAR2Shot(ent, bullet))
+        net.SendPVS(src)
+    end)
+    
+    -- Bullet Impact Handler
     hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
         if not IsValid(ent) then return end
         if not bullet then return end
@@ -38,7 +60,8 @@ if SERVER then
                 pos = pos + tr.HitNormal * 2
             end
 
-            net.Start("BetterLights_BulletImpact")
+            net.Start("BetterLights_Event")
+                net.WriteUInt(MSG_BULLET_IMPACT, 4)
                 net.WriteVector(pos)
                 net.WriteBool(isAR2Shot(att, bullet))
             net.SendPVS(pos)

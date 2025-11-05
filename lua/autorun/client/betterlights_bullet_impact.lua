@@ -23,34 +23,23 @@ if CLIENT then
     local cvar_ar2_col_g = CreateClientConVar("betterlights_bullet_impact_ar2_color_g", "190", true, false, "AR2 bullet impact color - green (0-255)")
     local cvar_ar2_col_b = CreateClientConVar("betterlights_bullet_impact_ar2_color_b", "255", true, false, "AR2 bullet impact color - blue (0-255)")
 
-    -- Ensure each impact gets a unique DynamicLight ID so multiple pellets don't overwrite each other.
-    local __bl_dl_counter = 0
-    local function spawnFlashAt(pos, col, size, bright, decay)
-        __bl_dl_counter = (__bl_dl_counter + 1) % 4096
-        local id = 60000 + __bl_dl_counter
-        local dl = DynamicLight(id)
-        if not dl then return end
-        dl.pos = pos
-    dl.r = col.r
-    dl.g = col.g
-    dl.b = col.b
-        dl.brightness = math.max(0, bright)
-        dl.Decay = math.max(0, decay)
-        dl.size = math.max(0, size)
-        dl.die = CurTime() + 0.14
-    end
-
-    net.Receive("BetterLights_BulletImpact", function()
+    -- Register network handler for bullet impacts
+    BL.AddNetworkHandler(BL.NET_BULLET_IMPACT, function()
         if not cvar_enable:GetBool() then return end
         local pos = net.ReadVector()
         local isAR2 = net.ReadBool()
 
+        local duration = 0.14
         if isAR2 and cvar_ar2_enable:GetBool() then
             local r, g, b = BL.GetColorFromCvars(cvar_ar2_col_r, cvar_ar2_col_g, cvar_ar2_col_b)
-            spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_ar2_size:GetFloat(), cvar_ar2_brightness:GetFloat(), cvar_decay:GetFloat())
+            local size = cvar_ar2_size:GetFloat()
+            local brightness = cvar_ar2_brightness:GetFloat()
+            BL.CreateFlash(pos, r, g, b, size, brightness, duration, 60000)
         else
             local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-            spawnFlashAt(pos, { r = r, g = g, b = b }, cvar_size:GetFloat(), cvar_brightness:GetFloat(), cvar_decay:GetFloat())
+            local size = cvar_size:GetFloat()
+            local brightness = cvar_brightness:GetFloat()
+            BL.CreateFlash(pos, r, g, b, size, brightness, duration, 60000)
         end
     end)
 end

@@ -29,8 +29,7 @@ if CLIENT then
     -- Exact classname for Strider Buster in GMod
     local TARGET_CLASS = "weapon_striderbuster"
 
-    -- Track ephemeral flashes and active devices
-    local BL_Magnusson_Flashes = BL_Magnusson_Flashes or {}
+    -- Track active devices for spawn-time checking
     local BL_Magnusson_Tracked = BL_Magnusson_Tracked or {} -- maps ent -> spawnTime
 
     -- Use core tracking for class
@@ -57,25 +56,30 @@ if CLIENT then
     hook.Add("EntityRemoved", "BetterLights_Magnusson_FlashOnRemoval", function(ent, fullUpdate)
         if fullUpdate then return end
         if not IsValid(ent) then return end
-        -- Untrack when removed
-        if BL_Magnusson_Tracked[ent] ~= nil then
+        
+        -- Check if we were tracking this entity
+        local spawnTime = BL_Magnusson_Tracked[ent]
+        if spawnTime then
             BL_Magnusson_Tracked[ent] = nil
         end
-        local class = (ent.GetClass and ent:GetClass()) or ""
-        if class ~= TARGET_CLASS then return end
+        
+        if not BL.IsEntityClass(ent, TARGET_CLASS) then return end
         if not cvar_flash_enable:GetBool() then return end
 
         -- Avoid spawn flashes: only flash if it existed for some time
         local now = CurTime()
-        local spawnTime = BL_Magnusson_Tracked[ent] or (ent.GetCreationTime and ent:GetCreationTime()) or now
-        if (now - spawnTime) < 0.2 then return end
+        if spawnTime and (now - spawnTime) < 0.2 then return end
 
         local pos = BL.GetEntityCenter(ent)
         if not pos then return end
 
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
-        table.insert(BL_Magnusson_Flashes, { pos = pos, start = now, die = now + dur, id = 59000 + (now * 1000 % 3000) })
+        
+        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
+        local flashSize = math.max(0, cvar_flash_size:GetFloat())
+        local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
+        BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 59000)
     end)
 
     -- Steady glow while active
@@ -112,46 +116,6 @@ if CLIENT then
                             BL.CreateDLight(idx, pos, gr, gg, gb, brightness, decay, size * elMult, true)
                         end
                     end
-                end
-            end
-        end
-    end)
-
-    -- Render short-lived explosion flashes
-    AddThink("BetterLights_Magnusson_FlashThink", function()
-        if not cvar_flash_enable:GetBool() then return end
-        if not BL_Magnusson_Flashes or #BL_Magnusson_Flashes == 0 then return end
-
-        local now = CurTime()
-        local baseSize = math.max(0, cvar_flash_size:GetFloat())
-        local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
-
-        -- Cache flash color once per frame
-        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
-
-        for i = #BL_Magnusson_Flashes, 1, -1 do
-            local f = BL_Magnusson_Flashes[i]
-            if not f or now >= f.die then
-                table.remove(BL_Magnusson_Flashes, i)
-            else
-                local dur = math.max(0.001, f.die - f.start)
-                local t = (f.die - now) / dur -- 1->0
-                local b_eff = baseBright * t
-                local s_eff = baseSize * (0.4 + 0.6 * t)
-
-                local d = DynamicLight(f.id or (60000 + i))
-                if d then
-                    d.pos = f.pos
-                    d.r = fr
-                    d.g = fg
-                    d.b = fb
-                    d.brightness = b_eff
-                    d.decay = 0
-                    d.size = s_eff
-                    d.minlight = 0
-                    d.noworld = false
-                    d.nomodel = false
-                    d.dietime = now + 0.05
                 end
             end
         end

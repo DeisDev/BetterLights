@@ -30,8 +30,7 @@ if CLIENT then
     local cvar_flash_g = CreateClientConVar("betterlights_rpg_flash_color_g", "210", true, false, "RPG flash color - green (0-255)")
     local cvar_flash_b = CreateClientConVar("betterlights_rpg_flash_color_b", "120", true, false, "RPG flash color - blue (0-255)")
 
-    -- Track ephemeral RPG explosion flashes and a recent list for suppression
-    local BL_RPG_Flashes = BL_RPG_Flashes or {}
+    -- Track recent explosions to prevent duplicates
     local BL_RPG_Recent = BL_RPG_Recent or {}
 
     local function rpgShouldSuppress(pos)
@@ -49,78 +48,48 @@ if CLIENT then
 
     hook.Add("EntityRemoved", "BetterLights_RPG_FlashOnRemoval", function(ent, fullUpdate)
         if fullUpdate then return end
-        if not IsValid(ent) or not ent.GetClass then return end
-        if ent:GetClass() ~= "rpg_missile" then return end
+        if not BL.IsEntityClass(ent, "rpg_missile") then return end
         if not cvar_flash_enable:GetBool() then return end
 
         local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
         if rpgShouldSuppress(pos) then return end
-        local now = CurTime()
+        
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
-        table_insert(BL_RPG_Flashes, { pos = pos, start = now, die = now + dur, id = 58000 + (now * 1000 % 4000) })
+        
+        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
+        local flashSize = math.max(0, cvar_flash_size:GetFloat())
+        local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
+        BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 58000)
+        
+        local now = CurTime()
         table_insert(BL_RPG_Recent, { pos = pos, t = now })
     end)
 
     -- Track rockets once
     if BL.TrackClass then BL.TrackClass("rpg_missile") end
 
-    -- Centralized Think
+    -- Centralized Think for rocket glow only (flashes handled by core)
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_RPGMissile_DLight", function()
-        local doGlow = cvar_enable:GetBool()
-        local doFlash = cvar_flash_enable:GetBool()
+        if not cvar_enable:GetBool() then return end
 
         -- Cache colors and settings once per frame
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
-        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
 
-        if doGlow then
-            local function update(ent)
-                if not IsValid(ent) then return end
-                local pos = ent:WorldSpaceCenter()
-                BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
-            end
-
-            if BL.ForEach then
-                BL.ForEach("rpg_missile", update)
-            else
-                for _, ent in ipairs(ents.FindByClass("rpg_missile")) do update(ent) end
-            end
+        local function update(ent)
+            if not IsValid(ent) then return end
+            local pos = ent:WorldSpaceCenter()
+            BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
         end
 
-        if doFlash and BL_RPG_Flashes and #BL_RPG_Flashes > 0 then
-            local now = CurTime()
-            local baseSize = math.max(0, cvar_flash_size:GetFloat())
-            local baseBright = math.max(0, cvar_flash_brightness:GetFloat())
-            for i = #BL_RPG_Flashes, 1, -1 do
-                local f = BL_RPG_Flashes[i]
-                if not f or now >= f.die then
-                    table.remove(BL_RPG_Flashes, i)
-                else
-                    local dur = math.max(0.001, f.die - f.start)
-                    local t = (f.die - now) / dur
-                    local b_eff = baseBright * t
-                    local s_eff = baseSize * (0.4 + 0.6 * t)
-                    local d = DynamicLight(f.id or (59000 + i))
-                    if d then
-                        d.pos = f.pos
-                        d.r = fr
-                        d.g = fg
-                        d.b = fb
-                        d.brightness = b_eff
-                        d.decay = 0
-                        d.size = s_eff
-                        d.minlight = 0
-                        d.noworld = false
-                        d.nomodel = false
-                        d.dietime = now + 0.05
-                    end
-                end
-            end
+        if BL.ForEach then
+            BL.ForEach("rpg_missile", update)
+        else
+            for _, ent in ipairs(ents.FindByClass("rpg_missile")) do update(ent) end
         end
     end)
 end
