@@ -1,377 +1,513 @@
-﻿# BetterLights API Documentation
+﻿# BetterLights Developer Documentation (v3.0)
 
-Complete API reference for developers building custom lighting modules or extending BetterLights.
+Complete, step-by-step guide for using the BetterLights framework in your own addons, plus a full API reference. This document shows you how to depend on the framework, structure your addon, and build dynamic lights quickly and correctly.
 
-For detailed examples and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Table of Contents
-
-- [Quick Start](#quick-start)
-- [Core Functions](#core-functions)
-- [Utility Functions](#utility-functions)
-- [Complete Examples](#complete-examples)
-- [Performance Best Practices](#performance-best-practices)
-- [Version 3.0 Features](#version-30-features)
+Links:
+- End-user overview: README.md
+- Contributing to this project: CONTRIBUTING.md
 
 ---
 
-## Quick Start
+## What is BetterLights?
 
-The simplest way to add lights to your entities:
+BetterLights is a client-side lighting framework for Garry’s Mod. It provides:
+
+- A single, high-performance Think aggregator for all lighting logic
+- A unified, pooled flash system for short-lived effects (explosions, impacts)
+- Helpers for ConVars, entity tracking, attachment lookups, and variant detection
+- A simple API so you can add dynamic lights to any entity in a few lines
+
+You can use BetterLights as a dependency in a separate addon, or add a new module directly to this project.
+
+---
+
+## Getting Started
+
+This section takes you from zero to a working addon that uses BetterLights.
+
+### Requirements
+
+- Garry’s Mod (x64 branch recommended for performance)
+- BetterLights installed and enabled
+  - For local development: place the BetterLights addon in `garrysmod/addons/`
+  - For Workshop: add BetterLights as a “Required Item” on your Workshop page (Steam UI)
+
+Note: Garry’s Mod does not enforce runtime dependencies via `addon.json`. Always perform a runtime check for the `BetterLights` global in your client code.
+
+### Project Structure (Separate Addon)
+
+Create a new addon alongside BetterLights:
+
+```
+garrysmod/
+  addons/
+	BetterLights/                       # This framework (dependency)
+	MyLightingAddon/                    # Your addon
+	  addon.json
+	  README.md                         # Optional
+	  lua/
+		autorun/
+		  client/
+			mylights_init.lua           # Your lighting code (client)
+		  server/
+			mylights_server.lua         # Optional (only if you need server logic)
+```
+
+Example `addon.json` (metadata only – dependencies are managed on Workshop page):
+```json
+{
+  "title": "My Lighting Addon (BetterLights)",
+  "type": "ServerContent",
+  "tags": ["effects"],
+  "ignore": ["*.git*", "*.md", "*.psd"]
+}
+```
+
+### Minimal Integration (Hello Light)
+
+Create `lua/autorun/client/mylights_init.lua` in your addon:
 
 ```lua
 if CLIENT then
-    local BL = BetterLights
+	if not BetterLights then
+		print("[MyLights] BetterLights not found. Please install/enable BetterLights.")
+		return
+	end
 
-    -- Create standard ConVars
-    local cvars = BL.CreateConVarSet("mymod_light", {
-        enable = 1, size = 100, brightness = 1.0, decay = 2000,
-        r = 255, g = 128, b = 64
-    })
+	local BL = BetterLights
 
-    BL.TrackClass("my_custom_entity")
+	-- Standard, user-configurable ConVars for one light family
+	local cvars = BL.CreateConVarSet("mylights_example", {
+		enable = 1, size = 120, brightness = 1.2, decay = 2000,
+		r = 255, g = 200, b = 100
+	})
 
-    BL.AddThink("MyMod_Lights", function()
-        if not cvars.enable:GetBool() then return end
+	-- Track an existing entity class (example: manhack)
+	BL.TrackClass("npc_manhack")
 
-        local r, g, b = BL.GetColorFromCvars(cvars.r, cvars.g, cvars.b)
+	BL.AddThink("MyLights_Example", function()
+		if not cvars.enable:GetBool() then return end
 
-        BL.ForEach("my_custom_entity", function(ent)
-            local pos = BL.GetEntityCenter(ent)
-            if pos then
-                BL.CreateDLight(
-                    ent:EntIndex(), pos, r, g, b,
-                    cvars.brightness:GetFloat(), cvars.decay:GetFloat(),
-                    cvars.size:GetFloat(), false
-                )
-            end
-        end)
-    end)
+		local r, g, b = BL.GetColorFromCvars(cvars.r, cvars.g, cvars.b)
+		local size = cvars.size:GetFloat()
+		local brightness = cvars.brightness:GetFloat()
+		local decay = cvars.decay:GetFloat()
+
+		BL.ForEach("npc_manhack", function(ent)
+			local pos = BL.GetEntityCenter(ent)
+			if pos then
+				BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
+			end
+		end)
+	end)
 end
 ```
 
+Run the game, spawn a manhack, and tweak the `mylights_example_*` ConVars to see results.
+
+### Declaring a Workshop Dependency
+
+- On your Steam Workshop item, add BetterLights as a “Required Item”.
+- In code, always check for the `BetterLights` global to avoid errors if a user disables it.
+
+### When to use server code
+
+Most BetterLights work is client-side. Only use server code if you:
+- Need to send events to nearby clients (e.g., custom muzzle flash events)
+- Need server validation for custom entities
+
+For most addons, client-only is sufficient.
+
 ---
 
-## Core Functions
+## Full Walkthrough: Build a Lighting Addon
 
-### Think system
+We’ll build “My Turret Lights,” which lights up custom turrets and flashes on destruction.
 
-#### `BL.AddThink(name, fn)`
-Register a Think callback that runs every frame.
-- name (string): Unique identifier
-- fn (function): Callback function
+Folder layout:
+```
+MyTurretLights/
+  addon.json
+  lua/
+	autorun/
+	  client/
+		myturret_lights.lua
+```
 
-#### `BL.RemoveThink(name)`
-Unregister a Think callback.
+`addon.json`:
+```json
+{
+  "title": "My Turret Lights (BetterLights)",
+  "type": "ServerContent",
+  "tags": ["effects", "fun"],
+  "ignore": ["*.git*", "*.md"]
+}
+```
 
-#### `BL.ShouldTick(name, hz)`
-Throttle updates to a specific rate.
-- name (string): Unique identifier for throttling
-- hz (number): Updates per second (0 = every frame)
-- Returns: boolean — true when it’s time to update
-
+`lua/autorun/client/myturret_lights.lua`:
 ```lua
-BL.AddThink("MyMod", function()
-    if BL.ShouldTick("Update", 30) then
-        -- Update at 30 Hz instead of every frame
-    end
+if CLIENT then
+	if not BetterLights then
+		print("[MyTurretLights] BetterLights is missing. Install the dependency.")
+		return
+	end
+	local BL = BetterLights
+
+	-- Config ConVars (hostile color defaults to red)
+	local cvars = BL.CreateConVarSet("myturret", {
+		enable = 1, size = 150, brightness = 1.5, decay = 2000,
+		r = 255, g = 64, b = 64
+	})
+	-- Optional extra ConVars
+	local cvar_friendly_r = CreateClientConVar("myturret_friendly_r", "64", true, false)
+	local cvar_friendly_g = CreateClientConVar("myturret_friendly_g", "255", true, false)
+	local cvar_friendly_b = CreateClientConVar("myturret_friendly_b", "64", true, false)
+	local cvar_flicker    = CreateClientConVar("myturret_flicker", "0.10", true, false)
+	local cvar_flash      = CreateClientConVar("myturret_explosion_flash", "1", true, false)
+
+	-- Track your turret class (replace with your SENT/NextBot class)
+	BL.TrackClass("sent_my_custom_turret")
+
+	BL.AddThink("MyTurretLights", function()
+		if not cvars.enable:GetBool() then return end
+		if not BL.ShouldTick("MyTurret_Update", 30) then return end -- 30 Hz
+
+		local size       = math.max(0, cvars.size:GetFloat())
+		local brightness = math.max(0, cvars.brightness:GetFloat())
+		local decay      = math.max(0, cvars.decay:GetFloat())
+		local fr, fg, fb = BL.GetColorFromCvars(cvar_friendly_r, cvar_friendly_g, cvar_friendly_b)
+		local hr, hg, hb = BL.GetColorFromCvars(cvars.r, cvars.g, cvars.b)
+		local now        = CurTime()
+		local flickerAmt = math.Clamp(cvar_flicker:GetFloat(), 0, 1)
+
+		BL.ForEach("sent_my_custom_turret", function(ent)
+			-- Attachment or center
+			local pos = BL.GetAttachmentPos(ent, {"light", "eye", "muzzle"}) or BL.GetEntityCenter(ent)
+			if not pos then return end
+
+			-- Friendly vs hostile color
+			local isFriendly = BL.DetectEntityVariant(ent, {
+				checkDisposition = true,
+				nwBools = {"Friendly", "PlayerAlly"},
+				saveTableKeys = {"m_bFriendly"},
+				targetname = "friendly"
+			})
+			local r, g, b = isFriendly and fr or hr, isFriendly and fg or hg, isFriendly and fb or hb
+
+			local finalSize = size
+			if flickerAmt > 0 then
+				finalSize = BL.CreateFlickerEffect(size, now, 8, flickerAmt, ent:EntIndex())
+			end
+
+			BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, finalSize, false)
+		end)
+	end)
+
+	-- Flash when a turret is removed (e.g., destroyed)
+	hook.Add("EntityRemoved", "MyTurretLights_Flash", function(ent, fullUpdate)
+		if fullUpdate then return end
+		if not BL.IsEntityClass(ent, "sent_my_custom_turret") then return end
+		if not cvar_flash:GetBool() then return end
+		local pos = BL.GetEntityCenter(ent)
+		if pos then
+			BL.CreateFlash(pos, 255, 200, 100, 400, 4.0, 0.3, 70000)
+		end
+	end)
+end
+```
+
+Testing checklist:
+- Subscribe to BetterLights on Workshop (or drop it into `addons/`)
+- Place this addon into `addons/MyTurretLights`
+- Launch GMod (x64 branch recommended)
+- Spawn your entity class `sent_my_custom_turret`
+- Use console ConVars to adjust size/brightness/colors
+
+---
+
+## Do’s and Don’ts
+
+### Do
+- Use `BL.AddThink` for your logic instead of adding many global hooks
+- Track entities with `BL.TrackClass` and iterate with `BL.ForEach`
+- Cache ConVar reads once per frame; don’t read them per-entity
+- Throttle with `BL.ShouldTick("Name", 30)` when 30 Hz is enough
+- Use `BL.CreateFlash` for short-lived effects instead of rolling your own arrays
+- Prefer `BL.LookupAttachmentCached` / `BL.GetAttachmentPos` for attachment positions
+
+### Don’t
+- Don’t call `ents.FindByClass` every frame; register once and use `BL.ForEach`
+- Don’t re-implement flash arrays/render loops — use `BL.CreateFlash`
+- Don’t generate random/new light IDs each frame for persistent lights; use `ent:EntIndex()`
+- Don’t keep stale references; always verify with `IsValid(ent)` where needed
+- Don’t spam network messages for effects already handled client-side
+
+Bad example (don’t do this):
+```lua
+-- Reads ConVar per entity and searches entities every frame
+hook.Add("Think", "MyLaggyLights", function()
+	for _, ent in ipairs(ents.FindByClass("npc_manhack")) do
+		local size = GetConVar("mylights_size"):GetFloat() -- slow repeated lookup
+		-- ...
+	end
 end)
 ```
 
-### Entity tracking
-
-#### `BL.TrackClass(classname)`
-Track entities of this class for efficient iteration.
-
-#### `BL.ForEach(classname, fn)`
-Iterate over all tracked entities. Automatically cleans up invalid entities.
-- classname (string)
-- fn (function): Receives `ent`
-
+Good example:
 ```lua
 BL.TrackClass("npc_manhack")
-BL.ForEach("npc_manhack", function(ent)
-    -- Process each manhack
+BL.AddThink("MyFastLights", function()
+	local size = GetConVar("mylights_size"):GetFloat()
+	BL.ForEach("npc_manhack", function(ent)
+		-- use cached size
+	end)
 end)
 ```
 
-#### `BL.AddRemoveHandler(classname, fn)`
-Register a callback when an entity is removed.
-
 ---
 
-## Utility Functions
+## API Reference
 
-### ConVar & configuration
+This is the public, stable surface intended for addon authors.
 
-#### `BL.CreateConVarSet(prefix, defaults)`
-Create standard ConVars in one call.
-- prefix (string): Prefix for ConVars
-- defaults (table): Keys typically include `enable`, `size`, `brightness`, `decay`, `r`, `g`, `b`
-- Returns: table with created ConVars
+### Think & Scheduling
 
-```lua
-local cvars = BL.CreateConVarSet("mymod_light", {
-    enable = 1, size = 100, brightness = 1.0, decay = 2000,
-    r = 255, g = 128, b = 64
-})
-```
+#### BL.AddThink(name, fn)
+Register a function to be executed from the BetterLights Think aggregator each frame.
+- name: string, unique identifier
+- fn: function()
 
-#### `BL.GetColorFromCvars(r_cvar, g_cvar, b_cvar)`
-Extract and clamp RGB values from ConVars (0–255).
-- Returns: r, g, b (numbers)
+#### BL.RemoveThink(name)
+Unregister a previously registered Think function.
 
-### Flash effects
+#### BL.ShouldTick(name, hz)
+Return true only at the requested rate (updates per second). Use to throttle work.
+- name: string, unique ID for this throttle stream
+- hz: number, e.g., 30 for 30 Hz; 0 or negative means every frame
+- returns: boolean
 
-#### `BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)`
-Create a managed timed flash. Automatically rendered and cleaned up.
-- pos (Vector), r/g/b (0–255), size (number), brightness (number), duration (seconds), baseId (number)
+### Entity Tracking
 
-```lua
--- Explosion flash
-BL.CreateFlash(pos, 255, 200, 100, 300, 4.0, 0.2, 65000)
-```
+#### BL.TrackClass(classname)
+Start tracking all entities of a class. Recommended before using `BL.ForEach`.
 
-### Entity helpers
+#### BL.ForEach(classname, fn)
+Iterate over all currently tracked, valid entities of a class.
+- fn(ent): called for each valid entity
 
-#### `BL.IsEntityClass(ent, classes)`
-Check if entity matches class (string) or classes (array).
-```lua
-if BL.IsEntityClass(ent, "npc_manhack") then end
-if BL.IsEntityClass(ent, {"npc_cscanner", "npc_clawscanner"}) then end
-```
+#### BL.AddRemoveHandler(classname, fn)
+Run a callback when entities of a class are removed.
 
-#### `BL.MatchesModel(ent, pattern)`
-Case-insensitive model substring match.
-```lua
-if BL.MatchesModel(ent, "barrel") then end
-```
+### Flash Effects
 
-#### `BL.GetEntityCenter(ent)`
-Get world-space center of entity (OBB center).
-- Returns: Vector or nil
+#### BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
+Create a short-lived, pooled flash that’s rendered and cleaned up automatically.
+- pos: Vector
+- r,g,b: integers 0–255
+- size: number (radius)
+- brightness: number
+- duration: seconds
+- baseId: base light ID (default 60000)
+- returns: flash object (advanced)
 
-### Lighting
+### Lights
 
-#### `BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight)`
-Create a dynamic light with standardized settings.
-- index (number): Unique ID (typically `ent:EntIndex()`)
-- pos (Vector), r/g/b (0–255), brightness (number), decay (number), size (number)
-- isElight (boolean): true for model-only, false for world lights
+#### BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight)
+Create a dynamic light with standard fields populated.
+- index: number, use `ent:EntIndex()` for persistent per-entity lights
+- pos: Vector
+- r,g,b: integers 0–255
+- brightness, decay, size: numbers
+- isElight: boolean (true = model-only, false = world light)
+- returns: DynamicLight struct or nil
 
-```lua
-BL.CreateDLight(ent:EntIndex(), pos, 255, 128, 64, 1.0, 2000, 100, false)
-```
+#### BL.NewLightId(base)
+Generate a unique ID for ephemeral effects you manage manually.
+- base: number (default 60000)
 
-#### `BL.NewLightId(base)`
-Generate unique light IDs for ephemeral effects.
+### ConVars & Colors
 
-### Effects
+#### BL.CreateConVarSet(prefix, defaults)
+Create a standard set of ConVars in one call.
+- prefix: string (e.g., "mymod_weapon")
+- defaults: table { enable, size, brightness, decay, r, g, b, ...Desc }
+- returns: table of ConVar objects
 
-#### `BL.CreateFlickerEffect(baseValue, time, speed, amount, phase)`
-Calculate natural-looking flicker using layered sine waves.
-```lua
-local size = BL.CreateFlickerEffect(100, CurTime(), 8, 0.15, ent:EntIndex())
-```
+#### BL.GetColorFromCvars(r_cvar, g_cvar, b_cvar)
+Clamp and return integer RGB values from ConVars.
+- returns: r, g, b (0–255)
 
-#### `BL.LerpColor(r1, g1, b1, r2, g2, b2, t)`
-Linearly interpolate between two RGB colors.
-```lua
-local r, g, b = BL.LerpColor(255, 0, 0, 0, 0, 255, t)
-```
+### Entity Helpers
 
-### Variant detection
+#### BL.IsEntityClass(ent, classes)
+Return true if ent is valid and its class matches a string or any string in a table.
 
-#### `BL.DetectEntityVariant(ent, options)`
-Detect entity variants (friendly/hostile/hacked).
-```lua
-local isHacked = BL.DetectEntityVariant(rollermine, {
-    nwBools = {"Hacked", "Friendly"},
-    saveTableKeys = {"m_bHackedByAlyx"},
-    checkDisposition = true
-})
-```
+#### BL.MatchesModel(ent, pattern)
+Case-insensitive substring check against `ent:GetModel()`.
 
-Options table may include:
-- `classes` (string[]), `nwBools` (string[]), `saveTableKeys` (string[])
-- `saveTableKeyword` (string), `checkDisposition` (boolean)
-- `skin` (number|function), `targetname` (string)
+#### BL.GetEntityCenter(ent)
+Return the world-space OBB center of an entity, or nil.
 
 ### Attachments
 
-#### `BL.LookupAttachmentCached(ent, names)`
-Find attachment ID by trying multiple names. Cached per model.
+#### BL.LookupAttachmentCached(ent, names)
+Try a list of attachment names; returns ID or nil. Results cached per model.
 
-#### `BL.GetAttachmentPos(ent, names)`
-Get attachment position by trying multiple names.
-```lua
-local pos = BL.GetAttachmentPos(weapon, {"muzzle", "muzzle_flash", "1"})
-```
+#### BL.GetAttachmentPos(ent, names)
+Return attachment world position if found, otherwise nil.
 
-### Player
+### Player / Traces / Math
 
-#### `BL.IsPlayerHoldingWeapon(weaponClass)`
-Check if local player is holding a specific weapon.
+#### BL.IsPlayerHoldingWeapon(weaponClass)
+Return true if the local player is holding the specified weapon.
 
-#### `BL.GetPlayerEyeTrace(distance, filter)`
-Perform a trace from the player’s eye position.
+#### BL.GetPlayerEyeTrace(distance, filter)
+Trace forward from player view; returns a trace table or nil.
 
-### Advanced
+#### BL.TraceLineReuse(key, data)
+Run util.TraceLine with a reusable table to reduce allocations.
 
-#### `BL.TraceLineReuse(key, data)`
-Perform a trace using a reusable table to reduce GC.
+#### BL.LerpColor(r1, g1, b1, r2, g2, b2, t)
+Linear interpolate between two colors; return r,g,b.
+
+#### BL.CreateFlickerEffect(baseValue, time, speed, amount, phase)
+Layered-sine flicker helper; returns a new value around baseValue.
+
+### Variant Detection
+
+#### BL.DetectEntityVariant(ent, options)
+Heuristics to detect entity “variants” (e.g., friendly vs hostile) using multiple signals.
+Options may include: `classes`, `nwBools`, `saveTableKeys`, `saveTableKeyword`, `checkDisposition`, `skin`, `targetname`, `debugName`, `debugCvar`.
 
 ---
 
-## Complete Examples
+## Advanced Examples
 
-### Basic entity light
-
+### Attachment-first light with distance culling
 ```lua
+BL.TrackClass("npc_cscanner")
+BL.AddThink("ScannerLights", function()
+	local r, g, b = 180, 200, 255
+	local size, brightness, decay = 140, 1.2, 2000
+	local viewer = LocalPlayer()
+	local vpos = IsValid(viewer) and viewer:GetPos() or nil
+
+	BL.ForEach("npc_cscanner", function(ent)
+		if vpos and ent:GetPos():DistToSqr(vpos) > (2000*2000) then return end
+		local pos = BL.GetAttachmentPos(ent, {"light", "muzzle"}) or BL.GetEntityCenter(ent)
+		if pos then BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false) end
+	end)
+end)
+```
+
+### Impact flash on bullet traces (client-only demo)
+```lua
+hook.Add("EntityFireBullets", "MyImpactFlash", function(ply, data)
+	timer.Simple(0, function()
+		local tr = util.TraceLine({start = data.Src, endpos = data.Src + data.Dir * 4096, filter = ply})
+		if tr.Hit then
+			BetterLights.CreateFlash(tr.HitPos, 255, 220, 180, 160, 2.0, 0.08, 65000)
+		end
+	end)
+end)
+```
+
+---
+
+## Contributing to BetterLights (Using the API)
+
+You can contribute a new module to this project using the same APIs your addon would use. Keep modules self-contained, client-side, and consistent with existing style.
+
+### Where to put files
+- Create a new client module in `lua/autorun/client/`
+- File name: `betterlights_<feature>.lua` (e.g., `betterlights_turret.lua`)
+
+### Module template
+```lua
+-- BetterLights: Turret Lights
+-- Adds dynamic lights to turrets
+
 if CLIENT then
-    local BL = BetterLights
+	local BL = BetterLights
+	if not BL then return end
 
-    local cvars = BL.CreateConVarSet("mymod_entity", {
-        enable = 1, size = 100, brightness = 1.0, decay = 2000,
-        r = 255, g = 128, b = 64
-    })
+	local cvars = BL.CreateConVarSet("bl_turret", {
+		enable = 1, size = 140, brightness = 1.2, decay = 2000,
+		r = 255, g = 80, b = 60
+	})
 
-    BL.TrackClass("my_custom_entity")
+	BL.TrackClass("npc_turret_floor")
 
-    BL.AddThink("MyMod_Light", function()
-        if not cvars.enable:GetBool() then return end
-        if not BL.ShouldTick("MyMod_Update", 60) then return end
-
-        local r, g, b = BL.GetColorFromCvars(cvars.r, cvars.g, cvars.b)
-        local size = cvars.size:GetFloat()
-        local brightness = cvars.brightness:GetFloat()
-        local decay = cvars.decay:GetFloat()
-
-        BL.ForEach("my_custom_entity", function(ent)
-            local pos = BL.GetEntityCenter(ent)
-            if pos then
-                BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
-            end
-        end)
-    end)
-
-    -- Explosion flash on removal
-    hook.Add("EntityRemoved", "MyMod_Explosion", function(ent, fullUpdate)
-        if fullUpdate then return end
-        if not BL.IsEntityClass(ent, "my_custom_entity") then return end
-
-        local pos = BL.GetEntityCenter(ent)
-        if pos then
-            BL.CreateFlash(pos, 255, 150, 50, 300, 3.0, 0.2, 70000)
-        end
-    end)
+	BL.AddThink("BetterLights_Turret", function()
+		if not cvars.enable:GetBool() then return end
+		local r, g, b = BL.GetColorFromCvars(cvars.r, cvars.g, cvars.b)
+		BL.ForEach("npc_turret_floor", function(ent)
+			local pos = BL.GetEntityCenter(ent)
+			if pos then BL.CreateDLight(ent:EntIndex(), pos, r, g, b, cvars.brightness:GetFloat(), cvars.decay:GetFloat(), cvars.size:GetFloat(), false) end
+		end)
+	end)
 end
 ```
 
-### Entity variant detection
+### Style & performance checklist
+- Use `BL.AddThink` (one Think per module)
+- Read ConVars once per frame, not per entity
+- Use `BL.TrackClass` + `BL.ForEach` (never `ents.FindByClass` every frame)
+- Use `BL.CreateFlash` for temporary effects
+- Consider `BL.ShouldTick(…, 30)` for throttling
+- Add comments for non-obvious logic
 
-```lua
-if CLIENT then
-    local BL = BetterLights
+### Testing before PR
+- No Lua errors in console
+- Works with and without other popular addons (basic sanity)
+- Performance acceptable in busy scenes (use `developer 1`)
+- ConVars behave as expected
 
-    BL.TrackClass("npc_turret_floor")
-
-    BL.AddThink("MyMod_Turrets", function()
-        BL.ForEach("npc_turret_floor", function(ent)
-            local isFriendly = BL.DetectEntityVariant(ent, {
-                checkDisposition = true,
-                nwBools = {"Friendly", "PlayerAlly"}
-            })
-
-            local r = isFriendly and 0 or 255
-            local g = isFriendly and 255 or 0
-            local b = 0
-
-            local pos = BL.GetEntityCenter(ent)
-            if pos then
-                BL.CreateDLight(ent:EntIndex(), pos, r, g, b, 1.0, 2000, 100, false)
-            end
-        end)
-    end)
-end
-```
+Submit a PR with:
+- Clear description and screenshots/GIFs
+- Notes on any variant detection heuristics
+- Link to discussion/issue if relevant
 
 ---
 
-## Performance Best Practices
+## Troubleshooting
 
-### Use unified systems
-
+### “BetterLights not found”
+- Ensure the BetterLights addon is installed and enabled
+- Add a short delay on Initialize if needed
 ```lua
--- Good: Unified flash system
-BL.CreateFlash(pos, 255, 200, 100, 300, 3.0, 0.2, 65000)
-
--- Avoid: Manual flash arrays (don’t do this)
-local myFlashes = {}
-table.insert(myFlashes, {...})
-```
-
-### Cache ConVar reads
-
-```lua
--- Good: Read once per frame
-BL.AddThink("MyMod", function()
-    local size = cvar_size:GetFloat()
-    BL.ForEach("my_entity", function(ent)
-        -- Use cached 'size'
-    end)
-end)
-
--- Avoid: Read per entity
-BL.ForEach("my_entity", function(ent)
-    local size = cvar_size:GetFloat()  -- Don’t!
+hook.Add("Initialize", "MyAddon_WaitBL", function()
+	if not BetterLights then timer.Simple(1, function() if not BetterLights then print("[MyAddon] BetterLights missing") end end) end
 end)
 ```
 
-### Use update throttling
+### Lights don’t show up
+- Verify entity class names (print `ent:GetClass()`)
+- Check positions (print `BL.GetEntityCenter(ent)`)
+- Ensure `r_dynamic 1`
+- Ensure your `*_enable` ConVar is 1
 
-```lua
--- Good: 30 Hz updates
-BL.AddThink("MyMod", function()
-    if BL.ShouldTick("Update", 30) then
-        -- Update at 30 Hz
-    end
-end)
-```
+### Flicker/disappear
+- Keep a stable ID: use `ent:EntIndex()` for persistent lights
+- Avoid per-frame random IDs
+- Use `BL.ShouldTick` to prevent thrashing
 
-### Use entity tracking
-
-```lua
--- Good: Efficient iteration
-BL.TrackClass("my_entity")
-BL.ForEach("my_entity", function(ent) end)
-
--- Avoid: Find every frame
-for _, ent in ipairs(ents.FindByClass("my_entity")) do end
-```
-
-### Use helper functions
-
-```lua
--- Good: Use helpers
-if BL.IsEntityClass(ent, "npc_manhack") then end
-
--- Avoid: Manual validation
-if IsValid(ent) and ent.GetClass and ent:GetClass() == "npc_manhack" then end
-```
+### Slow performance
+- Throttle to 30–60 Hz
+- Cache ConVars per frame
+- Distance cull with `DistToSqr`
 
 ---
 
-## Version 3.0 Features
+## Version 3.0 Highlights
 
-- Unified Flash System: Automatic management, memory pooling, ~350 lines eliminated
-- Network Consolidation: Single message with type routing, 66% overhead reduction
-- Memory Pooling: Flash table recycling, reduces GC pressure
-- Helper Functions: `CreateConVarSet()`, `IsEntityClass()`, `MatchesModel()`
-- Performance: 26 total optimizations across the framework
+- Unified flash system (pooled, auto cleanup)
+- Single Think aggregator (less overhead)
+- Entity tracking + attachment caching
+- Network consolidation for built-in effects
+- Helper functions: ConVars, variants, color math
 
 ---
 
-For more information:
-- [README.md](README.md) — End-user documentation
-- [CONTRIBUTING.md](CONTRIBUTING.md) — Detailed development guide
+Happy hacking. If you build something cool with BetterLights, consider releasing it as a separate addon and adding BetterLights as a Required Item — or contribute it here as a new module!
+
