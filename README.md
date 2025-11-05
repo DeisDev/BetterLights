@@ -23,35 +23,35 @@ A comprehensive dynamic lighting framework for Garry's Mod that adds realistic l
 ## Included Modules
 
 ### NPCs
-- **Manhacks** - Oscillating red eye light
-- **Rollermines** - Blue (idle), red (hostile), green (hacked)
-- **Antlion Grubs** - Soft green bioluminescent glow
-- **Antlion Workers** - Yellow-green glow
-- **Antlion Guardians** - Intense green glow
-- **City Scanners** - Blue/white scanning light with photograph flash
-- **Combine Mines** - Blue (idle), red (proximity), green (resistance)
+- **Manhacks** 
+- **Rollermines**
+- **Antlion Grubs** 
+- **Antlion Workers** 
+- **Antlion Guardians** 
+- **City Scanners** 
+- **Combine Mines** 
 
 ### Weapons & Projectiles
-- **Muzzle Flashes** - Dynamic flashes with attachment detection
-- **Bullet Impacts** - Brief impact flashes on surfaces
-- **Crossbow Bolts** - Glowing projectiles with hold/fire modes
-- **RPG Missiles** - Bright rocket trails with explosion flashes
-- **Grenades** - Pulsing fuse light + explosion flash
-- **Combine Balls** - Crackling energy sphere
-- **Magnusson Devices** - Sticky bomb with explosion
-- **Helicopter Bombs** - Dropped explosives
+- **Muzzle Flashes** 
+- **Bullet Impacts** 
+- **Crossbow Bolts** 
+- **RPG Missiles** 
+- **Grenades**
+- **Combine Balls** 
+- **Magnusson Devices** 
+- **Helicopter Bombs**
 
 ### Tools
-- **Gravity Gun** - Blue hold light, orange/yellow fire blast
-- **Physics Gun** - Adjustable beam color (default blue)
-- **Tool Gun** - Color-coded per tool with hold/fire modes
+- **Gravity Gun** 
+- **Physics Gun**
+- **Tool Gun**
 
 ### Environmental
-- **Explosions** - Generic explosion flash system
-- **Fire** - Flickering orange flames
-- **Antlion Spit** - Green acid projectile with splash
-- **Chargers** - Soft glow when active
-- **Pickups** - Subtle glow for items
+- **Explosions** 
+- **Fire** 
+- **Antlion Spit** 
+- **Chargers**
+- **Pickups** 
 
 ## Configuration
 
