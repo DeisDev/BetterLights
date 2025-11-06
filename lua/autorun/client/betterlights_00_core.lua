@@ -1,6 +1,5 @@
 -- BetterLights Core
 -- Provides centralized Think aggregator, entity tracking system, and utility functions for lighting modules
--- See README.md for full API documentation
 
 if CLIENT then
     BetterLights = BetterLights or {}
