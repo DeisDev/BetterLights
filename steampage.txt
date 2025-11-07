@@ -1,4 +1,4 @@
-[b]Better Lights v3.0[/b]
+[b]Better Lights[/b]
 
 [i]Dynamic lighting for Garry's Mod[/i]
 
@@ -6,7 +6,7 @@
 
 [b]Overview[/b]
 
-Better Lights adds configurable dynamic lighting to Garry's Mod: muzzle flashes, bullet impacts, projectiles, NPCs, items, fires, and explosions.
+Better Lights adds dynamic lighting to Garry's Mod: muzzle flashes, bullet impacts, projectiles, NPCs, items, fires, and explosions.
 
 [b]I HIGHLY RECOMMEND YOU PLAY THIS MOD ON THE 64-BIT BRANCH[/b]
 
@@ -32,11 +32,16 @@ Each feature includes options for Enable, Color, Size, Brightness, Decay, and Re
 
 If you like this addon, please [b]rate and favorite[/b] it!
 
-Have a problem? Report it on the [url=https://github.com/DeisDev/BetterLights]GitHub[/url] page. 
+Have a problem? Report it on the [url=https://github.com/DeisDev/BetterLights/issues]GitHub[/url] page. 
 
 See more of my addons [url=https://steamcommunity.com/workshop/filedetails/?id=3551812511]here[/url].
 
 [img]https://i.imgur.com/7jzy9bl.png[/img]
+
+[b]Where did the comments go?[/b]
+
+Y’all need to relax lmao. Yes, I used AI to code part of this addon. It is NOT the end of the world. You DONT have to subscribe to it. I completely get why some people are against it. But spamming my profile and harrassing me is NOT the move gang. If you don’t like AI, don’t use the addon. That simple. I’m not gonna let randoms spam my comments over a straight nothing burger. For the record, AI is a great tool to have for coding. But if you're gonna be mad at me 
+be mad at [url=https://www.cnbc.com/2025/04/29/satya-nadella-says-as-much-as-30percent-of-microsoft-code-is-written-by-ai.html]microsoft[/url] too. 
 
 [spoiler]
 keywords: better lights, lighting, dynamic lights, gmod lights, gmod lighting, muzzle flash, bullet impact, glow, elight, dlight, garrysmod, garry's mod, npc light, weapon glow, projectile light, flashlight, physgun light, toolgun light, gravity gun light, ar2 orb, rpg rocket, rollermine, scanner, manhack, healthkit glow, item glow, lighting mod, lighting framework, developer api, optimized lighting, performance, v3.0

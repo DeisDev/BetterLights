@@ -18,17 +18,7 @@ if CLIENT then
     local cvar_col_g = CreateClientConVar("betterlights_antlion_grub_color_g", "255", true, false, "Antlion grub color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_antlion_grub_color_b", "120", true, false, "Antlion grub color - blue (0-255)")
 
-    local function getAbdomenPos(ent)
-        if not IsValid(ent) then return end
-        -- Try common attachment names first
-        local pos = BL.GetAttachmentPos(ent, { "glow", "glow1", "abdomen", "light", "lum" })
-        if pos then return pos end
-        -- Fallback to OBB center slightly offset forward
-        local center = BL.GetEntityCenter(ent)
-        if not center then return nil end
-        local fwd = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
-        return center + fwd * 2
-    end
+    local ATTACH_NAMES = { "glow", "glow1", "abdomen", "light", "lum" }
 
     if BL.TrackClass then BL.TrackClass("npc_antlion_grub") end
 
@@ -46,10 +36,16 @@ if CLIENT then
             if not IsValid(ent) then return end
             if ent.GetNoDraw and ent:GetNoDraw() then return end
 
-            local pos = getAbdomenPos(ent)
-            if not pos then return end
-
-            BL.CreateDLight(ent:EntIndex() + 23000, pos, r, g, b, brightness, decay, size, false)
+            -- Try attachment-based light first
+            if not BL.CreateLightFromAttachment(ent, ATTACH_NAMES, r, g, b, brightness, decay, size, false) then
+                -- Fallback to OBB center with slight forward offset
+                local center = BL.GetEntityCenter(ent)
+                if center then
+                    local fwd = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
+                    local pos = center + fwd * 2
+                    BL.CreateDLight(ent:EntIndex() + 23000, pos, r, g, b, brightness, decay, size, false)
+                end
+            end
         end
 
         if BL.ForEach then

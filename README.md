@@ -1,6 +1,6 @@
 # BetterLights
 
-*A Dynamic lighting mod.* 
+*A Dynamic lighting mod for Garry's Mod.* 
 
 Everything can be configured in the tool menu tab labeled "Better Lights". 
 

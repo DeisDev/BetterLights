@@ -36,21 +36,18 @@ if CLIENT then
     local hk_g = CreateClientConVar("betterlights_rollermine_hacked_color_g", "160", true, false, "Hacked rollermine color - green (0-255)")
     local hk_b = CreateClientConVar("betterlights_rollermine_hacked_color_b", "60", true, false, "Hacked rollermine color - blue (0-255)")
 
-    -- Color mapping by skin:
-    -- 0 = blue (default), 1 = yellow, 2 = red (others -> default)
+    -- Color mapping by skin: 0 = blue (default), 1 = yellow, 2 = red (others -> default)
+    -- Using BL.DetectSkinVariant for cleaner skin-based color detection
+    local skinColors = {
+        [0] = function() return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b) end,
+        [1] = function() return BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b) end,
+        [2] = function() return BL.GetColorFromCvars(rm2_r, rm2_g, rm2_b) end
+    }
+    
     local function BL_GetRollermineColor(ent)
-        local skin = 0
-        if ent.GetSkin then
-            local ok, s = pcall(ent.GetSkin, ent)
-            if ok and type(s) == "number" then skin = s end
-        end
-        if skin == 1 then
-            return BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b)
-        elseif skin == 2 then
-            return BL.GetColorFromCvars(rm2_r, rm2_g, rm2_b)
-        else
-            return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b)
-        end
+        local colorFn = BL.DetectSkinVariant(ent, skinColors)
+        if colorFn then return colorFn() end
+        return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b)  -- Default to skin 0
     end
 
     -- Detect hacked state on an npc_rollermine using unified detection helper
@@ -105,6 +102,12 @@ if CLIENT then
                 decay = math.max(0, cvar_decay:GetFloat())
                 use_elight = cvar_models_elight:GetBool()
                 el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+            end
+            
+            -- Boost brightness and size when spikes are deployed (roller_spikes.mdl)
+            if BL.MatchesModel(ent, "roller_spikes") then
+                brightness = brightness * 2.5
+                size = size * 1.5
             end
 
             -- Create world light

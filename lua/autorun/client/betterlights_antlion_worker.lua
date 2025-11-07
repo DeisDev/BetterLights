@@ -19,24 +19,7 @@ if CLIENT then
     local cvar_col_b = CreateClientConVar("betterlights_antlion_worker_color_b", "120", true, false, "Antlion Worker color - blue (0-255)")
 
     local BONE_NAME = "Antlion.Back_Bone"
-
-    local function getBackBonePos(ent)
-        if not IsValid(ent) then return end
-        local bone = ent:LookupBone(BONE_NAME)
-        if bone and bone >= 0 then
-            local m = ent:GetBoneMatrix(bone)
-            if m then
-                local pos = m:GetTranslation()
-                if pos and pos ~= vector_origin then return pos end
-            end
-            local pos = ent:GetBonePosition(bone)
-            if pos and pos ~= vector_origin then return pos end
-        end
-        -- Fallbacks: try a few likely attachments, then OBB center
-        local pos = BL.GetAttachmentPos(ent, { "glow", "light", "abdomen", "body", "spine" })
-        if pos then return pos end
-        return BL.GetEntityCenter(ent)
-    end
+    local ATTACH_NAMES = { "glow", "light", "abdomen", "body", "spine" }
 
     if BL.TrackClass then BL.TrackClass("npc_antlion_worker") end
 
@@ -54,10 +37,18 @@ if CLIENT then
             if not IsValid(ent) then return end
             if ent.GetNoDraw and ent:GetNoDraw() then return end
 
-            local pos = getBackBonePos(ent)
-            if not pos then return end
-
-            BL.CreateDLight(ent:EntIndex() + 23200, pos, r, g, b, brightness, decay, size, false)
+            -- Try bone position first (most accurate for this NPC)
+            local pos = BL.GetBonePosition(ent, BONE_NAME)
+            
+            -- Try attachment-based light if bone lookup fails
+            if not pos and not BL.CreateLightFromAttachment(ent, ATTACH_NAMES, r, g, b, brightness, decay, size, false) then
+                -- Final fallback to entity center
+                pos = BL.GetEntityCenter(ent)
+            end
+            
+            if pos then
+                BL.CreateDLight(ent:EntIndex() + 23200, pos, r, g, b, brightness, decay, size, false)
+            end
         end
 
         if BL.ForEach then

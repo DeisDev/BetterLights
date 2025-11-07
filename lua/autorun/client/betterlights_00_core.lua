@@ -477,6 +477,81 @@ if CLIENT then
         return false
     end
 
+    -- Get attachment position with cached lookup
+    function BL.GetAttachmentPosById(ent, attachId)
+        if not IsValid(ent) or not attachId or attachId == 0 then return nil end
+        local data = ent:GetAttachment(attachId)
+        return (data and data.Pos) or nil
+    end
+    
+    -- Get bone position with fallback logic (tries GetBoneMatrix first, then GetBonePosition)
+    function BL.GetBonePosition(ent, boneName)
+        if not IsValid(ent) or not boneName then return nil end
+        if not ent.LookupBone then return nil end
+        
+        local bone = ent:LookupBone(boneName)
+        if not bone or bone < 0 then return nil end
+        
+        -- Try GetBoneMatrix first (more accurate)
+        if ent.GetBoneMatrix then
+            local m = ent:GetBoneMatrix(bone)
+            if m then
+                local pos = m:GetTranslation()
+                if pos and pos ~= vector_origin then
+                    return pos
+                end
+            end
+        end
+        
+        -- Fallback to GetBonePosition
+        if ent.GetBonePosition then
+            local pos = ent:GetBonePosition(bone)
+            if pos and pos ~= vector_origin then
+                return pos
+            end
+        end
+        
+        return nil
+    end
+    
+    -- Detect entity variant by skin value (common pattern for colored variants)
+    function BL.DetectSkinVariant(ent, skinMap)
+        if not IsValid(ent) or not skinMap then return nil end
+        local skin = (ent.GetSkin and ent:GetSkin()) or 0
+        return skinMap[skin]
+    end
+    
+    -- Detect entity type by model pattern and optionally return skin-based variant
+    function BL.DetectModelVariant(ent, modelPatterns)
+        if not IsValid(ent) or not modelPatterns then return nil end
+        local model = ent:GetModel() or ""
+        local skin = (ent.GetSkin and ent:GetSkin()) or 0
+        
+        for _, pattern in ipairs(modelPatterns) do
+            if BL.MatchesModel(ent, pattern.model) then
+                if pattern.skinMap then
+                    return pattern.skinMap[skin] or pattern.default
+                end
+                return pattern.default
+            end
+        end
+        return nil
+    end
+    
+    -- Create light from attachment (common pattern)
+    function BL.CreateLightFromAttachment(ent, attachNames, r, g, b, brightness, decay, size, isElight)
+        if not IsValid(ent) then return false end
+        
+        local attachId = BL.LookupAttachmentCached(ent, attachNames)
+        if not attachId or attachId == 0 then return false end
+        
+        local pos = BL.GetAttachmentPosById(ent, attachId)
+        if not pos then return false end
+        
+        BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, isElight)
+        return true
+    end
+
     -- Core Think loop: executes all registered Think functions every frame
     hook.Add("Think", "BetterLights_CoreThink", function()
         -- Update global flash manager first

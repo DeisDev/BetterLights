@@ -786,6 +786,26 @@ if CLIENT then
             })
         end)
 
+        -- Combine Soldier Face Glow
+        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldier", "Combine Soldier", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Face glow for Combine Soldiers. Color varies by type:")
+            panel:Help("• Elite: Red")
+            panel:Help("• Prison Guard: Yellow (skin 0) or Red (skin 1)")
+            panel:Help("• Standard: Blue (skin 0) or Orange (skin 1)")
+            panel:CheckBox("Enable", "bl_combine_soldier_enable")
+            panel:NumSlider("Radius", "bl_combine_soldier_size", 0, 200, 0)
+            panel:NumSlider("Brightness", "bl_combine_soldier_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "bl_combine_soldier_decay", 0, 5000, 0)
+            panel:Help("Note: Colors are automatically determined by soldier variant")
+            addResetButton(panel, {
+                bl_combine_soldier_enable = 1,
+                bl_combine_soldier_size = 40,
+                bl_combine_soldier_brightness = 0.5,
+                bl_combine_soldier_decay = 1500,
+            })
+        end)
+
         -- Pickups: AR2 alt-fire ammo
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_AR2Alt", "AR2 Alt Ammo", "", "", function(panel)
             panel:ClearControls()
@@ -966,6 +986,7 @@ if CLIENT then
         spawnmenu.AddToolCategory("Better Lights", "Weapons", "Weapons (Held)")
         spawnmenu.AddToolCategory("Better Lights", "Projectiles", "Projectiles & Explosives")
         spawnmenu.AddToolCategory("Better Lights", "NPCs", "NPCs & Traps")
+        spawnmenu.AddToolCategory("Better Lights", "Eye Glow", "Eye Glow")
         spawnmenu.AddToolCategory("Better Lights", "Gunfire", "Gunfire")
         spawnmenu.AddToolCategory("Better Lights", "Environment", "Environment")
         spawnmenu.AddToolCategory("Better Lights", "Pickups", "Pickups")
