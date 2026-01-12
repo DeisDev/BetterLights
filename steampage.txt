@@ -46,7 +46,6 @@ Look, I get it. I used AI to help with parts of this addon. If that bothers you,
 AI is just a tool, and I used it the same way a lot of developers already do. If that’s something you’re against, that’s fine. Just don't download the addon and continue on with your lives. And if you’re gonna be upset about AI in code, maybe take it up with [url=https://www.cnbc.com/2025/04/29/satya-nadella-says-as-much-as-30percent-of-microsoft-code-is-written-by-ai.html]Microsoft[/url]
 
 
-
 [spoiler]
 keywords: better lights, lighting, dynamic lights, gmod lights, gmod lighting, muzzle flash, bullet impact, glow, elight, dlight, garrysmod, garry's mod, npc light, weapon glow, projectile light, flashlight, physgun light, toolgun light, gravity gun light, ar2 orb, rpg rocket, rollermine, scanner, manhack, healthkit glow, item glow, lighting mod, lighting framework, developer api, optimized lighting, performance, v3.0
 [/spoiler]
