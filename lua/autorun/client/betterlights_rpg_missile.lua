@@ -7,10 +7,6 @@ if CLIENT then
     -- Localize hot globals
     local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
-    local ents = ents
-    local ipairs = ipairs
-    local table_insert = table.insert
     local cvar_enable = CreateClientConVar("betterlights_rpg_enable", "1", true, false, "Enable dynamic light for fired RPG rockets")
     local cvar_size = CreateClientConVar("betterlights_rpg_size", "280", true, false, "Dynamic light radius for RPG rockets")
     local cvar_brightness = CreateClientConVar("betterlights_rpg_brightness", "2.2", true, false, "Dynamic light brightness for RPG rockets")
@@ -30,29 +26,13 @@ if CLIENT then
     local cvar_flash_g = CreateClientConVar("betterlights_rpg_flash_color_g", "210", true, false, "RPG flash color - green (0-255)")
     local cvar_flash_b = CreateClientConVar("betterlights_rpg_flash_color_b", "120", true, false, "RPG flash color - blue (0-255)")
 
-    -- Track recent explosions to prevent duplicates
-    local BL_RPG_Recent = BL_RPG_Recent or {}
-
-    local function rpgShouldSuppress(pos)
-        local now = CurTime()
-        for i = #BL_RPG_Recent, 1, -1 do
-            local e = BL_RPG_Recent[i]
-            if not e or now - e.t > 0.15 then
-                table.remove(BL_RPG_Recent, i)
-            else
-                if e.pos:DistToSqr(pos) < (40 * 40) then return true end
-            end
-        end
-        return false
-    end
-
     hook.Add("EntityRemoved", "BetterLights_RPG_FlashOnRemoval", function(ent, fullUpdate)
         if fullUpdate then return end
         if not BL.IsEntityClass(ent, "rpg_missile") then return end
         if not cvar_flash_enable:GetBool() then return end
 
         local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
-        if rpgShouldSuppress(pos) then return end
+        if BL.ShouldSuppressFlash("rpg", pos) then return end
         
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
@@ -61,9 +41,7 @@ if CLIENT then
         local flashSize = math.max(0, cvar_flash_size:GetFloat())
         local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
         BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 58000)
-        
-        local now = CurTime()
-        table_insert(BL_RPG_Recent, { pos = pos, t = now })
+        BL.RecordFlashPosition("rpg", pos)
     end)
 
     -- Track rockets once

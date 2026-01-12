@@ -26,18 +26,14 @@ if CLIENT then
     local hc_g = CreateClientConVar("betterlights_healthcharger_color_g", "190", true, false, "Health charger color - green (0-255)")
     local hc_b = CreateClientConVar("betterlights_healthcharger_color_b", "255", true, false, "Health charger color - blue (0-255)")
 
+    -- Track entity classes at module load for efficiency
+    if BL.TrackClass then
+        BL.TrackClass("item_suitcharger")
+        BL.TrackClass("item_healthcharger")
+    end
+
     local function process(class, en, sz, br, de, el, elmult, rcv, gcv, bcv)
         if not en:GetBool() then return end
-        local list
-        if BL.ForEach then
-            list = {}
-            BL.TrackClass(class)
-            BL.ForEach(class, function(e) table.insert(list, e) end)
-            if #list == 0 then return end
-        else
-            list = ents.FindByClass(class)
-            if not list or #list == 0 then return end
-        end
         
         -- Cache ConVar values once per entity type
         local size = math.max(0, sz:GetFloat())
@@ -47,19 +43,27 @@ if CLIENT then
         local cr, cg, cb = BL.GetColorFromCvars(rcv, gcv, bcv)
         local doElight = el:GetBool()
         
-        for _, ent in ipairs(list) do
-            if IsValid(ent) then
-                local idx = ent:EntIndex()
-                local pos = BL.GetEntityCenter(ent)
-                if pos then
-                    -- Create world light
-                    BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size, false)
+        local function update(ent)
+            if not IsValid(ent) then return end
+            local idx = ent:EntIndex()
+            local pos = BL.GetEntityCenter(ent)
+            if pos then
+                -- Create world light
+                BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size, false)
 
-                    -- Create entity light if enabled
-                    if doElight then
-                        BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size * el_mult, true)
-                    end
+                -- Create entity light if enabled
+                if doElight then
+                    BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size * el_mult, true)
                 end
+            end
+        end
+        
+        if BL.ForEach then
+            BL.ForEach(class, update)
+        else
+            local list = ents.FindByClass(class)
+            if list then
+                for _, ent in ipairs(list) do update(ent) end
             end
         end
     end

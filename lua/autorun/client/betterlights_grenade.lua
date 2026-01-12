@@ -5,9 +5,7 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     -- Localize hot globals
-    local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_grenade_enable", "1", true, false, "Enable dim red light on frag grenades (npc_grenade_frag)")
     local cvar_size = CreateClientConVar("betterlights_grenade_size", "80", true, false, "Dynamic light radius for frag grenades")
     local cvar_brightness = CreateClientConVar("betterlights_grenade_brightness", "0.9", true, false, "Dynamic light brightness for frag grenades")

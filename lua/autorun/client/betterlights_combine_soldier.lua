@@ -5,13 +5,12 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     
-    -- ConVars
+    -- ConVars (color is determined by model variant, not configurable)
     local cvars = BL.CreateConVarSet("bl_combine_soldier", {
         enable = 1,
         size = 40,
         brightness = 0.5,
-        decay = 1500,
-        r = 80, g = 120, b = 255  -- Default blue (unused, color determined by variant)
+        decay = 1500
     })
     
     -- Track Combine soldiers

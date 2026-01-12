@@ -5,6 +5,11 @@ if CLIENT then
     BetterLights = BetterLights or {}
 
     local BL = BetterLights
+    
+    -- Version tracking
+    BL.VERSION = "1.1.0"
+    BL.VERSION_DATE = "2026-01-12"
+    
     BL._thinks = BL._thinks or {}
     BL._classes = BL._classes or {}
     BL._tracked = BL._tracked or {}
@@ -62,6 +67,47 @@ if CLIENT then
             BL._flashPoolSize = BL._flashPoolSize + 1
             BL._flashPool[BL._flashPoolSize] = flash
         end
+    end
+    
+    -- Shared suppression tracking for flash deduplication
+    BL._suppressionRecords = BL._suppressionRecords or {}
+    
+    -- Check if a flash at this position should be suppressed (too close to recent flash)
+    -- Returns true if suppressed, false if allowed
+    function BL.ShouldSuppressFlash(key, pos, minDistSq, maxAge)
+        minDistSq = minDistSq or (40 * 40)
+        maxAge = maxAge or 0.15
+        
+        local record = BL._suppressionRecords[key]
+        if not record then
+            record = {}
+            BL._suppressionRecords[key] = record
+        end
+        
+        local now = CurTime()
+        
+        -- Clean old entries and check for nearby recent flashes
+        for i = #record, 1, -1 do
+            local e = record[i]
+            if now - e.t > maxAge then
+                record[i] = record[#record]
+                record[#record] = nil
+            elseif e.pos:DistToSqr(pos) < minDistSq then
+                return true
+            end
+        end
+        
+        return false
+    end
+    
+    -- Record a flash position for future suppression checks
+    function BL.RecordFlashPosition(key, pos)
+        local record = BL._suppressionRecords[key]
+        if not record then
+            record = {}
+            BL._suppressionRecords[key] = record
+        end
+        record[#record + 1] = { pos = pos, t = CurTime() }
     end
     
     -- Flash lifecycle management

@@ -21,14 +21,14 @@ if CLIENT then
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
-                local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(vm, ATTACH_NAMES)
+                local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(vm, ATTACH_NAMES)
                 if pos then return pos end
             end
         end
 
         -- Fallback to world model attachment
         if IsValid(wep) then
-            local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(wep, ATTACH_NAMES)
+            local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(wep, ATTACH_NAMES)
             if pos then return pos end
             -- Fallback to weapon position
             if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end

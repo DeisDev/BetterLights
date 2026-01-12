@@ -5,9 +5,7 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     -- Localize hot globals
-    local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_bolt_enable", "1", true, false, "Enable dynamic light for crossbow bolts")
     local cvar_size = CreateClientConVar("betterlights_bolt_size", "220", true, false, "Dynamic light radius for crossbow bolts")
     local cvar_brightness = CreateClientConVar("betterlights_bolt_brightness", "0.96", true, false, "Dynamic light brightness for crossbow bolts")

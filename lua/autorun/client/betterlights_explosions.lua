@@ -21,35 +21,18 @@ if CLIENT then
     local cvar_detect_scanner = CreateClientConVar("betterlights_explosion_detect_scanners", "1", true, false, "Detect scanner explosions (npc_cscanner, npc_clawscanner)")
     local cvar_detect_mine = CreateClientConVar("betterlights_explosion_detect_mines", "1", true, false, "Detect combine mine explosions (combine_mine)")
 
-    local recent = recent or {}
-
-    local function shouldSuppress(pos)
-        local now = CurTime()
-        for i = #recent, 1, -1 do
-            local e = recent[i]
-            if not e or now - e.t > 0.15 then
-                table.remove(recent, i)
-            else
-                if e.pos:DistToSqr(pos) < (40 * 40) then return true end
-            end
-        end
-        return false
-    end
-
     local function spawnFlashAt(pos)
         if not cvar_enable:GetBool() then return end
         local dur = math.max(0, cvar_time:GetFloat())
         if dur <= 0 then return end
-        if shouldSuppress(pos) then return end
+        if BL.ShouldSuppressFlash("explosion", pos) then return end
         
         local r, g, b = BL.GetColorFromCvars(cvar_r, cvar_g, cvar_b)
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         
         BL.CreateFlash(pos, r, g, b, size, brightness, dur, 61000)
-        
-        local now = CurTime()
-        table.insert(recent, { pos = pos, t = now })
+        BL.RecordFlashPosition("explosion", pos)
     end
 
     -- Detect env_* explosion entities as they spawn

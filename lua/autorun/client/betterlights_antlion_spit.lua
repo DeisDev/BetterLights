@@ -7,11 +7,6 @@ if CLIENT then
     -- Localize frequently used globals to reduce global table lookups per frame
     local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
-    local ipairs = ipairs
-    local pairs = pairs
-    local insert = table.insert
-    local remove = table.remove
     local timer_Simple = timer.Simple
     -- ConVars: in-flight glow
     local cvar_enable = CreateClientConVar("betterlights_antlion_spit_enable", "1", true, false, "Enable dynamic light for Antlion spit projectiles (grenade_spit)")

@@ -9,7 +9,6 @@ if CLIENT then
     local cvar_enable = CreateClientConVar("betterlights_bullet_impact_enable", "1", true, false, "Enable subtle dynamic light on bullet impacts")
     local cvar_size = CreateClientConVar("betterlights_bullet_impact_size", "60", true, false, "Dynamic light radius for generic bullet impacts")
     local cvar_brightness = CreateClientConVar("betterlights_bullet_impact_brightness", "0.25", true, false, "Dynamic light brightness for generic bullet impacts")
-    local cvar_decay = CreateClientConVar("betterlights_bullet_impact_decay", "1800", true, false, "Dynamic light decay for bullet impacts")
 
     local cvar_ar2_enable = CreateClientConVar("betterlights_bullet_impact_ar2_enable", "1", true, false, "Enable special color for AR2 bullet impacts")
     local cvar_ar2_size = CreateClientConVar("betterlights_bullet_impact_ar2_size", "70", true, false, "Dynamic light radius for AR2 bullet impacts")

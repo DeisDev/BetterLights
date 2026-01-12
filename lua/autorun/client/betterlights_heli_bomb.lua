@@ -7,8 +7,7 @@ if CLIENT then
     -- Localize frequently used globals
     local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
-    local ProjectedTexture = ProjectedTexture
+    -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
     -- Steady red glow only for helicopter bombs
     local cvar_enable = CreateClientConVar("betterlights_heli_bomb_enable", "1", true, false, "Enable dynamic light for helicopter bombs (grenade_helicopter)")
     local cvar_size = CreateClientConVar("betterlights_heli_bomb_size", "140", true, false, "Dynamic light radius for helicopter bombs")

@@ -5,9 +5,7 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     -- Localize hot globals
-    local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_manhack_enable", "1", true, false, "Enable dynamic light for Manhacks (npc_manhack)")
     local cvar_size = CreateClientConVar("betterlights_manhack_size", "70", true, false, "Dynamic light radius for Manhacks")
     local cvar_brightness = CreateClientConVar("betterlights_manhack_brightness", "0.6", true, false, "Dynamic light brightness for Manhacks")

@@ -8,14 +8,8 @@ if CLIENT then
     -- Localize hot globals for per-frame performance
     local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
-    local ProjectedTexture = ProjectedTexture
-    local ents = ents
-    local Vector = Vector
-    local Color = Color
-    local table_insert = table.insert
-    local ipairs = ipairs
-    local pairs = pairs
+    -- Note: Other globals (ProjectedTexture, ents, Vector, Color, etc.) are accessed infrequently
+    -- and do not benefit significantly from localization
     local cvar_enable = CreateClientConVar("betterlights_cscanner_enable", "1", true, false, "Enable dynamic light for Combine Scanners (npc_cscanner)")
     local cvar_size = CreateClientConVar("betterlights_cscanner_size", "120", true, false, "Dynamic light radius for Combine Scanners")
     local cvar_brightness = CreateClientConVar("betterlights_cscanner_brightness", "0.7", true, false, "Dynamic light brightness for Combine Scanners")
@@ -56,24 +50,6 @@ if CLIENT then
     AddThink("BetterLights_CScanner_DLight", function()
         local now = CurTime()
 
-        -- Gather scanners (both types if requested)
-        local entsList = {}
-        local includeClaw = cvar_sl_include_claw:GetBool()
-        if BL.ForEach then
-            BL.ForEach("npc_cscanner", function(e) table_insert(entsList, e) end)
-            if includeClaw then
-                BL.ForEach("npc_clawscanner", function(e) table_insert(entsList, e) end)
-            end
-        else
-            entsList = ents.FindByClass("npc_cscanner") or {}
-            if includeClaw then
-                local claws = ents.FindByClass("npc_clawscanner")
-                if claws and #claws > 0 then
-                    for _, e in ipairs(claws) do table_insert(entsList, e) end
-                end
-            end
-        end
-
         -- Frame-constant settings and precomputed colors
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
@@ -81,6 +57,9 @@ if CLIENT then
         local el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
         local dietime = now + 0.1
+        local includeClaw = cvar_sl_include_claw:GetBool()
+        local doGlow = cvar_enable:GetBool()
+        local doModelsElight = cvar_models_elight:GetBool()
 
         -- Searchlight frame-constants
         local sl_enable = cvar_sl_enable:GetBool()
@@ -93,54 +72,71 @@ if CLIENT then
 
         -- Track which entities we saw this frame (for projector cleanup)
         local seen = {}
-        for _, ent in ipairs(entsList) do
-            if IsValid(ent) then
-                seen[ent] = true
-                local idx = ent:EntIndex()
-                local pos = BL.GetEntityCenter(ent)
+        
+        local function processScanner(ent)
+            if not IsValid(ent) then return end
+            seen[ent] = true
+            local idx = ent:EntIndex()
+            local pos = BL.GetEntityCenter(ent)
 
-                if cvar_enable:GetBool() then
-                    -- Create world light
-                    BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
+            if doGlow then
+                -- Create world light
+                BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
 
-                    -- Create entity light if enabled
-                    if cvar_models_elight:GetBool() then
-                        BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
+                -- Create entity light if enabled
+                if doModelsElight then
+                    BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
+                end
+            end
+
+            -- Searchlight (ProjectedTexture)
+            if sl_enable then
+                local lamp = scannerProjectors[ent]
+                if not lamp or not lamp:IsValid() then
+                    lamp = ProjectedTexture()
+                    if lamp then
+                        lamp:SetTexture("effects/flashlight001")
+                        scannerProjectors[ent] = lamp
                     end
                 end
-
-                -- Searchlight (ProjectedTexture)
-                if sl_enable then
-                    local lamp = scannerProjectors[ent]
-                    if not lamp or not lamp:IsValid() then
-                        lamp = ProjectedTexture()
-                        if lamp then
-                            lamp:SetTexture("effects/flashlight001")
-                            scannerProjectors[ent] = lamp
-                        end
+                if lamp and lamp:IsValid() then
+                    -- Place slightly below the body and point forward-down
+                    local origin = pos
+                    if ent.GetUp then
+                        origin = origin - ent:GetUp() * 8
+                    else
+                        origin = origin + Vector(0, 0, -8)
                     end
-                    if lamp and lamp:IsValid() then
-                        -- Place slightly below the body and point forward-down
-                        local origin = pos
-                        if ent.GetUp then
-                            origin = origin - ent:GetUp() * 8
-                        else
-                            origin = origin + Vector(0, 0, -8)
-                        end
-                        local forward = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
-                        local target = origin + forward * 100 + Vector(0, 0, -80)
-                        local ang = (target - origin):Angle()
+                    local forward = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
+                    local target = origin + forward * 100 + Vector(0, 0, -80)
+                    local ang = (target - origin):Angle()
 
-                        lamp:SetPos(origin)
-                        lamp:SetAngles(ang)
-                        lamp:SetNearZ(sl_near)
-                        lamp:SetFarZ(sl_far)
-                        lamp:SetFOV(sl_fov)
-                        lamp:SetBrightness(sl_bright)
-                        lamp:SetColor(Color(sl_r, sl_g, sl_b))
-                        lamp:SetEnableShadows(sl_shadows)
-                        lamp:Update()
-                    end
+                    lamp:SetPos(origin)
+                    lamp:SetAngles(ang)
+                    lamp:SetNearZ(sl_near)
+                    lamp:SetFarZ(sl_far)
+                    lamp:SetFOV(sl_fov)
+                    lamp:SetBrightness(sl_bright)
+                    lamp:SetColor(Color(sl_r, sl_g, sl_b))
+                    lamp:SetEnableShadows(sl_shadows)
+                    lamp:Update()
+                end
+            end
+        end
+        
+        -- Process scanners using the tracking system
+        if BL.ForEach then
+            BL.ForEach("npc_cscanner", processScanner)
+            if includeClaw then
+                BL.ForEach("npc_clawscanner", processScanner)
+            end
+        else
+            for _, ent in ipairs(ents.FindByClass("npc_cscanner") or {}) do
+                processScanner(ent)
+            end
+            if includeClaw then
+                for _, ent in ipairs(ents.FindByClass("npc_clawscanner") or {}) do
+                    processScanner(ent)
                 end
             end
         end

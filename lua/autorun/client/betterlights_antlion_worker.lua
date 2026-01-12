@@ -5,9 +5,7 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     -- Localize hot globals
-    local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
     local cvar_enable = CreateClientConVar("betterlights_antlion_worker_enable", "1", true, false, "Enable subtle glow on Antlion Workers")
     local cvar_size = CreateClientConVar("betterlights_antlion_worker_size", "120", true, false, "Antlion Worker light radius")
     local cvar_brightness = CreateClientConVar("betterlights_antlion_worker_brightness", "0.55", true, false, "Antlion Worker light brightness")

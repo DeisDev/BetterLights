@@ -8,7 +8,6 @@ if CLIENT then
     local cvar_enable = CreateClientConVar("betterlights_muzzle_enable", "1", true, false, "Enable muzzle flash light on firing")
     local cvar_size = CreateClientConVar("betterlights_muzzle_size", "250", true, false, "Muzzle flash radius")
     local cvar_brightness = CreateClientConVar("betterlights_muzzle_brightness", "2.00", true, false, "Muzzle flash brightness")
-    local cvar_decay = CreateClientConVar("betterlights_muzzle_decay", "1600", true, false, "Muzzle flash decay")
 
     local cvar_ar2_enable = CreateClientConVar("betterlights_muzzle_ar2_enable", "1", true, false, "Use blue tint for AR2 muzzle flashes")
     local cvar_ar2_size = CreateClientConVar("betterlights_muzzle_ar2_size", "250", true, false, "AR2 muzzle flash radius")

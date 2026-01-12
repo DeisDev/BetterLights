@@ -50,10 +50,16 @@ if CLIENT then
     local kit_g = CreateClientConVar("betterlights_item_healthkit_color_g", "255", true, false, "Health kit color - green (0-255)")
     local kit_b = CreateClientConVar("betterlights_item_healthkit_color_b", "150", true, false, "Health kit color - blue (0-255)")
 
+    -- Track entity classes at module load for efficiency
+    if BL.TrackClass then
+        BL.TrackClass("item_ammo_ar2_altfire")
+        BL.TrackClass("item_battery")
+        BL.TrackClass("item_healthvial")
+        BL.TrackClass("item_healthkit")
+    end
+
     local function processClass(class, r_cvar, g_cvar, b_cvar, c_en, c_size, c_bright, c_decay, c_elight, c_el_mult)
         if not c_en:GetBool() then return end
-        local list = ents.FindByClass(class)
-        if not list or #list == 0 then return end
         
         local size = math.max(0, c_size:GetFloat())
         local brightness = math.max(0, c_bright:GetFloat())
@@ -64,24 +70,33 @@ if CLIENT then
         -- Cache color once per class per frame
         local r, g, b = BL.GetColorFromCvars(r_cvar, g_cvar, b_cvar)
         
-        for _, ent in ipairs(list) do
-            if IsValid(ent) then
-                local idx = ent:EntIndex()
-                local pos = BL.GetEntityCenter(ent)
-                if pos then
-                    -- Create world light
-                    BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
-                    
-                    -- Create entity light if enabled
-                    if doElight then
-                        BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
-                    end
+        local function update(ent)
+            if not IsValid(ent) then return end
+            local idx = ent:EntIndex()
+            local pos = BL.GetEntityCenter(ent)
+            if pos then
+                -- Create world light
+                BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
+                
+                -- Create entity light if enabled
+                if doElight then
+                    BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
                 end
+            end
+        end
+        
+        if BL.ForEach then
+            BL.ForEach(class, update)
+        else
+            local list = ents.FindByClass(class)
+            if list then
+                for _, ent in ipairs(list) do update(ent) end
             end
         end
     end
 
-    hook.Add("Think", "BetterLights_Pickups_DLight", function()
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    AddThink("BetterLights_Pickups_DLight", function()
         processClass("item_ammo_ar2_altfire", ar2_r, ar2_g, ar2_b, ar2_cvar_enable, ar2_cvar_size, ar2_cvar_brightness, ar2_cvar_decay, ar2_cvar_elight, ar2_cvar_elight_mult)
         processClass("item_battery", bat_r, bat_g, bat_b, bat_cvar_enable, bat_cvar_size, bat_cvar_brightness, bat_cvar_decay, bat_cvar_elight, bat_cvar_elight_mult)
         processClass("item_healthvial", vial_r, vial_g, vial_b, vial_cvar_enable, vial_cvar_size, vial_cvar_brightness, vial_cvar_decay, vial_cvar_elight, vial_cvar_elight_mult)

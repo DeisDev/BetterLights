@@ -7,8 +7,7 @@ if CLIENT then
     -- Localize frequently used globals
     local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
-    local util = util
+    -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
     local cvar_enable = CreateClientConVar("betterlights_physgun_enable", "1", true, false, "Enable dynamic light for the physgun matching your weapon color")
     local cvar_size = CreateClientConVar("betterlights_physgun_size", "33", true, false, "Dynamic light radius for the physgun")
     local cvar_brightness = CreateClientConVar("betterlights_physgun_brightness", "0.3", true, false, "Dynamic light brightness for the physgun")
@@ -28,13 +27,13 @@ if CLIENT then
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
-                local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(vm, ATTACH_NAMES)
+                local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(vm, ATTACH_NAMES)
                 if pos then return pos end
             end
         end
 
         if IsValid(wep) then
-            local pos = BetterLights.GetAttachmentPos and BetterLights:GetAttachmentPos(wep, ATTACH_NAMES)
+            local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(wep, ATTACH_NAMES)
             if pos then return pos end
             if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end
         end

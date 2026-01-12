@@ -7,7 +7,7 @@ if CLIENT then
     -- Localize frequently used globals
     local CurTime = CurTime
     local IsValid = IsValid
-    local DynamicLight = DynamicLight
+    -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
     local cvar_enable = CreateClientConVar("betterlights_fire_enable", "1", true, false, "Enable dynamic light for entities that are on fire")
     local cvar_size = CreateClientConVar("betterlights_fire_size", "160", true, false, "Dynamic light radius for burning entities")
     local cvar_brightness = CreateClientConVar("betterlights_fire_brightness", "5.2", true, false, "Dynamic light brightness for burning entities")

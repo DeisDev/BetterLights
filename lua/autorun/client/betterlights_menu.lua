@@ -565,7 +565,7 @@ if CLIENT then
                 betterlights_magnusson_flash_enable = 1,
                 betterlights_magnusson_flash_size = 360,
                 betterlights_magnusson_flash_brightness = 2.2,
-                betterlights_magnusson_flash_time = 0.14,
+                betterlights_magnusson_flash_time = 2.0,
                 betterlights_magnusson_flash_color_r = 180,
                 betterlights_magnusson_flash_color_g = 220,
                 betterlights_magnusson_flash_color_b = 255,
