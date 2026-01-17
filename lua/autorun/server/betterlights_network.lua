@@ -11,6 +11,12 @@ if SERVER then
     
     -- Shared AR2 detection function
     local function isAR2Shot(shooter, bullet)
+        if IsValid(shooter) and shooter.GetClass then
+            local cls = string.lower(shooter:GetClass() or "")
+            if cls == "npc_turret_floor" or cls == "npc_turret_ceiling" then
+                return true
+            end
+        end
         if bullet and type(bullet.TracerName) == "string" and bullet.TracerName ~= "" then
             local tn = string.lower(bullet.TracerName)
             if string.find(tn, "ar2", 1, true) then return true end
