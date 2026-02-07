@@ -31,14 +31,13 @@ Each feature includes options for Enable, Color, Size, Brightness, Decay, and Re
 [b]Compatibility & Performance[/b]
 
 [list]
+[*]Compatible with GShader Library and it's addons. 
 [*]Most effects are client-side with minimal performance impact
 [*]Works with popular weapon packs like ARC9
 [*]May conflict with other lighting mods, but you can disable each module individually
 [/list]
 
 If you like this addon, please [b]rate and favorite[/b] it!
-
-Have a problem? Report it on the [url=https://github.com/DeisDev/BetterLights/issues]GitHub[/url] page. 
 
 See more of my addons [url=https://steamcommunity.com/workshop/filedetails/?id=3551812511]here[/url].
 
@@ -50,6 +49,7 @@ Look, I get it. I used AI to help with parts of this addon. If that bothers you,
 
 AI is just a tool, and I used it the same way a lot of developers already do. If that’s something you’re against, that’s fine. Just don't download the addon and continue on with your lives. And if you’re gonna be upset about AI in code, maybe take it up with [url=https://www.cnbc.com/2025/04/29/satya-nadella-says-as-much-as-30percent-of-microsoft-code-is-written-by-ai.html]Microsoft[/url]
 
+[url=https://buymeacoffee.com/deisdev] [img]https://i.imgur.com/py0UCVZ.png[/img] [/url]
 
 
 [spoiler]
