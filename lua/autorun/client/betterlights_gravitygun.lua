@@ -7,6 +7,7 @@ if CLIENT then
     -- Localize frequently used globals
     local CurTime = CurTime
     local IsValid = IsValid
+    local GetConVar = GetConVar
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
     local cvar_enable = CreateClientConVar("betterlights_gravitygun_enable", "1", true, false, "Enable dynamic light for the gravity gun (physcannon)")
     local cvar_size = CreateClientConVar("betterlights_gravitygun_size", "36", true, false, "Dynamic light radius for the gravity gun")
@@ -19,6 +20,9 @@ if CLIENT then
     local cvar_col_r = CreateClientConVar("betterlights_gravitygun_color_r", "255", true, false, "Gravity gun color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_gravitygun_color_g", "140", true, false, "Gravity gun color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_gravitygun_color_b", "40", true, false, "Gravity gun color - blue (0-255)")
+    local cvar_super_col_r = CreateClientConVar("betterlights_gravitygun_super_color_r", "40", true, false, "Supercharged gravity gun color - red (0-255)")
+    local cvar_super_col_g = CreateClientConVar("betterlights_gravitygun_super_color_g", "140", true, false, "Supercharged gravity gun color - green (0-255)")
+    local cvar_super_col_b = CreateClientConVar("betterlights_gravitygun_super_color_b", "255", true, false, "Supercharged gravity gun color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "core", "fork", "claw", "muzzle_flash" }
     local function getGravgunLightPos(ply, wep)
@@ -44,6 +48,34 @@ if CLIENT then
         return IsValid(wep) and wep:GetPos() or Vector(0, 0, 0)
     end
 
+    local function isSuperCharged(ply, wep)
+        if not IsValid(wep) then return false end
+        local megaConvar = GetConVar and (GetConVar("physcannon_mega_enabled") or GetConVar("physcannon_mega"))
+        if megaConvar and megaConvar:GetBool() then return true end
+        if wep.IsSuperCharged and wep:IsSuperCharged() then return true end
+        if wep.GetInternalVariable then
+            local val = wep:GetInternalVariable("m_bIsSuperCharged")
+            if val ~= nil and val ~= 0 then return true end
+            val = wep:GetInternalVariable("m_bSuperCharged")
+            if val ~= nil and val ~= 0 then return true end
+        end
+        if wep.GetNWBool and (wep:GetNWBool("IsSuperCharged") or wep:GetNWBool("SuperCharged") or wep:GetNWBool("supercharged")) then return true end
+        if wep.GetNWInt and wep:GetNWInt("SuperCharged", 0) ~= 0 then return true end
+        if wep.GetNW2Bool and (wep:GetNW2Bool("IsSuperCharged") or wep:GetNW2Bool("SuperCharged") or wep:GetNW2Bool("supercharged")) then return true end
+        if IsValid(ply) and ply.GetNWBool then
+            if ply:GetNWBool("IsSuperGravityGun") or ply:GetNWBool("SuperGravityGun") or ply:GetNWBool("HasSuperGravityGun") or ply:GetNWBool("super_gravity_gun") then return true end
+        end
+        if IsValid(ply) and ply.GetNW2Bool then
+            if ply:GetNW2Bool("IsSuperGravityGun") or ply:GetNW2Bool("SuperGravityGun") or ply:GetNW2Bool("HasSuperGravityGun") or ply:GetNW2Bool("super_gravity_gun") then return true end
+        end
+        if wep.GetSkin and wep:GetSkin() == 1 then return true end
+        if IsValid(ply) then
+            local vm = ply:GetViewModel()
+            if IsValid(vm) and vm.GetSkin and vm:GetSkin() == 1 then return true end
+        end
+        return false
+    end
+
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
     AddThink("BetterLights_GravityGun_DLight", function()
         if not cvar_enable:GetBool() then return end
@@ -60,8 +92,12 @@ if CLIENT then
         local doElight = cvar_models_elight:GetBool()
         local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
 
-        -- Cache color once per frame
-        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        local r, g, b
+        if isSuperCharged(ply, wep) then
+            r, g, b = BL.GetColorFromCvars(cvar_super_col_r, cvar_super_col_g, cvar_super_col_b)
+        else
+            r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        end
 
         -- Model light position (for elight): use viewmodel/worldmodel attachments when possible
         local pos_model = getGravgunLightPos(ply, wep)

@@ -423,6 +423,10 @@ if CLIENT then
             panel:NumSlider("Red", "betterlights_gravitygun_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_gravitygun_color_g", 0, 255, 0)
             panel:NumSlider("Blue", "betterlights_gravitygun_color_b", 0, 255, 0)
+            panel:Help("Supercharged Color (RGB)")
+            panel:NumSlider("Red", "betterlights_gravitygun_super_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "betterlights_gravitygun_super_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "betterlights_gravitygun_super_color_b", 0, 255, 0)
             addResetButton(panel, {
                 betterlights_gravitygun_enable = 1,
                 betterlights_gravitygun_size = 36,
@@ -433,6 +437,9 @@ if CLIENT then
                 betterlights_gravitygun_color_r = 255,
                 betterlights_gravitygun_color_g = 140,
                 betterlights_gravitygun_color_b = 40,
+                betterlights_gravitygun_super_color_r = 40,
+                betterlights_gravitygun_super_color_g = 140,
+                betterlights_gravitygun_super_color_b = 255,
             })
         end)
 
