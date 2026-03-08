@@ -4,53 +4,97 @@
 
 [img]https://i.imgur.com/VJ5aKv7.gif[/img]
 
-[b]HAVE AN ISSUE OR A FEATURE REQUEST? REPORT IT ON THIS ADDON'S [url=https://github.com/DeisDev/BetterLights/issues/new/choose]GITHUB[/url] REPO[/b]
+[hr][/hr]
 
-I can help you better there than in the comment section :)
+[b]Support / Issues / Feature Requests[/b]
 
+If you encounter a bug or want to suggest a feature, please open an issue on the GitHub repository:
+
+[url=https://github.com/DeisDev/BetterLights/issues/new/choose][b]Better Lights GitHub Issues[/b][/url]
+
+I do not provide support through Steam comments or my profile.  
+GitHub is the best place to report problems so they can be tracked and fixed properly.
+
+[hr][/hr]
 
 [b]Overview[/b]
 
-Better Lights adds dynamic lighting to Garry's Mod: muzzle flashes, bullet impacts, projectiles, NPCs, items, fires, and explosions.
+Better Lights adds dynamic lighting to Garry's Mod, including:
 
-[b]I HIGHLY RECOMMEND YOU PLAY THIS MOD ON THE 64-BIT BRANCH[/b]
+[list]
+[*]Muzzle flashes
+[*]Bullet impacts
+[*]Projectiles
+[*]NPC lighting
+[*]Item glow
+[*]Fires and explosions
+[*]Combine eye glow
+[/list]
 
-The 64-Bit branch is what this addon was developed, tested, and targeted for. In most cases, your game will run significantly better on this branch.
+[hr][/hr]
+
+[b]Recommended Branch[/b]
+
+[b]It is highly recommended to run this addon on the 64-bit branch.[/b]
+
+This addon was developed and tested on the 64-bit version of Garry's Mod.  
+In most cases, the game will run significantly better on this branch.
+
+[hr][/hr]
 
 [b]Configuration[/b]
 
-Open the spawn menu tab: [b]Better Lights[/b].  
-Each feature includes options for Enable, Color, Size, Brightness, Decay, and Reset to Defaults.
+Open the spawn menu and navigate to the tab:
 
-[img]https://i.imgur.com/7tkSj2C.gif[/img]  
-[img]https://i.imgur.com/Nfgu4bJ.gif[/img]  
-[img]https://i.imgur.com/U5wAcKx.gif[/img]  
+[b]Better Lights[/b]
+
+Each feature includes configurable options such as:
+
+[list]
+[*]Enable / Disable
+[*]Color
+[*]Size
+[*]Brightness
+[*]Decay
+[*]Reset to Defaults
+[/list]
+
+[img]https://i.imgur.com/7tkSj2C.gif[/img]
+[img]https://i.imgur.com/Nfgu4bJ.gif[/img]
+[img]https://i.imgur.com/U5wAcKx.gif[/img]
 [img]https://i.imgur.com/98AMEjC.gif[/img]
 [img]https://i.imgur.com/FTiESdG.jpeg[/img]
+
+[hr][/hr]
 
 [b]Compatibility & Performance[/b]
 
 [list]
-[*]Compatible with GShader Library and it's addons. 
+[*]Compatible with GShader Library and its addons
 [*]Most effects are client-side with minimal performance impact
-[*]Works with popular weapon packs like ARC9
-[*]May conflict with other lighting mods, but you can disable each module individually
+[*]Works with popular weapon packs such as ARC9
+[*]May conflict with other lighting mods, but each module can be disabled individually
 [/list]
 
-If you like this addon, please [b]rate and favorite[/b] it!
+If you enjoy this addon, please consider [b]rating and favoriting it[/b].
 
-See more of my addons [url=https://steamcommunity.com/workshop/filedetails/?id=3551812511]here[/url].
+See more of my addons here:  
+[url=https://steamcommunity.com/workshop/filedetails/?id=3551812511]My Workshop Collection[/url]
 
 [img]https://i.imgur.com/7jzy9bl.png[/img]
 
-[b]Where did the comments go? [/b]
+[hr][/hr]
 
-Look, I get it. I used AI to help with parts of this addon. If that bothers you, you don’t have to use it. What I don’t get is people spamming my profile or trying to argue with me over it. 
+[b]About the Comment Section[/b]
 
-AI is just a tool, and I used it the same way a lot of developers already do. If that’s something you’re against, that’s fine. Just don't download the addon and continue on with your lives. And if you’re gonna be upset about AI in code, maybe take it up with [url=https://www.cnbc.com/2025/04/29/satya-nadella-says-as-much-as-30percent-of-microsoft-code-is-written-by-ai.html]Microsoft[/url]
+Some people noticed the comments are disabled.
 
-[url=https://buymeacoffee.com/deisdev] [img]https://i.imgur.com/py0UCVZ.png[/img] [/url]
+Yes, I used AI to help with parts of this addon. If that bothers you, you are free not to use it. What I don't appreciate is people spamming my profile or trying to start arguments about it.
 
+AI is simply a tool, and many developers already use it in their workflow. If you're against that, that's completely fine — just skip the addon and move on.
+
+And if you're upset about AI being used in code, you might want to take it up with  
+[url=https://www.cnbc.com/2025/04/29/satya-nadella-says-as-much-as-30percent-of-microsoft-code-is-written-by-ai.html]Microsoft[/url].
 
 [spoiler]
 keywords: better lights, lighting, dynamic lights, gmod lights, gmod lighting, muzzle flash, bullet impact, glow, elight, dlight, garrysmod, garry's mod, npc light, weapon glow, projectile light, flashlight, physgun light, toolgun light, gravity gun light, ar2 orb, rpg rocket, rollermine, scanner, manhack, healthkit glow, item glow, lighting mod, lighting framework, developer api, optimized lighting, performance, v3.0
