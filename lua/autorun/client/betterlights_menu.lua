@@ -79,7 +79,6 @@ if CLIENT then
             panel:CheckBox("Enable", "betterlights_muzzle_enable")
             panel:NumSlider("Generic radius", "betterlights_muzzle_size", 0, 300, 0)
             panel:NumSlider("Generic brightness", "betterlights_muzzle_brightness", 0, 2, 2)
-            panel:NumSlider("Decay", "betterlights_muzzle_decay", 0, 5000, 0)
             panel:Help("Generic Color (RGB)")
             panel:NumSlider("Red", "betterlights_muzzle_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_muzzle_color_g", 0, 255, 0)
@@ -96,7 +95,6 @@ if CLIENT then
                 betterlights_muzzle_enable = 1,
                 betterlights_muzzle_size = 250,
                 betterlights_muzzle_brightness = 2.0,
-                betterlights_muzzle_decay = 1600,
                 betterlights_muzzle_ar2_enable = 1,
                 betterlights_muzzle_ar2_size = 250,
                 betterlights_muzzle_ar2_brightness = 2.0,
@@ -269,8 +267,8 @@ if CLIENT then
                 panel:NumSlider("Blue", "betterlights_explosion_flash_color_b", 0, 255, 0)
                 addResetButton(panel, {
                     betterlights_explosion_flash_enable = 1,
-                    betterlights_explosion_flash_size = 320,
-                    betterlights_explosion_flash_brightness = 3.0,
+                    betterlights_explosion_flash_size = 380,
+                    betterlights_explosion_flash_brightness = 4.6,
                     betterlights_explosion_flash_time = 0.18,
                     betterlights_explosion_detect_env = 1,
                     betterlights_explosion_detect_barrels = 1,
@@ -793,23 +791,108 @@ if CLIENT then
             })
         end)
 
-        -- Combine Soldier Face Glow
-        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldier", "Combine Soldier", "", "", function(panel)
+        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierElite", "Combine Soldier - Elite", "", "", function(panel)
             panel:ClearControls()
-            panel:Help("Face glow for Combine Soldiers. Color varies by type:")
-            panel:Help("• Elite: Red")
-            panel:Help("• Prison Guard: Yellow (skin 0) or Red (skin 1)")
-            panel:Help("• Standard: Blue (skin 0) or Orange (skin 1)")
-            panel:CheckBox("Enable", "bl_combine_soldier_enable")
-            panel:NumSlider("Radius", "bl_combine_soldier_size", 0, 200, 0)
-            panel:NumSlider("Brightness", "bl_combine_soldier_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "bl_combine_soldier_decay", 0, 5000, 0)
-            panel:Help("Note: Colors are automatically determined by soldier variant")
+            panel:Help("Color used for combine_super_soldier.")
+            panel:CheckBox("Enable", "bl_combine_soldier_elite_enable")
+            panel:NumSlider("Radius", "bl_combine_soldier_elite_size", 0, 200, 0)
+            panel:NumSlider("Brightness", "bl_combine_soldier_elite_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "bl_combine_soldier_elite_decay", 0, 5000, 0)
+            panel:NumSlider("Red", "bl_combine_soldier_elite_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "bl_combine_soldier_elite_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "bl_combine_soldier_elite_color_b", 0, 255, 0)
             addResetButton(panel, {
-                bl_combine_soldier_enable = 1,
-                bl_combine_soldier_size = 40,
-                bl_combine_soldier_brightness = 0.5,
-                bl_combine_soldier_decay = 1500,
+                bl_combine_soldier_elite_enable = 1,
+                bl_combine_soldier_elite_size = 40,
+                bl_combine_soldier_elite_brightness = 0.5,
+                bl_combine_soldier_elite_decay = 1500,
+                bl_combine_soldier_elite_color_r = 255,
+                bl_combine_soldier_elite_color_g = 72,
+                bl_combine_soldier_elite_color_b = 72,
+            })
+        end)
+
+        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierPrisonYellow", "Combine Soldier - Prison Guard Yellow", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Color used for prisonguard skin 0.")
+            panel:CheckBox("Enable", "bl_combine_soldier_prisonguard_yellow_enable")
+            panel:NumSlider("Radius", "bl_combine_soldier_prisonguard_yellow_size", 0, 200, 0)
+            panel:NumSlider("Brightness", "bl_combine_soldier_prisonguard_yellow_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "bl_combine_soldier_prisonguard_yellow_decay", 0, 5000, 0)
+            panel:NumSlider("Red", "bl_combine_soldier_prisonguard_yellow_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "bl_combine_soldier_prisonguard_yellow_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "bl_combine_soldier_prisonguard_yellow_color_b", 0, 255, 0)
+            addResetButton(panel, {
+                bl_combine_soldier_prisonguard_yellow_enable = 1,
+                bl_combine_soldier_prisonguard_yellow_size = 40,
+                bl_combine_soldier_prisonguard_yellow_brightness = 0.5,
+                bl_combine_soldier_prisonguard_yellow_decay = 1500,
+                bl_combine_soldier_prisonguard_yellow_color_r = 255,
+                bl_combine_soldier_prisonguard_yellow_color_g = 220,
+                bl_combine_soldier_prisonguard_yellow_color_b = 70,
+            })
+        end)
+
+        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierPrisonRed", "Combine Soldier - Prison Guard Red", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Color used for prisonguard skin 1.")
+            panel:CheckBox("Enable", "bl_combine_soldier_prisonguard_red_enable")
+            panel:NumSlider("Radius", "bl_combine_soldier_prisonguard_red_size", 0, 200, 0)
+            panel:NumSlider("Brightness", "bl_combine_soldier_prisonguard_red_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "bl_combine_soldier_prisonguard_red_decay", 0, 5000, 0)
+            panel:NumSlider("Red", "bl_combine_soldier_prisonguard_red_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "bl_combine_soldier_prisonguard_red_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "bl_combine_soldier_prisonguard_red_color_b", 0, 255, 0)
+            addResetButton(panel, {
+                bl_combine_soldier_prisonguard_red_enable = 1,
+                bl_combine_soldier_prisonguard_red_size = 40,
+                bl_combine_soldier_prisonguard_red_brightness = 0.5,
+                bl_combine_soldier_prisonguard_red_decay = 1500,
+                bl_combine_soldier_prisonguard_red_color_r = 255,
+                bl_combine_soldier_prisonguard_red_color_g = 72,
+                bl_combine_soldier_prisonguard_red_color_b = 72,
+            })
+        end)
+
+        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierStandardBlue", "Combine Soldier - Standard Blue", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Color used for combine_soldier skin 0.")
+            panel:CheckBox("Enable", "bl_combine_soldier_standard_blue_enable")
+            panel:NumSlider("Radius", "bl_combine_soldier_standard_blue_size", 0, 200, 0)
+            panel:NumSlider("Brightness", "bl_combine_soldier_standard_blue_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "bl_combine_soldier_standard_blue_decay", 0, 5000, 0)
+            panel:NumSlider("Red", "bl_combine_soldier_standard_blue_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "bl_combine_soldier_standard_blue_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "bl_combine_soldier_standard_blue_color_b", 0, 255, 0)
+            addResetButton(panel, {
+                bl_combine_soldier_standard_blue_enable = 1,
+                bl_combine_soldier_standard_blue_size = 40,
+                bl_combine_soldier_standard_blue_brightness = 0.5,
+                bl_combine_soldier_standard_blue_decay = 1500,
+                bl_combine_soldier_standard_blue_color_r = 95,
+                bl_combine_soldier_standard_blue_color_g = 150,
+                bl_combine_soldier_standard_blue_color_b = 255,
+            })
+        end)
+
+        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierStandardOrange", "Combine Soldier - Standard Orange", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Color used for combine_soldier skin 1.")
+            panel:CheckBox("Enable", "bl_combine_soldier_standard_orange_enable")
+            panel:NumSlider("Radius", "bl_combine_soldier_standard_orange_size", 0, 200, 0)
+            panel:NumSlider("Brightness", "bl_combine_soldier_standard_orange_brightness", 0, 5, 2)
+            panel:NumSlider("Decay", "bl_combine_soldier_standard_orange_decay", 0, 5000, 0)
+            panel:NumSlider("Red", "bl_combine_soldier_standard_orange_color_r", 0, 255, 0)
+            panel:NumSlider("Green", "bl_combine_soldier_standard_orange_color_g", 0, 255, 0)
+            panel:NumSlider("Blue", "bl_combine_soldier_standard_orange_color_b", 0, 255, 0)
+            addResetButton(panel, {
+                bl_combine_soldier_standard_orange_enable = 1,
+                bl_combine_soldier_standard_orange_size = 40,
+                bl_combine_soldier_standard_orange_brightness = 0.5,
+                bl_combine_soldier_standard_orange_decay = 1500,
+                bl_combine_soldier_standard_orange_color_r = 255,
+                bl_combine_soldier_standard_orange_color_g = 155,
+                bl_combine_soldier_standard_orange_color_b = 48,
             })
         end)
 
@@ -975,10 +1058,30 @@ if CLIENT then
     local function addAboutPanel()
         spawnmenu.AddToolMenuOption("Better Lights", "About", "BL_About", "About", "", "", function(panel)
             panel:ClearControls()
+            local version = (BetterLights and BetterLights.VERSION) or "v1.2.0"
+            panel:Help("Better Lights " .. version)
             panel:Help("Author: Catsniffer")
-            local btn = panel:Button("Steam Workshop Page")
-            btn.DoClick = function()
+            panel:Help("Please report bugs and feature requests on GitHub.")
+            panel:Help("Please do not use Steam comments or the author's Steam profile for support.")
+
+            local issueBtn = panel:Button("Report Issue / Request Feature")
+            issueBtn.DoClick = function()
+                gui.OpenURL("https://github.com/DeisDev/BetterLights/issues/new/choose")
+            end
+
+            local sourceBtn = panel:Button("View Source Code on GitHub")
+            sourceBtn.DoClick = function()
+                gui.OpenURL("https://github.com/DeisDev/BetterLights")
+            end
+
+            local workshopBtn = panel:Button("Steam Workshop Page")
+            workshopBtn.DoClick = function()
                 gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225")
+            end
+
+            local otherAddonsBtn = panel:Button("Other Addons")
+            otherAddonsBtn.DoClick = function()
+                gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=3551812511")
             end
         end)
     end

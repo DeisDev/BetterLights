@@ -7,8 +7,8 @@ if CLIENT then
     local BL = BetterLights
     
     -- Version tracking
-    BL.VERSION = "1.1.0"
-    BL.VERSION_DATE = "2026-01-12"
+    BL.VERSION = "v1.2.0"
+    BL.VERSION_DATE = "2026-04-13"
     
     BL._thinks = BL._thinks or {}
     BL._classes = BL._classes or {}
