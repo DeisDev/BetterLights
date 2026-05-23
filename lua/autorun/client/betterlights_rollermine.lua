@@ -1,10 +1,6 @@
--- BetterLights: Rollermine (npc_rollermine) glow
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Signal to any legacy scripts that rollermine handling is unified here
     BL_ROLLERMINE_UNIFIED = true
     local cvar_enable = CreateClientConVar("betterlights_rollermine_enable", "1", true, false, "Enable dynamic light for Rollermines (npc_rollermine)")
     local cvar_size = CreateClientConVar("betterlights_rollermine_size", "110", true, false, "Dynamic light radius for Rollermines")
@@ -13,7 +9,6 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_rollermine_models_elight", "1", true, false, "Also add an entity light (elight) to light the rollermine model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_rollermine_models_elight_size_mult", "1.0", true, false, "Multiplier for rollermine elight radius")
 
-    -- Hacked rollermine convars
     local cvar_h_enable = CreateClientConVar("betterlights_rollermine_hacked_enable", "1", true, false, "Enable dynamic light for Hacked Rollermines (ally)")
     local cvar_h_size = CreateClientConVar("betterlights_rollermine_hacked_size", "110", true, false, "Dynamic light radius for Hacked Rollermines")
     local cvar_h_brightness = CreateClientConVar("betterlights_rollermine_hacked_brightness", "0.6", true, false, "Dynamic light brightness for Hacked Rollermines")
@@ -22,7 +17,6 @@ if CLIENT then
     local cvar_h_models_elight_mult = CreateClientConVar("betterlights_rollermine_hacked_models_elight_size_mult", "1.0", true, false, "Multiplier for hacked rollermine elight radius")
     local cvar_debug = CreateClientConVar("betterlights_rollermine_debug", "0", true, false, "Debug hacked rollermine detection (prints to console)")
 
-    -- Color configuration (by skin and hacked override)
     local rm0_r = CreateClientConVar("betterlights_rollermine_color_r", "110", true, false, "Rollermine skin0 (default) color - red (0-255)")
     local rm0_g = CreateClientConVar("betterlights_rollermine_color_g", "190", true, false, "Rollermine skin0 (default) color - green (0-255)")
     local rm0_b = CreateClientConVar("betterlights_rollermine_color_b", "255", true, false, "Rollermine skin0 (default) color - blue (0-255)")
@@ -36,8 +30,6 @@ if CLIENT then
     local hk_g = CreateClientConVar("betterlights_rollermine_hacked_color_g", "160", true, false, "Hacked rollermine color - green (0-255)")
     local hk_b = CreateClientConVar("betterlights_rollermine_hacked_color_b", "60", true, false, "Hacked rollermine color - blue (0-255)")
 
-    -- Color mapping by skin: 0 = blue (default), 1 = yellow, 2 = red (others -> default)
-    -- Using BL.DetectSkinVariant for cleaner skin-based color detection
     local skinColors = {
         [0] = function() return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b) end,
         [1] = function() return BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b) end,
@@ -47,10 +39,9 @@ if CLIENT then
     local function BL_GetRollermineColor(ent)
         local colorFn = BL.DetectSkinVariant(ent, skinColors)
         if colorFn then return colorFn() end
-        return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b)  -- Default to skin 0
+        return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b)
     end
 
-    -- Detect hacked state on an npc_rollermine using unified detection helper
     local function BL_IsRollermineHacked(ent)
         return BL.DetectEntityVariant(ent, {
             debugName = "hacked rollermine",
@@ -104,16 +95,13 @@ if CLIENT then
                 el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
             end
             
-            -- Boost brightness and size when spikes are deployed (roller_spikes.mdl)
             if BL.MatchesModel(ent, "roller_spikes") then
                 brightness = brightness * 2.5
                 size = size * 1.5
             end
 
-            -- Create world light
             BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
 
-            -- Create entity light if enabled
             if use_elight then
                 BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
             end

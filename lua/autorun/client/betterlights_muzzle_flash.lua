@@ -1,6 +1,3 @@
--- BetterLights: Muzzle Flash (client)
--- Spawns a brief DynamicLight at the muzzle when a weapon fires.
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
@@ -13,7 +10,6 @@ if CLIENT then
     local cvar_ar2_size = CreateClientConVar("betterlights_muzzle_ar2_size", "250", true, false, "AR2 muzzle flash radius")
     local cvar_ar2_brightness = CreateClientConVar("betterlights_muzzle_ar2_brightness", "2.0", true, false, "AR2 muzzle flash brightness")
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_muzzle_color_r", "255", true, false, "Generic muzzle flash color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_muzzle_color_g", "170", true, false, "Generic muzzle flash color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_muzzle_color_b", "90", true, false, "Generic muzzle flash color - blue (0-255)")
@@ -21,7 +17,6 @@ if CLIENT then
     local cvar_ar2_col_g = CreateClientConVar("betterlights_muzzle_ar2_color_g", "190", true, false, "AR2 muzzle flash color - green (0-255)")
     local cvar_ar2_col_b = CreateClientConVar("betterlights_muzzle_ar2_color_b", "255", true, false, "AR2 muzzle flash color - blue (0-255)")
 
-    -- Register network handler for muzzle flashes
     BL.AddNetworkHandler(BL.NET_MUZZLE_FLASH, function()
         if not cvar_enable:GetBool() then return end
         local pos = net.ReadVector()

@@ -1,22 +1,16 @@
--- BetterLights: Combine AR2 orb dynamic lighting
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- ConVars for tweaking
     local cvar_enable = CreateClientConVar("betterlights_combineball_enable", "1", true, false, "Enable dynamic light for Combine AR2 orb")
     local cvar_size = CreateClientConVar("betterlights_combineball_size", "320", true, false, "Dynamic light radius for Combine AR2 orb")
     local cvar_brightness = CreateClientConVar("betterlights_combineball_brightness", "2.5", true, false, "Dynamic light brightness for Combine AR2 orb")
     local cvar_decay = CreateClientConVar("betterlights_combineball_decay", "2000", true, false, "Dynamic light decay for Combine AR2 orb (higher = faster fade)")
 
-    -- Performance and behavior controls
     local cvar_world_enable = CreateClientConVar("betterlights_combineball_world_light_enable", "1", true, false, "Enable world lighting (turn off to avoid lighting static world surfaces)")
     local cvar_models_enable = CreateClientConVar("betterlights_combineball_model_light_enable", "1", true, false, "Enable model lighting")
     local cvar_models_elight = CreateClientConVar("betterlights_combineball_models_elight", "0", true, false, "Also add an entity light (elight) for models (useful when world light is disabled)")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_combineball_models_elight_size_mult", "1.0", true, false, "Multiplier for model elight radius")
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_combineball_color_r", "80", true, false, "Combine ball color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_combineball_color_g", "180", true, false, "Combine ball color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_combineball_color_b", "255", true, false, "Combine ball color - blue (0-255)")
@@ -27,7 +21,6 @@ if CLIENT then
     AddThink("BetterLights_CombineBall_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        -- Cache ConVar values once per frame
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
@@ -41,7 +34,6 @@ if CLIENT then
             if not IsValid(ent) then return end
             local pos = ent:WorldSpaceCenter()
 
-            -- World dynamic light: optionally also hits models (if wantModels)
             if wantWorld then
                 local dl = DynamicLight(ent:EntIndex())
                 if dl then
@@ -54,12 +46,11 @@ if CLIENT then
                     dl.size = size
                     dl.minlight = 0
                     dl.noworld = false
-                    dl.nomodel = not wantModels -- world-only when models disabled
+                    dl.nomodel = not wantModels
                     dl.dietime = CurTime() + 0.1
                 end
             end
 
-            -- Model-only lighting when world is disabled, or if explicitly requested via elight
             if wantModels and (not wantWorld) then
                 if wantElight then
                     local el = DynamicLight(ent:EntIndex(), true)
@@ -75,7 +66,6 @@ if CLIENT then
                         el.dietime = CurTime() + 0.1
                     end
                 else
-                    -- If elight is disabled, use a dlight restricted to models-only
                     local dlm = DynamicLight(ent:EntIndex())
                     if dlm then
                         dlm.pos = pos

@@ -1,17 +1,12 @@
--- BetterLights: Antlion Worker subtle back glow
--- Attaches a dynamic light to npc_antlion_worker at the bone "Antlion.Back_Bone".
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Localize hot globals
     local IsValid = IsValid
     local cvar_enable = CreateClientConVar("betterlights_antlion_worker_enable", "1", true, false, "Enable subtle glow on Antlion Workers")
     local cvar_size = CreateClientConVar("betterlights_antlion_worker_size", "120", true, false, "Antlion Worker light radius")
     local cvar_brightness = CreateClientConVar("betterlights_antlion_worker_brightness", "0.55", true, false, "Antlion Worker light brightness")
     local cvar_decay = CreateClientConVar("betterlights_antlion_worker_decay", "2000", true, false, "Antlion Worker light decay")
 
-    -- Color configuration (yellow-green default)
     local cvar_col_r = CreateClientConVar("betterlights_antlion_worker_color_r", "180", true, false, "Antlion Worker color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_antlion_worker_color_g", "240", true, false, "Antlion Worker color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_antlion_worker_color_b", "120", true, false, "Antlion Worker color - blue (0-255)")
@@ -25,7 +20,6 @@ if CLIENT then
     AddThink("BetterLights_AntlionWorker", function()
         if not cvar_enable:GetBool() then return end
 
-        -- Cache ConVar values once per frame
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
@@ -35,12 +29,9 @@ if CLIENT then
             if not IsValid(ent) then return end
             if ent.GetNoDraw and ent:GetNoDraw() then return end
 
-            -- Try bone position first (most accurate for this NPC)
             local pos = BL.GetBonePosition(ent, BONE_NAME)
             
-            -- Try attachment-based light if bone lookup fails
             if not pos and not BL.CreateLightFromAttachment(ent, ATTACH_NAMES, r, g, b, brightness, decay, size, false) then
-                -- Final fallback to entity center
                 pos = BL.GetEntityCenter(ent)
             end
             

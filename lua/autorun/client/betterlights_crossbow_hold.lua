@@ -1,6 +1,3 @@
--- BetterLights: Passive light when holding the Crossbow
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
@@ -10,14 +7,12 @@ if CLIENT then
     local cvar_decay = CreateClientConVar("betterlights_crossbow_hold_decay", "2000", true, false, "Dynamic light decay for held Crossbow")
     local cvar_require_loaded = CreateClientConVar("betterlights_crossbow_hold_require_loaded", "1", true, false, "Only emit light when a bolt is loaded (clip > 0)")
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_crossbow_hold_color_r", "255", true, false, "Crossbow (held) color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_crossbow_hold_color_g", "140", true, false, "Crossbow (held) color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_crossbow_hold_color_b", "40", true, false, "Crossbow (held) color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "bolt", "tip", "flash", "spark" }
     local function getHeldCrossbowPos(ply, wep)
-        -- Prefer viewmodel attachment when in first-person
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
@@ -26,16 +21,13 @@ if CLIENT then
             end
         end
 
-        -- Fallback to world model attachment
         if IsValid(wep) then
             local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(wep, ATTACH_NAMES)
             if pos then return pos end
-            -- Fallback to weapon position
             if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end
             return wep:GetPos()
         end
 
-        -- Final fallback: player view position slightly forward
         return ply:EyePos() + (ply.EyeAngles and ply:EyeAngles():Forward() * 20 or Vector(20, 0, 0))
     end
 
@@ -52,11 +44,9 @@ if CLIENT then
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
-        -- Cache color once per frame
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         if cvar_require_loaded:GetBool() then
-            -- Determine if the crossbow currently has a bolt loaded
             local loaded = false
 
             if wep.Clip1 then
@@ -66,7 +56,6 @@ if CLIENT then
                 end
             end
 
-            -- Fallback heuristic: if not reloading and weapon reports HasAmmo, assume loaded
             if not loaded then
                 local inReload = false
                 if wep.GetActivity then
@@ -83,10 +72,8 @@ if CLIENT then
             if not loaded then return end
         end
 
-        -- Model light position (for elight-style model illumination in the future): attachments if possible
         local pos_model = getHeldCrossbowPos(ply, wep)
 
-        -- World light (dlight) position: trace from EyePos so it doesn't clip into nearby walls
         local eye = ply:EyePos()
         local fwd = ply:EyeAngles():Forward()
         local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("xbow_hold", {
@@ -96,10 +83,9 @@ if CLIENT then
         })) or util.TraceLine({ start = eye, endpos = eye + fwd * 48, filter = { ply, wep } })
         local pos_world = tr.Hit and (tr.HitPos + tr.HitNormal * 6) or (eye + fwd * 24)
 
-        -- Fallback if model pos failed
         if not pos_model then pos_model = pos_world end
 
-        local dlight = DynamicLight(ply:EntIndex() + 1337) -- offset to avoid collisions
+        local dlight = DynamicLight(ply:EntIndex() + 1337)
         if dlight then
             dlight.pos = pos_world
             dlight.r = r

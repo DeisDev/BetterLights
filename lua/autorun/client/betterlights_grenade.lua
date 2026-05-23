@@ -1,10 +1,6 @@
--- BetterLights: Dim red light for frag grenades
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Localize hot globals
     local IsValid = IsValid
     local cvar_enable = CreateClientConVar("betterlights_grenade_enable", "1", true, false, "Enable dim red light on frag grenades (npc_grenade_frag)")
     local cvar_size = CreateClientConVar("betterlights_grenade_size", "80", true, false, "Dynamic light radius for frag grenades")
@@ -13,7 +9,6 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_grenade_models_elight", "1", true, false, "Also add an entity light (elight) to light the grenade model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_grenade_models_elight_size_mult", "1.0", true, false, "Multiplier for grenade elight radius")
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_grenade_color_r", "255", true, false, "Frag grenade color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_grenade_color_g", "40", true, false, "Frag grenade color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_grenade_color_b", "40", true, false, "Frag grenade color - blue (0-255)")
@@ -24,7 +19,6 @@ if CLIENT then
     AddThink("BetterLights_Grenade_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        -- Cache ConVar values once per frame
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
@@ -40,10 +34,8 @@ if CLIENT then
 
             local idx = n:EntIndex()
 
-            -- Create world light
             BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
 
-            -- Create entity light if enabled
             if doElight then
                 BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * elMult, true)
             end

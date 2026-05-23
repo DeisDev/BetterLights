@@ -1,10 +1,6 @@
--- BetterLights: Suit/Health Chargers ambient glows
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Suit charger (orange)
     local sc_enable = CreateClientConVar("betterlights_suitcharger_enable", "1", true, false, "Enable glow for item_suitcharger")
     local sc_size = CreateClientConVar("betterlights_suitcharger_size", "75", true, false, "Glow radius for item_suitcharger")
     local sc_bright = CreateClientConVar("betterlights_suitcharger_brightness", "0.25", true, false, "Glow brightness for item_suitcharger")
@@ -15,7 +11,6 @@ if CLIENT then
     local sc_g = CreateClientConVar("betterlights_suitcharger_color_g", "180", true, false, "Suit charger color - green (0-255)")
     local sc_b = CreateClientConVar("betterlights_suitcharger_color_b", "80", true, false, "Suit charger color - blue (0-255)")
 
-    -- Health charger (blue)
     local hc_enable = CreateClientConVar("betterlights_healthcharger_enable", "1", true, false, "Enable glow for item_healthcharger")
     local hc_size = CreateClientConVar("betterlights_healthcharger_size", "75", true, false, "Glow radius for item_healthcharger")
     local hc_bright = CreateClientConVar("betterlights_healthcharger_brightness", "0.25", true, false, "Glow brightness for item_healthcharger")
@@ -26,7 +21,6 @@ if CLIENT then
     local hc_g = CreateClientConVar("betterlights_healthcharger_color_g", "190", true, false, "Health charger color - green (0-255)")
     local hc_b = CreateClientConVar("betterlights_healthcharger_color_b", "255", true, false, "Health charger color - blue (0-255)")
 
-    -- Track entity classes at module load for efficiency
     if BL.TrackClass then
         BL.TrackClass("item_suitcharger")
         BL.TrackClass("item_healthcharger")
@@ -35,7 +29,6 @@ if CLIENT then
     local function process(class, en, sz, br, de, el, elmult, rcv, gcv, bcv)
         if not en:GetBool() then return end
         
-        -- Cache ConVar values once per entity type
         local size = math.max(0, sz:GetFloat())
         local brightness = math.max(0, br:GetFloat())
         local decay = math.max(0, de:GetFloat())
@@ -48,10 +41,8 @@ if CLIENT then
             local idx = ent:EntIndex()
             local pos = BL.GetEntityCenter(ent)
             if pos then
-                -- Create world light
                 BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size, false)
 
-                -- Create entity light if enabled
                 if doElight then
                     BL.CreateDLight(idx, pos, cr, cg, cb, brightness, decay, size * el_mult, true)
                 end

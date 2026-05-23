@@ -1,10 +1,6 @@
--- BetterLights: Dynamic light for burning entities
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Localize frequently used globals
     local CurTime = CurTime
     local IsValid = IsValid
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
@@ -18,9 +14,7 @@ if CLIENT then
     local cvar_flicker_amount = CreateClientConVar("betterlights_fire_flicker_amount", "0.35", true, false, "Flicker intensity (as a fraction of brightness)")
     local cvar_flicker_size_amount = CreateClientConVar("betterlights_fire_flicker_size_amount", "0.12", true, false, "Flicker intensity applied to light radius")
     local cvar_flicker_speed = CreateClientConVar("betterlights_fire_flicker_speed", "11.5", true, false, "Flicker speed (higher = faster flicker)")
-    -- removed update_hz throttling entirely (always update every frame)
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_fire_color_r", "255", true, false, "Burning entities color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_fire_color_g", "170", true, false, "Burning entities color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_fire_color_b", "60", true, false, "Burning entities color - blue (0-255)")
@@ -31,7 +25,6 @@ if CLIENT then
     AddThink("BetterLights_Fire_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        -- No throttling (always update every frame)
 
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
@@ -43,10 +36,8 @@ if CLIENT then
         local flickerAmt = math.max(0, cvar_flicker_amount:GetFloat())
         local flickerSizeAmt = math.max(0, cvar_flicker_size_amount:GetFloat())
 
-        -- Track which target entities we've already lit this frame to avoid duplicate lights
         local seenTargets = {}
 
-        -- Cache color once per frame
         local cr, cg, cb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         local function handleFlame(flame)
@@ -59,11 +50,9 @@ if CLIENT then
                 local pos
                 local lightIndex
                 if IsValid(target) then
-                    -- Use the entity's OBB center for better "self-lighting" and the target's EntIndex for stability
                     local obbCenter = target.OBBCenter and target:OBBCenter() or Vector(0, 0, 0)
                     pos = target.LocalToWorld and target:LocalToWorld(obbCenter) or (target.WorldSpaceCenter and target:WorldSpaceCenter()) or target:GetPos()
                     lightIndex = target:EntIndex()
-                    -- Skip if we've already placed a light for this target this frame
                     if seenTargets[lightIndex] then goto continue_flame end
                     seenTargets[lightIndex] = true
                 else
@@ -71,7 +60,6 @@ if CLIENT then
                     lightIndex = flame:EntIndex()
                 end
 
-                -- Compute flicker-adjusted brightness/size once and use for both dlight and elight
                 local b_eff, s_eff = brightness, size
                 if doFlicker then
                     local t = CurTime()
@@ -80,7 +68,6 @@ if CLIENT then
                     s_eff = BL.CreateFlickerEffect(size, t, flickerSpeed, flickerSizeAmt, phase)
                 end
 
-                -- DLight (world/model)
                 local dlight = DynamicLight(lightIndex)
                 if dlight then
                     dlight.pos = pos
@@ -96,9 +83,8 @@ if CLIENT then
                     dlight.dietime = CurTime() + 0.16
                 end
 
-                -- ELight (model-only)
                 if doElight then
-                    local el = DynamicLight(lightIndex, true) -- elight: lights models, not world
+                    local el = DynamicLight(lightIndex, true)
                     if el then
                         el.pos = pos
                         el.r = cr
@@ -108,7 +94,6 @@ if CLIENT then
                         el.decay = decay
                         el.size = s_eff * elMult
                         el.minlight = 0
-                        -- noworld/nomodel flags are ignored for elights; elights never light world
                         el.dietime = CurTime() + 0.16
                     end
                 end

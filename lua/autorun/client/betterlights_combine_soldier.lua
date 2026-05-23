@@ -1,6 +1,3 @@
-﻿-- BetterLights: Combine Soldier Face Glow
--- Adds glow to Combine soldier face visors (color varies by type and skin)
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights

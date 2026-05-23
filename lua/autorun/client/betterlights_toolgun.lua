@@ -1,10 +1,6 @@
--- BetterLights: Tool Gun (gmod_tool) small white light
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Localize frequently used globals
     local CurTime = CurTime
     local IsValid = IsValid
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
@@ -15,14 +11,12 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_toolgun_models_elight", "1", true, false, "Also add an entity light (elight) to light the Tool Gun model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_toolgun_models_elight_size_mult", "1.0", true, false, "Multiplier for Tool Gun elight radius")
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_toolgun_color_r", "255", true, false, "Tool Gun color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_toolgun_color_g", "255", true, false, "Tool Gun color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_toolgun_color_b", "255", true, false, "Tool Gun color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "spark", "laser", "muzzle_flash", "tip" }
     local function getToolgunLightPos(ply, wep)
-        -- Prefer viewmodel attachments for first person, then worldmodel attachments
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
@@ -60,13 +54,10 @@ if CLIENT then
         local doElight = cvar_models_elight:GetBool()
         local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
 
-        -- Cache color once per frame
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
-        -- Model light position (for elight): use attachments if possible
         local pos_model = getToolgunLightPos(ply, wep)
 
-        -- World light (dlight): trace toward the look direction so it stays just off nearby walls
         local eye = ply:EyePos()
         local fwd = ply:EyeAngles():Forward()
         local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("toolgun", {
@@ -78,10 +69,8 @@ if CLIENT then
 
         if not pos_model then pos_model = pos_world end
 
-        -- Use a stable index separate from other features (offset from player index)
         local idx = ply:EntIndex() + 1480
 
-        -- DLight
         local d = DynamicLight(idx)
         if d then
             d.pos = pos_world
@@ -97,7 +86,6 @@ if CLIENT then
             d.dietime = CurTime() + 0.16
         end
 
-        -- ELight
         if doElight then
             local el = DynamicLight(idx, true)
             if el then

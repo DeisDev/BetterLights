@@ -1,12 +1,8 @@
--- BetterLights Core
--- Provides centralized Think aggregator, entity tracking system, and utility functions for lighting modules
-
 if CLIENT then
     BetterLights = BetterLights or {}
 
     local BL = BetterLights
     
-    -- Version tracking
     BL.VERSION = "v1.2.0"
     BL.VERSION_DATE = "2026-04-13"
     
@@ -18,17 +14,14 @@ if CLIENT then
     BL._attachCache = BL._attachCache or {}
     BL._networkHandlers = BL._networkHandlers or {}
 
-    -- Network message constants (must match server)
     local NET_MUZZLE_FLASH = 1
     local NET_BULLET_IMPACT = 2
     
-    -- Register a network message handler
     function BL.AddNetworkHandler(msgType, fn)
         if not isfunction(fn) then return end
         BL._networkHandlers[msgType] = fn
     end
     
-    -- Consolidated network message receiver
     net.Receive("BetterLights_Event", function()
         local msgType = net.ReadUInt(4)
         local handler = BL._networkHandlers[msgType]
@@ -37,16 +30,13 @@ if CLIENT then
         end
     end)
     
-    -- Export constants for modules to use
     BL.NET_MUZZLE_FLASH = NET_MUZZLE_FLASH
     BL.NET_BULLET_IMPACT = NET_BULLET_IMPACT
     
-    -- Memory pooling for flash tables
     BL._flashPool = BL._flashPool or {}
     BL._flashPoolSize = 0
-    BL._flashPoolMax = 100 -- Max pooled objects
+    BL._flashPoolMax = 100
     
-    -- Get a flash table from the pool or create new one
     function BL.GetFlashTable()
         if BL._flashPoolSize > 0 then
             local flash = BL._flashPool[BL._flashPoolSize]
@@ -57,10 +47,8 @@ if CLIENT then
         return {}
     end
     
-    -- Return a flash table to the pool for reuse
     function BL.RecycleFlashTable(flash)
         if BL._flashPoolSize < BL._flashPoolMax then
-            -- Clear the table
             for k in pairs(flash) do
                 flash[k] = nil
             end
@@ -69,11 +57,8 @@ if CLIENT then
         end
     end
     
-    -- Shared suppression tracking for flash deduplication
     BL._suppressionRecords = BL._suppressionRecords or {}
     
-    -- Check if a flash at this position should be suppressed (too close to recent flash)
-    -- Returns true if suppressed, false if allowed
     function BL.ShouldSuppressFlash(key, pos, minDistSq, maxAge)
         minDistSq = minDistSq or (40 * 40)
         maxAge = maxAge or 0.15
@@ -86,7 +71,6 @@ if CLIENT then
         
         local now = CurTime()
         
-        -- Clean old entries and check for nearby recent flashes
         for i = #record, 1, -1 do
             local e = record[i]
             if now - e.t > maxAge then
@@ -100,7 +84,6 @@ if CLIENT then
         return false
     end
     
-    -- Record a flash position for future suppression checks
     function BL.RecordFlashPosition(key, pos)
         local record = BL._suppressionRecords[key]
         if not record then
@@ -110,11 +93,9 @@ if CLIENT then
         record[#record + 1] = { pos = pos, t = CurTime() }
     end
     
-    -- Flash lifecycle management
     BL._activeFlashes = BL._activeFlashes or {}
     BL._flashIdCounter = BL._flashIdCounter or 0
     
-    -- Create and register a timed flash effect
     function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
         local now = CurTime()
         BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
@@ -132,7 +113,6 @@ if CLIENT then
         return flash
     end
     
-    -- Update all active flashes (call from Think hook)
     function BL.UpdateFlashes()
         if #BL._activeFlashes == 0 then return end
         local now = CurTime()
@@ -140,7 +120,8 @@ if CLIENT then
             local f = BL._activeFlashes[i]
             if not f or now >= f.die then
                 if f then BL.RecycleFlashTable(f) end
-                table.remove(BL._activeFlashes, i)
+                BL._activeFlashes[i] = BL._activeFlashes[#BL._activeFlashes]
+                BL._activeFlashes[#BL._activeFlashes] = nil
             else
                 local dur = math.max(0.001, f.die - f.start)
                 local t = (f.die - now) / dur
@@ -165,7 +146,6 @@ if CLIENT then
         end
     end
     
-    -- ConVar creation helper - creates a standard set of ConVars for a module
     function BL.CreateConVarSet(prefix, defaults)
         defaults = defaults or {}
         local cvars = {}
@@ -195,7 +175,6 @@ if CLIENT then
         return cvars
     end
     
-    -- Entity class checking helper
     function BL.IsEntityClass(ent, classes)
         if not IsValid(ent) then return false end
         if not ent.GetClass then return false end
@@ -210,7 +189,6 @@ if CLIENT then
         return false
     end
     
-    -- Model matching helper (case-insensitive substring match)
     function BL.MatchesModel(ent, pattern)
         if not IsValid(ent) then return false end
         if not ent.GetModel then return false end
@@ -218,7 +196,6 @@ if CLIENT then
         return string.find(mdl, string.lower(pattern), 1, true) ~= nil
     end
 
-    -- Register a Think function to be called every frame
     function BL.AddThink(name, fn)
         if not isfunction(fn) then return end
         BL._thinks[name] = fn
@@ -228,7 +205,6 @@ if CLIENT then
         BL._thinks[name] = nil
     end
 
-    -- Throttle updates to a specific Hz (returns true if enough time has passed)
     function BL.ShouldTick(name, hz)
         if not hz or hz <= 0 then return true end
         local now = CurTime()
@@ -240,14 +216,12 @@ if CLIENT then
         return false
     end
 
-    -- Generate unique light indices to avoid collisions
     BL._idCounter = BL._idCounter or 0
     function BL.NewLightId(base)
         BL._idCounter = (BL._idCounter + 1) % 4096
         return (base or 60000) + BL._idCounter
     end
 
-    -- Begin tracking entities of a specific class (enables BL.ForEach and OnEntityCreated/EntityRemoved hooks)
     function BL.TrackClass(classname)
         if type(classname) ~= "string" or classname == "" then return end
         if BL._classes[classname] then return end
@@ -261,7 +235,6 @@ if CLIENT then
         end)
     end
 
-    -- Iterate over all tracked entities of a class (auto-cleans up invalid entities)
     function BL.ForEach(classname, fn)
         local set = BL._tracked[classname]
         if not set then return end
@@ -274,14 +247,12 @@ if CLIENT then
         end
     end
 
-    -- Register a callback for when entities of a class are removed
     function BL.AddRemoveHandler(classname, fn)
         if type(classname) ~= "string" or not isfunction(fn) then return end
         BL._removeHandlers[classname] = BL._removeHandlers[classname] or {}
         table.insert(BL._removeHandlers[classname], fn)
     end
 
-    -- Get the center position of an entity (OBB center in world space)
     function BL.GetEntityCenter(ent)
         if not IsValid(ent) then return nil end
         if ent.LocalToWorld and ent.OBBCenter then
@@ -293,14 +264,12 @@ if CLIENT then
         end
     end
 
-    -- Read and clamp RGB color values from ConVars
     function BL.GetColorFromCvars(r_cvar, g_cvar, b_cvar)
         return math.Clamp(math.floor(r_cvar:GetFloat() + 0.5), 0, 255),
                math.Clamp(math.floor(g_cvar:GetFloat() + 0.5), 0, 255),
                math.Clamp(math.floor(b_cvar:GetFloat() + 0.5), 0, 255)
     end
 
-    -- Create a DynamicLight with standard settings (pass isElight=true for model-only lights)
     function BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight)
         local dl = DynamicLight(index, isElight or false)
         if dl then
@@ -321,7 +290,6 @@ if CLIENT then
         return dl
     end
 
-    -- Cache attachment lookups per model to avoid repeated LookupAttachment calls
     function BL.LookupAttachmentCached(ent, names)
         if not (IsValid(ent) and ent.LookupAttachment and ent.GetModel) then return nil end
         local mdl = ent:GetModel() or ""
@@ -345,7 +313,6 @@ if CLIENT then
         return nil
     end
 
-    -- Get world position from first found attachment in a list
     function BL.GetAttachmentPos(ent, names)
         local id = BL.LookupAttachmentCached(ent, names)
         if id and ent.GetAttachment then
@@ -355,7 +322,6 @@ if CLIENT then
         return nil
     end
 
-    -- Reusable trace table to reduce garbage collection (keyed by string for multiple concurrent traces)
     local _tracePools = {}
     function BL.TraceLineReuse(key, data)
         local t = _tracePools[key]
@@ -372,7 +338,6 @@ if CLIENT then
         return util.TraceLine(t)
     end
 
-    -- Check if the local player is holding a specific weapon class
     function BL.IsPlayerHoldingWeapon(weaponClass)
         local ply = LocalPlayer()
         if not IsValid(ply) then return false end
@@ -380,7 +345,6 @@ if CLIENT then
         return IsValid(wep) and wep:GetClass() == weaponClass
     end
 
-    -- Perform a trace from the player's eye position in the direction they're looking
     function BL.GetPlayerEyeTrace(distance, filter)
         local ply = LocalPlayer()
         if not IsValid(ply) then return nil end
@@ -393,7 +357,6 @@ if CLIENT then
         })
     end
 
-    -- Linearly interpolate between two RGB colors
     function BL.LerpColor(r1, g1, b1, r2, g2, b2, t)
         t = math.Clamp(t, 0, 1)
         return math.floor(r1 + (r2 - r1) * t),
@@ -401,15 +364,12 @@ if CLIENT then
                math.floor(b1 + (b2 - b1) * t)
     end
 
-    -- Calculate a natural-looking flicker effect using layered sine waves
     function BL.CreateFlickerEffect(baseValue, time, speed, amount, phase)
         phase = phase or 0
         local osc = 0.65 * math.sin(time * speed + phase) + 0.35 * math.sin(time * (speed * 1.7) + phase * 1.13)
         return math.max(0.1, baseValue * (1 + amount * osc))
     end
 
-    -- Unified entity variant detection (for hacked, friendly, guardian variants, etc.)
-    -- Returns true if entity matches any of the provided detection criteria
     function BL.DetectEntityVariant(ent, options)
         if not IsValid(ent) then return false end
         
@@ -417,7 +377,6 @@ if CLIENT then
         local debugName = options.debugName or "variant"
         local debugCvar = options.debugCvar
         
-        -- 1) Check entity class matches
         if options.classes then
             local class = ent:GetClass()
             for _, checkClass in ipairs(options.classes) do
@@ -430,7 +389,6 @@ if CLIENT then
             end
         end
         
-        -- 2) Check NWBools
         if options.nwBools and ent.GetNWBool then
             for _, key in ipairs(options.nwBools) do
                 if ent:GetNWBool(key, false) then
@@ -442,7 +400,6 @@ if CLIENT then
             end
         end
         
-        -- 3) Check SaveTable flags
         if options.saveTableKeys and ent.GetSaveTable then
             local ok, st = pcall(ent.GetSaveTable, ent)
             if ok and st then
@@ -455,7 +412,6 @@ if CLIENT then
                     end
                 end
                 
-                -- Check for keyword in any SaveTable key
                 if options.saveTableKeyword then
                     for k, v in pairs(st) do
                         local lk = tostring(k):lower()
@@ -470,7 +426,6 @@ if CLIENT then
             end
         end
         
-        -- 4) Check Disposition (relationship with player)
         if options.checkDisposition and ent.Disposition then
             local lp = LocalPlayer()
             if IsValid(lp) then
@@ -484,7 +439,6 @@ if CLIENT then
             end
         end
         
-        -- 5) Check skin value
         if options.skin and ent.GetSkin then
             local ok, skin = pcall(ent.GetSkin, ent)
             if ok and type(skin) == "number" then
@@ -506,7 +460,6 @@ if CLIENT then
             end
         end
         
-        -- 6) Check targetname
         if options.targetname and ent.GetName then
             local ok, name = pcall(ent.GetName, ent)
             if ok and isstring(name) then
@@ -523,14 +476,12 @@ if CLIENT then
         return false
     end
 
-    -- Get attachment position with cached lookup
     function BL.GetAttachmentPosById(ent, attachId)
         if not IsValid(ent) or not attachId or attachId == 0 then return nil end
         local data = ent:GetAttachment(attachId)
         return (data and data.Pos) or nil
     end
     
-    -- Get bone position with fallback logic (tries GetBoneMatrix first, then GetBonePosition)
     function BL.GetBonePosition(ent, boneName)
         if not IsValid(ent) or not boneName then return nil end
         if not ent.LookupBone then return nil end
@@ -538,7 +489,6 @@ if CLIENT then
         local bone = ent:LookupBone(boneName)
         if not bone or bone < 0 then return nil end
         
-        -- Try GetBoneMatrix first (more accurate)
         if ent.GetBoneMatrix then
             local m = ent:GetBoneMatrix(bone)
             if m then
@@ -549,7 +499,6 @@ if CLIENT then
             end
         end
         
-        -- Fallback to GetBonePosition
         if ent.GetBonePosition then
             local pos = ent:GetBonePosition(bone)
             if pos and pos ~= vector_origin then
@@ -560,14 +509,12 @@ if CLIENT then
         return nil
     end
     
-    -- Detect entity variant by skin value (common pattern for colored variants)
     function BL.DetectSkinVariant(ent, skinMap)
         if not IsValid(ent) or not skinMap then return nil end
         local skin = (ent.GetSkin and ent:GetSkin()) or 0
         return skinMap[skin]
     end
     
-    -- Detect entity type by model pattern and optionally return skin-based variant
     function BL.DetectModelVariant(ent, modelPatterns)
         if not IsValid(ent) or not modelPatterns then return nil end
         local model = ent:GetModel() or ""
@@ -584,7 +531,6 @@ if CLIENT then
         return nil
     end
     
-    -- Create light from attachment (common pattern)
     function BL.CreateLightFromAttachment(ent, attachNames, r, g, b, brightness, decay, size, isElight)
         if not IsValid(ent) then return false end
         
@@ -598,12 +544,9 @@ if CLIENT then
         return true
     end
 
-    -- Core Think loop: executes all registered Think functions every frame
     hook.Add("Think", "BetterLights_CoreThink", function()
-        -- Update global flash manager first
         BL.UpdateFlashes()
         
-        -- Execute all registered Think functions
         for name, fn in pairs(BL._thinks) do
             local ok, err = pcall(fn)
             if not ok then
@@ -615,7 +558,6 @@ if CLIENT then
         end
     end)
 
-    -- Entity tracking: automatically register entities as they're created
     hook.Add("OnEntityCreated", "BetterLights_CoreTrackCreate", function(ent)
         timer.Simple(0, function()
             if not IsValid(ent) then return end
@@ -627,7 +569,6 @@ if CLIENT then
         end)
     end)
 
-    -- Entity tracking: clean up and call removal handlers when entities are removed
     hook.Add("EntityRemoved", "BetterLights_CoreTrackRemove", function(ent, fullUpdate)
         if fullUpdate then return end
         if not ent then return end

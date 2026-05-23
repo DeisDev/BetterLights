@@ -1,12 +1,7 @@
--- BetterLights: Pickup items subtle glow
--- Covers: item_ammo_ar2_altfire, item_battery, item_healthvial, item_healthkit
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     
-    -- AR2 alt-fire ammo (Combine ball ammo) — yellow per feedback; RGB override supported
     local ar2_cvar_enable = CreateClientConVar("betterlights_item_ar2alt_enable", "1", true, false, "Enable dynamic light for item_ammo_ar2_altfire")
     local ar2_cvar_size = CreateClientConVar("betterlights_item_ar2alt_size", "60", true, false, "Dynamic light radius for item_ammo_ar2_altfire")
     local ar2_cvar_brightness = CreateClientConVar("betterlights_item_ar2alt_brightness", "0.25", true, false, "Dynamic light brightness for item_ammo_ar2_altfire")
@@ -17,7 +12,6 @@ if CLIENT then
     local ar2_g = CreateClientConVar("betterlights_item_ar2alt_color_g", "220", true, false, "AR2 alt ammo color - green (0-255)")
     local ar2_b = CreateClientConVar("betterlights_item_ar2alt_color_b", "60", true, false, "AR2 alt ammo color - blue (0-255)")
 
-    -- Battery — blue per feedback; RGB override supported
     local bat_cvar_enable = CreateClientConVar("betterlights_item_battery_enable", "1", true, false, "Enable dynamic light for item_battery")
     local bat_cvar_size = CreateClientConVar("betterlights_item_battery_size", "55", true, false, "Dynamic light radius for item_battery")
     local bat_cvar_brightness = CreateClientConVar("betterlights_item_battery_brightness", "0.2", true, false, "Dynamic light brightness for item_battery")
@@ -28,7 +22,6 @@ if CLIENT then
     local bat_g = CreateClientConVar("betterlights_item_battery_color_g", "190", true, false, "Battery color - green (0-255)")
     local bat_b = CreateClientConVar("betterlights_item_battery_color_b", "255", true, false, "Battery color - blue (0-255)")
 
-    -- Health vial — soft green
     local vial_cvar_enable = CreateClientConVar("betterlights_item_healthvial_enable", "1", true, false, "Enable dynamic light for item_healthvial")
     local vial_cvar_size = CreateClientConVar("betterlights_item_healthvial_size", "45", true, false, "Dynamic light radius for item_healthvial")
     local vial_cvar_brightness = CreateClientConVar("betterlights_item_healthvial_brightness", "0.18", true, false, "Dynamic light brightness for item_healthvial")
@@ -39,7 +32,6 @@ if CLIENT then
     local vial_g = CreateClientConVar("betterlights_item_healthvial_color_g", "255", true, false, "Health vial color - green (0-255)")
     local vial_b = CreateClientConVar("betterlights_item_healthvial_color_b", "150", true, false, "Health vial color - blue (0-255)")
 
-    -- Health kit — soft green per feedback; RGB override supported
     local kit_cvar_enable = CreateClientConVar("betterlights_item_healthkit_enable", "1", true, false, "Enable dynamic light for item_healthkit")
     local kit_cvar_size = CreateClientConVar("betterlights_item_healthkit_size", "55", true, false, "Dynamic light radius for item_healthkit")
     local kit_cvar_brightness = CreateClientConVar("betterlights_item_healthkit_brightness", "0.2", true, false, "Dynamic light brightness for item_healthkit")
@@ -50,7 +42,6 @@ if CLIENT then
     local kit_g = CreateClientConVar("betterlights_item_healthkit_color_g", "255", true, false, "Health kit color - green (0-255)")
     local kit_b = CreateClientConVar("betterlights_item_healthkit_color_b", "150", true, false, "Health kit color - blue (0-255)")
 
-    -- Track entity classes at module load for efficiency
     if BL.TrackClass then
         BL.TrackClass("item_ammo_ar2_altfire")
         BL.TrackClass("item_battery")
@@ -67,7 +58,6 @@ if CLIENT then
         local el_mult = math.max(0, c_el_mult:GetFloat())
         local doElight = c_elight:GetBool()
         
-        -- Cache color once per class per frame
         local r, g, b = BL.GetColorFromCvars(r_cvar, g_cvar, b_cvar)
         
         local function update(ent)
@@ -75,10 +65,8 @@ if CLIENT then
             local idx = ent:EntIndex()
             local pos = BL.GetEntityCenter(ent)
             if pos then
-                -- Create world light
                 BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
                 
-                -- Create entity light if enabled
                 if doElight then
                     BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
                 end

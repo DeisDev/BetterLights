@@ -1,6 +1,3 @@
--- BetterLights: RPG (Held) subtle red light at the laser dot (aim hit point)
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
@@ -8,16 +5,13 @@ if CLIENT then
     local cvar_size = CreateClientConVar("betterlights_rpg_hold_size", "24", true, false, "Dynamic light radius for held RPG lights")
     local cvar_brightness = CreateClientConVar("betterlights_rpg_hold_brightness", "0.22", true, false, "Dynamic light brightness for held RPG lights")
     local cvar_decay = CreateClientConVar("betterlights_rpg_hold_decay", "2000", true, false, "Dynamic light decay for held RPG lights")
-    -- Elight removed per request; weapon/hand glow now uses a hand-attached world dlight
 
-    -- Color configuration (subtle red)
     local cvar_col_r = CreateClientConVar("betterlights_rpg_hold_color_r", "255", true, false, "RPG (Held) color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_rpg_hold_color_g", "60", true, false, "RPG (Held) color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_rpg_hold_color_b", "60", true, false, "RPG (Held) color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "laser", "muzzle_flash" }
     local function getRPGModelLightPos(ply, wep)
-        -- Prefer viewmodel attachments for first person, then worldmodel
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
@@ -40,7 +34,6 @@ if CLIENT then
     end
 
     local function getLeftHandPos(ply, wep)
-        -- Try viewmodel first (first-person hands)
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
@@ -57,7 +50,6 @@ if CLIENT then
             end
         end
 
-        -- Fallback to player worldmodel bone
         if IsValid(ply) then
             local bone = ply:LookupBone("ValveBiped.Bip01_L_Hand")
             if bone and bone >= 0 then
@@ -71,7 +63,6 @@ if CLIENT then
             end
         end
 
-        -- Last resort: near weapon/model position
         return getRPGModelLightPos(ply, wep)
     end
 
@@ -88,10 +79,8 @@ if CLIENT then
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
 
-        -- Cache color once per frame
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
-        -- World light: place at the laser dot (aim hit point) using a long trace
         local startPos = ply.EyePos and ply:EyePos() or (ply.GetShootPos and ply:GetShootPos()) or wep:GetPos()
         local dir = ply.GetAimVector and ply:GetAimVector() or (ply.EyeAngles and ply:EyeAngles():Forward()) or Vector(1,0,0)
         local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("rpg_hold", {
@@ -106,7 +95,6 @@ if CLIENT then
             pos_world = startPos + dir * 1024
         end
 
-        -- Stable index per player
         local idx = ply:EntIndex() + 1520
 
         local d = DynamicLight(idx)
@@ -124,7 +112,6 @@ if CLIENT then
             d.dietime = CurTime() + 0.1
         end
 
-        -- Attach a second subtle world dlight to the player's left hand so the weapon and hand glow
         local pos_hand = getLeftHandPos(ply, wep)
         if pos_hand then
             local d2 = DynamicLight(idx + 1)

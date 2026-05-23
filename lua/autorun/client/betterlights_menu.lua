@@ -1,6 +1,3 @@
--- BetterLights: Spawnmenu integration
--- Adds a "Better Lights" tab with organized categories and per-feature panels.
-
 if CLIENT then
     local function addResetButton(panel, defaults)
         local btn = panel:Button("Reset to Defaults")
@@ -12,7 +9,6 @@ if CLIENT then
     end
 
     local function addClientPanels()
-        -- Combine AR2 orb
         spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_CombineBall", "Combine AR2 Orb", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Blue/cyan light for prop_combine_ball")
@@ -35,14 +31,12 @@ if CLIENT then
             })
         end)
 
-        -- Bullet Impacts
     spawnmenu.AddToolMenuOption("Better Lights", "Gunfire", "BL_BulletImpacts", "Bullet Impacts", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle flashes when bullets hit surfaces. AR2 impacts use a blue tint; others use warm orange.")
             panel:CheckBox("Enable", "betterlights_bullet_impact_enable")
             panel:NumSlider("Generic radius", "betterlights_bullet_impact_size", 0, 300, 0)
             panel:NumSlider("Generic brightness", "betterlights_bullet_impact_brightness", 0, 2, 2)
-            panel:NumSlider("Decay", "betterlights_bullet_impact_decay", 0, 5000, 0)
             panel:Help("Generic Color (RGB)")
             panel:NumSlider("Red", "betterlights_bullet_impact_color_r", 0, 255, 0)
             panel:NumSlider("Green", "betterlights_bullet_impact_color_g", 0, 255, 0)
@@ -59,7 +53,6 @@ if CLIENT then
                 betterlights_bullet_impact_enable = 1,
                 betterlights_bullet_impact_size = 60,
                 betterlights_bullet_impact_brightness = 0.25,
-                betterlights_bullet_impact_decay = 1800,
                 betterlights_bullet_impact_ar2_enable = 1,
                 betterlights_bullet_impact_ar2_size = 70,
                 betterlights_bullet_impact_ar2_brightness = 0.3,
@@ -72,7 +65,6 @@ if CLIENT then
             })
         end)
 
-        -- Muzzle Flash
     spawnmenu.AddToolMenuOption("Better Lights", "Gunfire", "BL_MuzzleFlash", "Muzzle Flash", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Brief flash at the muzzle when a weapon fires. AR2 uses a blue tint.")
@@ -107,7 +99,6 @@ if CLIENT then
             })
         end)
 
-        -- Crossbow bolt
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Bolt", "Crossbow Bolt", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Warm orange light for crossbow bolts")
@@ -130,7 +121,6 @@ if CLIENT then
             })
         end)
 
-        -- Crossbow (held)
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_CrossbowHeld", "Crossbow (Held)", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle orange light while holding the Crossbow")
@@ -153,7 +143,6 @@ if CLIENT then
             })
         end)
 
-        -- RPG rocket
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_RPG", "RPG Rocket", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Warm flame light for RPG rockets in flight")
@@ -176,7 +165,6 @@ if CLIENT then
             })
         end)
 
-        -- Antlion Spit
         spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_AntlionSpit", "Antlion Spit", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Acid-green glow on Antlion Worker spit (grenade_spit) and a small flash on impact")
@@ -215,7 +203,6 @@ if CLIENT then
             })
         end)
 
-        -- Burning entities
     spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Fire", "Burning Entities", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Light for entities on fire, with optional flicker and model-only elight")
@@ -250,7 +237,6 @@ if CLIENT then
             })
         end)
 
-            -- Generic Explosion Flash
         spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Explosions", "Explosion Flash (Generic)", "", "", function(panel)
                 panel:ClearControls()
                 panel:Help("Brief flash when generic explosions occur (env_explosion, explosive barrels)")
@@ -277,7 +263,6 @@ if CLIENT then
                     betterlights_explosion_flash_color_b = 120,
                 })
             end)
-        -- Frag grenade
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Grenade", "Frag Grenade", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Dim red light for thrown frag grenades")
@@ -304,7 +289,6 @@ if CLIENT then
             })
         end)
 
-        -- Combine Mine (hopper mine)
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CombineMine", "Combine Mine", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Idle blue glow; red alert glow when you're within range")
@@ -353,7 +337,6 @@ if CLIENT then
             })
         end)
 
-        -- Resistance Mine (friendly)
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CombineMineResistance", "Resistance Mine", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Idle blue glow; green alert glow when you're within range")
@@ -378,7 +361,6 @@ if CLIENT then
             })
         end)
 
-        -- Physgun
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_Physgun", "Physics Gun", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Light that matches your Weapon Color; wall-safe world placement")
@@ -407,7 +389,6 @@ if CLIENT then
             })
         end)
 
-        -- Gravity Gun
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_GravityGun", "Gravity Gun", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Warm orange light from the physcannon; wall-safe world placement")
@@ -441,7 +422,6 @@ if CLIENT then
             })
         end)
 
-        -- RPG (Held)
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_RPG_Held", "RPG (Held)", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle red light at the laser dot and on your left hand (ValveBiped.Bip01_L_Hand)")
@@ -464,7 +444,6 @@ if CLIENT then
             })
         end)
 
-        -- Tool Gun
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_ToolGun", "Tool Gun", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Small white light at the tip; wall-safe world placement")
@@ -491,7 +470,6 @@ if CLIENT then
             })
         end)
 
-        -- Helicopter Bombs
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_HeliBomb", "Helicopter Bomb", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Red glow on helicopter bombs and a brief flash on explosion")
@@ -534,7 +512,6 @@ if CLIENT then
             })
         end)
 
-        -- Magnusson Device (Strider Buster)
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Magnusson", "Magnusson Device", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Light blue glow on Magnusson devices and a brief flash on explosion")
@@ -577,7 +554,6 @@ if CLIENT then
             })
         end)
 
-        -- Manhack
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Manhack", "Manhack", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Red glow for Combine Manhacks")
@@ -604,7 +580,6 @@ if CLIENT then
             })
         end)
 
-        -- Antlion Grub
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionGrub", "Antlion Grub", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle green glow on antlion grubs (abdomen)")
@@ -627,7 +602,6 @@ if CLIENT then
             })
         end)
 
-        -- Antlion Guardian
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionGuardian", "Antlion Guardian", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Green glow for Antlion Guardian (heuristic detection)")
@@ -650,7 +624,6 @@ if CLIENT then
             })
         end)
 
-        -- Antlion Worker
         spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionWorker", "Antlion Worker", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle glow for Antlion Workers attached to Antlion.Back_Bone")
@@ -673,7 +646,6 @@ if CLIENT then
             })
         end)
 
-        -- Rollermine
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Rollermine", "Rollermine", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Neutral blue glow for rollermines")
@@ -715,7 +687,6 @@ if CLIENT then
             })
         end)
 
-        -- Rollermine (Hacked)
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_RollermineHacked", "Rollermine (Hacked)", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Orange glow for hacked rollermines")
@@ -742,7 +713,6 @@ if CLIENT then
             })
         end)
 
-        -- Combine Scanner
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CScanner", "Combine Scanner", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Cool white/blue glow for Combine Scanners")
@@ -896,7 +866,6 @@ if CLIENT then
             })
         end)
 
-        -- Pickups: AR2 alt-fire ammo
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_AR2Alt", "AR2 Alt Ammo", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle glow for item_ammo_ar2_altfire")
@@ -923,7 +892,6 @@ if CLIENT then
             })
         end)
 
-        -- Pickups: Battery
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Battery", "Battery", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle glow for item_battery")
@@ -950,7 +918,6 @@ if CLIENT then
             })
         end)
 
-        -- Pickups: Health Vial
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Vial", "Health Vial", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle glow for item_healthvial")
@@ -977,7 +944,6 @@ if CLIENT then
             })
         end)
 
-        -- Pickups: Health Kit
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_HealthKit", "Health Kit", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Subtle glow for item_healthkit")
@@ -1004,11 +970,9 @@ if CLIENT then
             })
         end)
 
-            -- Chargers (Suit/Health)
         spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Chargers", "Chargers", "", "", function(panel)
                 panel:ClearControls()
                 panel:Help("Subtle glows for suit and health wall chargers")
-                -- Suit charger
                 panel:CheckBox("Suit Charger", "betterlights_suitcharger_enable")
                 panel:NumSlider("Suit Radius", "betterlights_suitcharger_size", 0, 300, 0)
                 panel:NumSlider("Suit Brightness", "betterlights_suitcharger_brightness", 0, 2, 2)
@@ -1019,7 +983,6 @@ if CLIENT then
                 panel:NumSlider("Red", "betterlights_suitcharger_color_r", 0, 255, 0)
                 panel:NumSlider("Green", "betterlights_suitcharger_color_g", 0, 255, 0)
                 panel:NumSlider("Blue", "betterlights_suitcharger_color_b", 0, 255, 0)
-                -- Health charger
                 panel:CheckBox("Health Charger", "betterlights_healthcharger_enable")
                 panel:NumSlider("Health Radius", "betterlights_healthcharger_size", 0, 300, 0)
                 panel:NumSlider("Health Brightness", "betterlights_healthcharger_brightness", 0, 2, 2)
@@ -1054,7 +1017,6 @@ if CLIENT then
 
     end
 
-    -- About panel (credits + workshop link)
     local function addAboutPanel()
         spawnmenu.AddToolMenuOption("Better Lights", "About", "BL_About", "About", "", "", function(panel)
             panel:ClearControls()
@@ -1086,7 +1048,6 @@ if CLIENT then
         end)
     end
 
-    -- No server panels
 
     hook.Add("AddToolMenuTabs", "BetterLights_AddTab", function()
         spawnmenu.AddToolTab("Better Lights", "Better Lights", "icon16/lightbulb.png")

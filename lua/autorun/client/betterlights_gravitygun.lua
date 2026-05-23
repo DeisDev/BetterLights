@@ -1,10 +1,6 @@
--- BetterLights: Gravity Gun (physcannon) warm orange light
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Localize frequently used globals
     local CurTime = CurTime
     local IsValid = IsValid
     local GetConVar = GetConVar
@@ -16,7 +12,6 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_gravitygun_models_elight", "1", true, false, "Also add an entity light (elight) to light the gravity gun model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_gravitygun_models_elight_size_mult", "1.0", true, false, "Multiplier for gravity gun elight radius")
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_gravitygun_color_r", "255", true, false, "Gravity gun color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_gravitygun_color_g", "140", true, false, "Gravity gun color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_gravitygun_color_b", "40", true, false, "Gravity gun color - blue (0-255)")
@@ -26,7 +21,6 @@ if CLIENT then
 
     local ATTACH_NAMES = { "muzzle", "core", "fork", "claw", "muzzle_flash" }
     local function getGravgunLightPos(ply, wep)
-        -- Prefer viewmodel attachments in first person, then worldmodel attachments
         if IsValid(ply) and ply == LocalPlayer() then
             local vm = ply:GetViewModel()
             if IsValid(vm) then
@@ -99,10 +93,8 @@ if CLIENT then
             r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
         end
 
-        -- Model light position (for elight): use viewmodel/worldmodel attachments when possible
         local pos_model = getGravgunLightPos(ply, wep)
 
-        -- World light position (for dlight): place just in front of nearby walls to avoid clipping into geometry
         local eye = ply:EyePos()
         local fwd = ply:EyeAngles():Forward()
         local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("gravgun", {
@@ -112,13 +104,10 @@ if CLIENT then
         })) or util.TraceLine({ start = eye, endpos = eye + fwd * 48, filter = { ply, wep } })
         local pos_world = tr.Hit and (tr.HitPos + tr.HitNormal * 6) or (eye + fwd * 24)
 
-        -- Fallback if model pos failed
         if not pos_model then pos_model = pos_world end
 
-        -- Use a stable index separate from other features (offset from player index)
         local idx = ply:EntIndex() + 1460
 
-        -- DLight (world/model)
         local d = DynamicLight(idx)
         if d then
             d.pos = pos_world
@@ -134,7 +123,6 @@ if CLIENT then
             d.dietime = CurTime() + 0.16
         end
 
-        -- ELight (model-only)
         if doElight then
             local el = DynamicLight(idx, true)
             if el then

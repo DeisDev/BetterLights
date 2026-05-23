@@ -1,15 +1,9 @@
--- BetterLights: Network Message Consolidation
--- Single network message system for all server-to-client communications
-
 if SERVER then
-    -- Single network string for all BetterLights messages
     util.AddNetworkString("BetterLights_Event")
     
-    -- Message type constants
     local MSG_MUZZLE_FLASH = 1
     local MSG_BULLET_IMPACT = 2
     
-    -- Shared AR2 detection function
     local function isAR2Shot(shooter, bullet)
         if IsValid(shooter) and shooter.GetClass then
             local cls = string.lower(shooter:GetClass() or "")
@@ -36,7 +30,6 @@ if SERVER then
         return false
     end
     
-    -- Muzzle Flash Handler
     hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", function(ent, bullet)
         if not IsValid(ent) then return end
         if not bullet then return end
@@ -45,21 +38,21 @@ if SERVER then
         if not src then return end
 
         net.Start("BetterLights_Event")
-            net.WriteUInt(MSG_MUZZLE_FLASH, 4) -- 4 bits = up to 16 message types
+            net.WriteUInt(MSG_MUZZLE_FLASH, 4)
             net.WriteVector(src)
             net.WriteBool(isAR2Shot(ent, bullet))
         net.SendPVS(src)
     end)
     
-    -- Bullet Impact Handler
     hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
         if not IsValid(ent) then return end
         if not bullet then return end
 
         local prev = bullet.Callback
         bullet.Callback = function(att, tr, dmginfo)
-            if isfunction(prev) then prev(att, tr, dmginfo) end
-            if not tr or not tr.Hit or not tr.HitPos then return end
+            local ret
+            if isfunction(prev) then ret = prev(att, tr, dmginfo) end
+            if not tr or not tr.Hit or not tr.HitPos then return ret end
 
             local pos = tr.HitPos
             if tr.HitNormal then
@@ -71,6 +64,8 @@ if SERVER then
                 net.WriteVector(pos)
                 net.WriteBool(isAR2Shot(att, bullet))
             net.SendPVS(pos)
+
+            return ret
         end
     end)
 end

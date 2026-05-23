@@ -1,10 +1,6 @@
--- BetterLights: Manhack (npc_manhack) glow
--- Client-side only
-
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    -- Localize hot globals
     local IsValid = IsValid
     local cvar_enable = CreateClientConVar("betterlights_manhack_enable", "1", true, false, "Enable dynamic light for Manhacks (npc_manhack)")
     local cvar_size = CreateClientConVar("betterlights_manhack_size", "70", true, false, "Dynamic light radius for Manhacks")
@@ -13,7 +9,6 @@ if CLIENT then
     local cvar_models_elight = CreateClientConVar("betterlights_manhack_models_elight", "1", true, false, "Also add an entity light (elight) to light the Manhack model directly")
     local cvar_models_elight_size_mult = CreateClientConVar("betterlights_manhack_models_elight_size_mult", "1.0", true, false, "Multiplier for Manhack elight radius")
 
-    -- Color configuration
     local cvar_col_r = CreateClientConVar("betterlights_manhack_color_r", "255", true, false, "Manhack color - red (0-255)")
     local cvar_col_g = CreateClientConVar("betterlights_manhack_color_g", "60", true, false, "Manhack color - green (0-255)")
     local cvar_col_b = CreateClientConVar("betterlights_manhack_color_b", "60", true, false, "Manhack color - blue (0-255)")
@@ -24,7 +19,6 @@ if CLIENT then
     AddThink("BetterLights_Manhack_DLight", function()
         if not cvar_enable:GetBool() then return end
 
-        -- Cache ConVar values once per frame
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
@@ -39,10 +33,8 @@ if CLIENT then
             local pos = BL.GetEntityCenter(ent)
             if not pos then return end
 
-            -- Create world light
             BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
 
-            -- Create entity light (elight) if enabled
             if doElight then
                 BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * elMult, true)
             end
