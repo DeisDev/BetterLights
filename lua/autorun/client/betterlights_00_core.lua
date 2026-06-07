@@ -2,10 +2,9 @@ if CLIENT then
     BetterLights = BetterLights or {}
 
     local BL = BetterLights
-    
-    BL.VERSION = "v1.2.0"
-    BL.VERSION_DATE = "2026-04-13"
-    
+
+    BL.VERSION = "v1.3.0"
+
     BL._thinks = BL._thinks or {}
     BL._classes = BL._classes or {}
     BL._tracked = BL._tracked or {}
