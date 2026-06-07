@@ -15,12 +15,12 @@ if CLIENT then
 
     local NET_MUZZLE_FLASH = 1
     local NET_BULLET_IMPACT = 2
-    
+
     function BL.AddNetworkHandler(msgType, fn)
         if not isfunction(fn) then return end
         BL._networkHandlers[msgType] = fn
     end
-    
+
     net.Receive("BetterLights_Event", function()
         local msgType = net.ReadUInt(4)
         local handler = BL._networkHandlers[msgType]
@@ -28,14 +28,14 @@ if CLIENT then
             handler()
         end
     end)
-    
+
     BL.NET_MUZZLE_FLASH = NET_MUZZLE_FLASH
     BL.NET_BULLET_IMPACT = NET_BULLET_IMPACT
-    
+
     BL._flashPool = BL._flashPool or {}
     BL._flashPoolSize = 0
     BL._flashPoolMax = 100
-    
+
     function BL.GetFlashTable()
         if BL._flashPoolSize > 0 then
             local flash = BL._flashPool[BL._flashPoolSize]
@@ -45,7 +45,7 @@ if CLIENT then
         end
         return {}
     end
-    
+
     function BL.RecycleFlashTable(flash)
         if BL._flashPoolSize < BL._flashPoolMax then
             for k in pairs(flash) do
@@ -55,21 +55,21 @@ if CLIENT then
             BL._flashPool[BL._flashPoolSize] = flash
         end
     end
-    
+
     BL._suppressionRecords = BL._suppressionRecords or {}
-    
+
     function BL.ShouldSuppressFlash(key, pos, minDistSq, maxAge)
         minDistSq = minDistSq or (40 * 40)
         maxAge = maxAge or 0.15
-        
+
         local record = BL._suppressionRecords[key]
         if not record then
             record = {}
             BL._suppressionRecords[key] = record
         end
-        
+
         local now = CurTime()
-        
+
         for i = #record, 1, -1 do
             local e = record[i]
             if now - e.t > maxAge then
@@ -79,10 +79,10 @@ if CLIENT then
                 return true
             end
         end
-        
+
         return false
     end
-    
+
     function BL.RecordFlashPosition(key, pos)
         local record = BL._suppressionRecords[key]
         if not record then
@@ -91,10 +91,10 @@ if CLIENT then
         end
         record[#record + 1] = { pos = pos, t = CurTime() }
     end
-    
+
     BL._activeFlashes = BL._activeFlashes or {}
     BL._flashIdCounter = BL._flashIdCounter or 0
-    
+
     function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
         local now = CurTime()
         BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
@@ -111,7 +111,7 @@ if CLIENT then
         table.insert(BL._activeFlashes, flash)
         return flash
     end
-    
+
     function BL.UpdateFlashes()
         if #BL._activeFlashes == 0 then return end
         local now = CurTime()
@@ -126,7 +126,7 @@ if CLIENT then
                 local t = (f.die - now) / dur
                 local brightness = f.baseBrightness * t
                 local size = f.baseSize * (0.4 + 0.6 * t)
-                
+
                 local dl = DynamicLight(f.id)
                 if dl then
                     dl.pos = f.pos
@@ -144,36 +144,36 @@ if CLIENT then
             end
         end
     end
-    
+
     function BL.CreateConVarSet(prefix, defaults)
         defaults = defaults or {}
         local cvars = {}
-        
+
         if defaults.enable ~= nil then
             cvars.enable = CreateClientConVar(prefix .. "_enable", tostring(defaults.enable), true, false, defaults.enableDesc or "Enable this lighting effect")
         end
-        
+
         if defaults.size then
             cvars.size = CreateClientConVar(prefix .. "_size", tostring(defaults.size), true, false, defaults.sizeDesc or "Light radius")
         end
-        
+
         if defaults.brightness then
             cvars.brightness = CreateClientConVar(prefix .. "_brightness", tostring(defaults.brightness), true, false, defaults.brightnessDesc or "Light brightness")
         end
-        
+
         if defaults.decay then
             cvars.decay = CreateClientConVar(prefix .. "_decay", tostring(defaults.decay), true, false, defaults.decayDesc or "Light decay")
         end
-        
+
         if defaults.r and defaults.g and defaults.b then
             cvars.r = CreateClientConVar(prefix .. "_color_r", tostring(defaults.r), true, false, defaults.rDesc or "Red (0-255)")
             cvars.g = CreateClientConVar(prefix .. "_color_g", tostring(defaults.g), true, false, defaults.gDesc or "Green (0-255)")
             cvars.b = CreateClientConVar(prefix .. "_color_b", tostring(defaults.b), true, false, defaults.bDesc or "Blue (0-255)")
         end
-        
+
         return cvars
     end
-    
+
     function BL.IsEntityClass(ent, classes)
         if not IsValid(ent) then return false end
         if not ent.GetClass then return false end
@@ -187,7 +187,7 @@ if CLIENT then
         end
         return false
     end
-    
+
     function BL.MatchesModel(ent, pattern)
         if not IsValid(ent) then return false end
         if not ent.GetModel then return false end
@@ -369,109 +369,125 @@ if CLIENT then
         return math.max(0.1, baseValue * (1 + amount * osc))
     end
 
-    function BL.DetectEntityVariant(ent, options)
-        if not IsValid(ent) then return false end
-        
-        options = options or {}
-        local debugName = options.debugName or "variant"
-        local debugCvar = options.debugCvar
-        
+    local function DebugVariantDetection(debugCvar, ent, message, ...)
+        if not (debugCvar and debugCvar:GetBool()) then return end
+        print(string.format("[BetterLights] Entity #%d detected as " .. message, ent:EntIndex(), ...))
+    end
+
+    local function DetectVariantByClass(ent, options, debugName, debugCvar)
         if options.classes then
             local class = ent:GetClass()
             for _, checkClass in ipairs(options.classes) do
                 if class == checkClass then
-                    if debugCvar and debugCvar:GetBool() then
-                        print(string.format("[BetterLights] Entity #%d detected as %s via class: %s", ent:EntIndex(), debugName, class))
-                    end
+                    DebugVariantDetection(debugCvar, ent, "%s via class: %s", debugName, class)
                     return true
                 end
             end
         end
-        
+        return false
+    end
+
+    local function DetectVariantByNWBool(ent, options, debugName, debugCvar)
         if options.nwBools and ent.GetNWBool then
             for _, key in ipairs(options.nwBools) do
                 if ent:GetNWBool(key, false) then
-                    if debugCvar and debugCvar:GetBool() then
-                        print(string.format("[BetterLights] Entity #%d detected as %s via NWBool: %s", ent:EntIndex(), debugName, key))
-                    end
+                    DebugVariantDetection(debugCvar, ent, "%s via NWBool: %s", debugName, key)
                     return true
                 end
             end
         end
-        
-        if options.saveTableKeys and ent.GetSaveTable then
-            local ok, st = pcall(ent.GetSaveTable, ent)
-            if ok and st then
-                for _, key in ipairs(options.saveTableKeys) do
-                    if st[key] == true or st[key] == 1 then
-                        if debugCvar and debugCvar:GetBool() then
-                            print(string.format("[BetterLights] Entity #%d detected as %s via SaveTable: %s", ent:EntIndex(), debugName, key))
-                        end
-                        return true
-                    end
-                end
-                
-                if options.saveTableKeyword then
-                    for k, v in pairs(st) do
-                        local lk = tostring(k):lower()
-                        if lk:find(options.saveTableKeyword, 1, true) and (v == true or v == 1) then
-                            if debugCvar and debugCvar:GetBool() then
-                                print(string.format("[BetterLights] Entity #%d detected as %s via SaveTable keyword '%s': %s", ent:EntIndex(), debugName, options.saveTableKeyword, k))
-                            end
-                            return true
-                        end
-                    end
+        return false
+    end
+
+    local function DetectVariantBySaveTable(ent, options, debugName, debugCvar)
+        if not ((options.saveTableKeys or options.saveTableKeyword) and ent.GetSaveTable) then return false end
+
+        local ok, st = pcall(ent.GetSaveTable, ent)
+        if not (ok and st) then return false end
+
+        if options.saveTableKeys then
+            for _, key in ipairs(options.saveTableKeys) do
+                if st[key] == true or st[key] == 1 then
+                    DebugVariantDetection(debugCvar, ent, "%s via SaveTable: %s", debugName, key)
+                    return true
                 end
             end
         end
-        
+
+        if options.saveTableKeyword then
+            for k, v in pairs(st) do
+                local lk = tostring(k):lower()
+                if lk:find(options.saveTableKeyword, 1, true) and (v == true or v == 1) then
+                    DebugVariantDetection(debugCvar, ent, "%s via SaveTable keyword '%s': %s", debugName, options.saveTableKeyword, k)
+                    return true
+                end
+            end
+        end
+
+        return false
+    end
+
+    local function DetectVariantByDisposition(ent, options, debugName, debugCvar)
         if options.checkDisposition and ent.Disposition then
             local lp = LocalPlayer()
             if IsValid(lp) then
                 local ok, disp = pcall(function() return ent:Disposition(lp) end)
                 if ok and disp == D_LI then
-                    if debugCvar and debugCvar:GetBool() then
-                        print(string.format("[BetterLights] Entity #%d detected as %s via Disposition", ent:EntIndex(), debugName))
-                    end
+                    DebugVariantDetection(debugCvar, ent, "%s via Disposition", debugName)
                     return true
                 end
             end
         end
-        
-        if options.skin and ent.GetSkin then
-            local ok, skin = pcall(ent.GetSkin, ent)
-            if ok and type(skin) == "number" then
-                if type(options.skin) == "number" then
-                    if skin == options.skin then
-                        if debugCvar and debugCvar:GetBool() then
-                            print(string.format("[BetterLights] Entity #%d detected as %s via skin: %d", ent:EntIndex(), debugName, skin))
-                        end
-                        return true
-                    end
-                elseif type(options.skin) == "function" then
-                    if options.skin(skin) then
-                        if debugCvar and debugCvar:GetBool() then
-                            print(string.format("[BetterLights] Entity #%d detected as %s via skin check: %d", ent:EntIndex(), debugName, skin))
-                        end
-                        return true
-                    end
-                end
-            end
+        return false
+    end
+
+    local function DetectVariantBySkin(ent, options, debugName, debugCvar)
+        if not (options.skin and ent.GetSkin) then return false end
+
+        local ok, skin = pcall(ent.GetSkin, ent)
+        if not (ok and type(skin) == "number") then return false end
+
+        if type(options.skin) == "number" and skin == options.skin then
+            DebugVariantDetection(debugCvar, ent, "%s via skin: %d", debugName, skin)
+            return true
         end
-        
+
+        if type(options.skin) == "function" and options.skin(skin) then
+            DebugVariantDetection(debugCvar, ent, "%s via skin check: %d", debugName, skin)
+            return true
+        end
+
+        return false
+    end
+
+    local function DetectVariantByTargetName(ent, options, debugName, debugCvar)
         if options.targetname and ent.GetName then
             local ok, name = pcall(ent.GetName, ent)
             if ok and isstring(name) then
                 local nm = string.lower(name)
                 if nm:find(options.targetname, 1, true) then
-                    if debugCvar and debugCvar:GetBool() then
-                        print(string.format("[BetterLights] Entity #%d detected as %s via targetname: %s", ent:EntIndex(), debugName, name))
-                    end
+                    DebugVariantDetection(debugCvar, ent, "%s via targetname: %s", debugName, name)
                     return true
                 end
             end
         end
-        
+        return false
+    end
+
+    function BL.DetectEntityVariant(ent, options)
+        if not IsValid(ent) then return false end
+
+        options = options or {}
+        local debugName = options.debugName or "variant"
+        local debugCvar = options.debugCvar
+
+        if DetectVariantByClass(ent, options, debugName, debugCvar) then return true end
+        if DetectVariantByNWBool(ent, options, debugName, debugCvar) then return true end
+        if DetectVariantBySaveTable(ent, options, debugName, debugCvar) then return true end
+        if DetectVariantByDisposition(ent, options, debugName, debugCvar) then return true end
+        if DetectVariantBySkin(ent, options, debugName, debugCvar) then return true end
+        if DetectVariantByTargetName(ent, options, debugName, debugCvar) then return true end
+
         return false
     end
 
@@ -480,14 +496,14 @@ if CLIENT then
         local data = ent:GetAttachment(attachId)
         return (data and data.Pos) or nil
     end
-    
+
     function BL.GetBonePosition(ent, boneName)
         if not IsValid(ent) or not boneName then return nil end
         if not ent.LookupBone then return nil end
-        
+
         local bone = ent:LookupBone(boneName)
         if not bone or bone < 0 then return nil end
-        
+
         if ent.GetBoneMatrix then
             local m = ent:GetBoneMatrix(bone)
             if m then
@@ -497,28 +513,27 @@ if CLIENT then
                 end
             end
         end
-        
+
         if ent.GetBonePosition then
             local pos = ent:GetBonePosition(bone)
             if pos and pos ~= vector_origin then
                 return pos
             end
         end
-        
+
         return nil
     end
-    
+
     function BL.DetectSkinVariant(ent, skinMap)
         if not IsValid(ent) or not skinMap then return nil end
         local skin = (ent.GetSkin and ent:GetSkin()) or 0
         return skinMap[skin]
     end
-    
+
     function BL.DetectModelVariant(ent, modelPatterns)
         if not IsValid(ent) or not modelPatterns then return nil end
-        local model = ent:GetModel() or ""
         local skin = (ent.GetSkin and ent:GetSkin()) or 0
-        
+
         for _, pattern in ipairs(modelPatterns) do
             if BL.MatchesModel(ent, pattern.model) then
                 if pattern.skinMap then
@@ -529,29 +544,29 @@ if CLIENT then
         end
         return nil
     end
-    
+
     function BL.CreateLightFromAttachment(ent, attachNames, r, g, b, brightness, decay, size, isElight)
         if not IsValid(ent) then return false end
-        
+
         local attachId = BL.LookupAttachmentCached(ent, attachNames)
         if not attachId or attachId == 0 then return false end
-        
+
         local pos = BL.GetAttachmentPosById(ent, attachId)
         if not pos then return false end
-        
+
         BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, isElight)
         return true
     end
 
     hook.Add("Think", "BetterLights_CoreThink", function()
         BL.UpdateFlashes()
-        
+
         for name, fn in pairs(BL._thinks) do
             local ok, err = pcall(fn)
             if not ok then
                 BL._thinks[name] = nil
                 if debug and debug.traceback then
-                    MsgC(Color(255,100,100), "[BetterLights] Think '"..tostring(name).."' error: "..tostring(err).."\n")
+                    MsgC(Color(255, 100, 100), "[BetterLights] Think '" .. tostring(name) .. "' error: " .. tostring(err) .. "\n")
                 end
             end
         end
@@ -573,10 +588,10 @@ if CLIENT then
         if not ent then return end
         local cls = (ent.GetClass and ent:GetClass()) or nil
         if not cls then return end
-        
+
         local set = BL._tracked[cls]
         if set and set[ent] then set[ent] = nil end
-        
+
         local handlers = BL._removeHandlers[cls]
         if handlers then
             for _, fn in ipairs(handlers) do

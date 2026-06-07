@@ -1,7 +1,7 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    
+
     local cvar_enable = CreateClientConVar("betterlights_bullet_impact_enable", "1", true, false, "Enable subtle dynamic light on bullet impacts")
     local cvar_size = CreateClientConVar("betterlights_bullet_impact_size", "60", true, false, "Dynamic light radius for generic bullet impacts")
     local cvar_brightness = CreateClientConVar("betterlights_bullet_impact_brightness", "0.25", true, false, "Dynamic light brightness for generic bullet impacts")
