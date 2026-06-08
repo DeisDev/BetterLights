@@ -32,20 +32,39 @@ if SERVER then
         ply.BetterLights_SuppressFlashlightHook = nil
     end
 
-    local function canUseFlashlight(ply, state)
+    local function canUseFlashlight(ply)
         if not cvar_enable:GetBool() then return false end
         if not IsValid(ply) or not ply:Alive() then return false end
         if GetConVar("mp_flashlight") and not GetConVar("mp_flashlight"):GetBool() then return false end
 
-        local allowed = hook.Run("PlayerCanSwitchFlashlight", ply, state)
+        if ply.CanUseFlashlight then
+            local ok, allowed = pcall(ply.CanUseFlashlight, ply)
+            if not ok or allowed ~= true then return false end
+        end
+
+        return true
+    end
+
+    local function canSwitchFlashlight(ply, state)
+        if not canUseFlashlight(ply) then return false end
+
+        ply.BetterLights_CheckingSwitchHook = true
+        local ok, allowed = pcall(hook.Run, "PlayerSwitchFlashlight", ply, state)
+        ply.BetterLights_CheckingSwitchHook = nil
+
+        if not ok then
+            ErrorNoHaltWithStack("[BetterLights] PlayerSwitchFlashlight hook failed: " .. tostring(allowed) .. "\n")
+            return false
+        end
+
         return allowed ~= false
     end
 
-    local function setFlashlight(ply, state, silent)
+    local function setFlashlight(ply, state, silent, skipPermission)
         if not IsValid(ply) then return false end
 
         state = state and true or false
-        if state and not canUseFlashlight(ply, state) then return false end
+        if not skipPermission and not canSwitchFlashlight(ply, state) then return false end
         if cvar_enable:GetBool() then
             turnOffVanillaFlashlight(ply)
         end
@@ -79,10 +98,11 @@ if SERVER then
 
     hook.Add("PlayerSwitchFlashlight", "BetterLights_FlashlightSwitch", function(ply, state)
         if not cvar_enable:GetBool() then return end
+        if ply.BetterLights_CheckingSwitchHook then return end
         if ply.BetterLights_SuppressFlashlightHook then return end
 
         if not recentlyHandledInput(ply) then
-            toggleFlashlight(ply)
+            setFlashlight(ply, state, false, true)
             markHandledInput(ply)
         end
 
@@ -90,24 +110,29 @@ if SERVER then
     end)
 
     hook.Add("PlayerSpawn", "BetterLights_FlashlightSpawn", function(ply)
-        setFlashlight(ply, false, true)
+        setFlashlight(ply, false, true, true)
     end)
 
     hook.Add("PlayerDeath", "BetterLights_FlashlightDeath", function(ply)
-        setFlashlight(ply, false, true)
+        setFlashlight(ply, false, true, true)
     end)
 
     cvars.AddChangeCallback("betterlights_flashlight_enable", function(_, _, new)
         if new ~= "0" then return end
 
         for _, ply in ipairs(player.GetAll()) do
-            setFlashlight(ply, false, true)
+            setFlashlight(ply, false, true, true)
         end
     end, "BetterLights_FlashlightEnable")
 
-    if PLAYER and not PLAYER.BetterLights_OldFlashlight then
-        PLAYER.BetterLights_OldFlashlight = PLAYER.Flashlight
-        PLAYER.BetterLights_OldFlashlightIsOn = PLAYER.FlashlightIsOn
+    if PLAYER then
+        if not PLAYER.BetterLights_OldFlashlight then
+            PLAYER.BetterLights_OldFlashlight = PLAYER.Flashlight
+        end
+
+        if not PLAYER.BetterLights_OldFlashlightIsOn then
+            PLAYER.BetterLights_OldFlashlightIsOn = PLAYER.FlashlightIsOn
+        end
 
         function PLAYER:Flashlight(state)
             if not cvar_enable:GetBool() then
