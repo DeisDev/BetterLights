@@ -3,6 +3,34 @@ if SERVER then
     local SOUND_ON = "betterlights/flashlight_on.wav"
     local SOUND_OFF = "betterlights/flashlight_off.wav"
     local SOUND_LEVEL = 77
+    local INPUT_DEBOUNCE = 0.05
+
+    local PLAYER = FindMetaTable("Player")
+
+    local function recentlyHandledInput(ply)
+        return (ply.BetterLights_LastFlashlightInput or 0) + INPUT_DEBOUNCE > CurTime()
+    end
+
+    local function markHandledInput(ply)
+        ply.BetterLights_LastFlashlightInput = CurTime()
+    end
+
+    local function isVanillaFlashlightOn(ply)
+        local oldIsOn = PLAYER and PLAYER.BetterLights_OldFlashlightIsOn
+        if not oldIsOn then return false end
+
+        local ok, isOn = pcall(oldIsOn, ply)
+        return ok and isOn == true
+    end
+
+    local function turnOffVanillaFlashlight(ply)
+        local oldFlashlight = PLAYER and PLAYER.BetterLights_OldFlashlight
+        if not oldFlashlight or not isVanillaFlashlightOn(ply) then return end
+
+        ply.BetterLights_SuppressFlashlightHook = true
+        pcall(oldFlashlight, ply, false)
+        ply.BetterLights_SuppressFlashlightHook = nil
+    end
 
     local function canUseFlashlight(ply, state)
         if not cvar_enable:GetBool() then return false end
@@ -18,6 +46,9 @@ if SERVER then
 
         state = state and true or false
         if state and not canUseFlashlight(ply, state) then return false end
+        if cvar_enable:GetBool() then
+            turnOffVanillaFlashlight(ply)
+        end
 
         if ply:GetNWBool("BetterLights_Flashlight", false) == state then return true end
 
@@ -39,16 +70,20 @@ if SERVER then
         if cmd:GetImpulse() ~= 100 then return end
 
         cmd:SetImpulse(0)
+        if recentlyHandledInput(ply) then return false end
+
         toggleFlashlight(ply)
+        markHandledInput(ply)
+        return false
     end)
 
     hook.Add("PlayerSwitchFlashlight", "BetterLights_FlashlightSwitch", function(ply, state)
         if not cvar_enable:GetBool() then return end
+        if ply.BetterLights_SuppressFlashlightHook then return end
 
-        if state == nil then
+        if not recentlyHandledInput(ply) then
             toggleFlashlight(ply)
-        else
-            setFlashlight(ply, state)
+            markHandledInput(ply)
         end
 
         return false
@@ -70,7 +105,6 @@ if SERVER then
         end
     end, "BetterLights_FlashlightEnable")
 
-    local PLAYER = FindMetaTable("Player")
     if PLAYER and not PLAYER.BetterLights_OldFlashlight then
         PLAYER.BetterLights_OldFlashlight = PLAYER.Flashlight
         PLAYER.BetterLights_OldFlashlightIsOn = PLAYER.FlashlightIsOn
