@@ -77,7 +77,7 @@ The player flashlight module replaces the default flashlight with a projected Be
 [*]Compatible with GShader Library and its addons
 [*]Most effects are client-side with minimal performance impact
 [*]Works with popular weapon packs such as ARC9
-[*]Flashlight weapon attachment mode may clip on some viewmodels or weapon models
+[*]The player flashlight module will probably conflict with most flashlight mods out there. It can be fully disabled if you wish to use a different flashlight addon. Do not report flashlight related issues without first disabling any other flashlight addons. 
 [*]May conflict with other lighting mods, but each module can be disabled individually
 [/list]
 
@@ -97,5 +97,5 @@ See more of my addons here:
 It's back for now, but please be civil and please dont spam with reports/errors. Obviously suggestions and criticism are welcome, but dont be an asshole. 
 
 [spoiler]
-keywords: better lights, lighting, dynamic lights, gmod lights, gmod lighting, muzzle flash, bullet impact, glow, elight, dlight, garrysmod, garry's mod, npc light, weapon glow, projectile light, flashlight, physgun light, toolgun light, gravity gun light, ar2 orb, rpg rocket, rollermine, scanner, manhack, healthkit glow, item glow, lighting mod, lighting framework, developer api, optimized lighting, performance, v3.0
+keywords: Better Lights, BetterLights, gmod lighting, garry's mod lighting, garrys mod lights, dynamic lighting, dynamic lights, dlight, elight, projected flashlight, shadow flashlight, custom flashlight, weapon lights, muzzle flash, muzzle flashes, bullet impact lights, tracer lights, projectile lights, explosion lights, fire lights, glow effects, item glow, pickup glow, healthkit glow, health vial glow, battery glow, AR2 glow, AR2 orb light, combine ball light, combine eye glow, combine soldier glow, NPC lighting, NPC glow, antlion glow, antlion spit light, antlion grub glow, antlion guardian glow, manhack light, city scanner light, rollermine light, hacked rollermine light, RPG rocket light, grenade light, crossbow bolt light, magnusson light, heli bomb light, physgun light, toolgun light, gravity gun light, gmod effects, visual effects, VFX, realism, immersive lighting, Half-Life 2 lighting, HL2 effects, sandbox lighting, configurable lights, client-side lighting, optimized lighting, performance friendly, 64-bit branch, ARC9 compatible, GShader compatible
 [/spoiler]
