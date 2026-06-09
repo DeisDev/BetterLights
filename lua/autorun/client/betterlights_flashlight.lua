@@ -55,8 +55,17 @@ if CLIENT then
             - ang:Up() * ATTACHMENT_OFFSET_DOWN
     end
 
+    local function isFirstPersonZooming(ply, localPlayer)
+        if ply ~= localPlayer or ply:ShouldDrawLocalPlayer() then return false end
+        if not ply.KeyDown or not ply:KeyDown(IN_ZOOM) then return false end
+        if not ply.GetCanZoom then return true end
+
+        return ply:GetCanZoom()
+    end
+
     local function getAttachmentTransform(ply, localPlayer)
         if not cvar_attachment:GetBool() then return end
+        if isFirstPersonZooming(ply, localPlayer) then return end
 
         local source
         if ply == localPlayer and not ply:ShouldDrawLocalPlayer() then
