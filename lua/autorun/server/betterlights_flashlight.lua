@@ -1,11 +1,17 @@
 if SERVER then
     local cvar_enable = CreateConVar("betterlights_flashlight_enable", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Replace player flashlights with BetterLights projected flashlights")
+    util.AddNetworkString("BetterLights_FlashlightClientEnable")
+
     local SOUND_ON = "betterlights/flashlight_on.wav"
     local SOUND_OFF = "betterlights/flashlight_off.wav"
     local SOUND_LEVEL = 77
     local INPUT_DEBOUNCE = 0.05
 
     local PLAYER = FindMetaTable("Player")
+
+    local function isModuleEnabledFor(ply)
+        return cvar_enable:GetBool() and IsValid(ply) and ply.BetterLights_FlashlightEnabled ~= false
+    end
 
     local function recentlyHandledInput(ply)
         return (ply.BetterLights_LastFlashlightInput or 0) + INPUT_DEBOUNCE > CurTime()
@@ -33,7 +39,7 @@ if SERVER then
     end
 
     local function canUseFlashlight(ply)
-        if not cvar_enable:GetBool() then return false end
+        if not isModuleEnabledFor(ply) then return false end
         if not IsValid(ply) or not ply:Alive() then return false end
         if GetConVar("mp_flashlight") and not GetConVar("mp_flashlight"):GetBool() then return false end
 
@@ -65,7 +71,7 @@ if SERVER then
 
         state = state and true or false
         if not skipPermission and not canSwitchFlashlight(ply, state) then return false end
-        if cvar_enable:GetBool() then
+        if isModuleEnabledFor(ply) then
             turnOffVanillaFlashlight(ply)
         end
 
@@ -84,8 +90,18 @@ if SERVER then
         return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false))
     end
 
+    net.Receive("BetterLights_FlashlightClientEnable", function(_, ply)
+        if not IsValid(ply) then return end
+
+        ply.BetterLights_FlashlightEnabled = net.ReadBool()
+
+        if ply.BetterLights_FlashlightEnabled == false then
+            setFlashlight(ply, false, true, true)
+        end
+    end)
+
     hook.Add("StartCommand", "BetterLights_FlashlightImpulse", function(ply, cmd)
-        if not cvar_enable:GetBool() then return end
+        if not isModuleEnabledFor(ply) then return end
         if cmd:GetImpulse() ~= 100 then return end
 
         cmd:SetImpulse(0)
@@ -97,7 +113,7 @@ if SERVER then
     end)
 
     hook.Add("PlayerSwitchFlashlight", "BetterLights_FlashlightSwitch", function(ply, state)
-        if not cvar_enable:GetBool() then return end
+        if not isModuleEnabledFor(ply) then return end
         if ply.BetterLights_CheckingSwitchHook then return end
         if ply.BetterLights_SuppressFlashlightHook then return end
 
@@ -135,7 +151,7 @@ if SERVER then
         end
 
         function PLAYER:Flashlight(state)
-            if not cvar_enable:GetBool() then
+            if not isModuleEnabledFor(self) then
                 return self:BetterLights_OldFlashlight(state)
             end
 
@@ -147,7 +163,7 @@ if SERVER then
         end
 
         function PLAYER:FlashlightIsOn()
-            if not cvar_enable:GetBool() then
+            if not isModuleEnabledFor(self) then
                 return self:BetterLights_OldFlashlightIsOn()
             end
 

@@ -3,7 +3,7 @@ if CLIENT then
 
     local BL = BetterLights
 
-    BL.VERSION = "v1.3.3"
+    BL.VERSION = "v1.3.4 "
 
     BL._thinks = BL._thinks or {}
     BL._classes = BL._classes or {}

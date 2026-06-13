@@ -1,14 +1,36 @@
 if CLIENT then
+    local cvar_player_enable = CreateClientConVar("betterlights_flashlight_player_enable", "1", true, false, "Enable BetterLights flashlight replacement for your player")
+    local refreshThinkRegistration
+
+    local function syncPlayerEnable()
+        net.Start("BetterLights_FlashlightClientEnable")
+            net.WriteBool(cvar_player_enable:GetBool())
+        net.SendToServer()
+    end
+
+    hook.Add("InitPostEntity", "BetterLights_FlashlightSyncPlayerEnable", function()
+        syncPlayerEnable()
+    end)
+
+    cvars.AddChangeCallback("betterlights_flashlight_player_enable", function()
+        syncPlayerEnable()
+        if refreshThinkRegistration then
+            refreshThinkRegistration()
+        end
+    end, "BetterLights_FlashlightPlayerEnable")
+
     if not ProjectedTexture then return end
 
     BetterLights = BetterLights or {}
     local BL = BetterLights
+    local THINK_NAME = "BetterLights_PlayerFlashlights"
 
     local cvar_fov = CreateClientConVar("betterlights_flashlight_fov", "45", true, false, "Flashlight cone FOV")
     local cvar_shadows = CreateClientConVar("betterlights_flashlight_shadows", "1", true, false, "Enable flashlight shadows")
     local cvar_attachment = CreateClientConVar("betterlights_flashlight_weapon_attachment", "1", true, false, "Use weapon or viewmodel muzzle attachments when available")
     local cvar_flicker = CreateClientConVar("betterlights_flashlight_flicker", "0", true, false, "Enable subtle flashlight flicker")
     local cvar_sway = CreateClientConVar("betterlights_flashlight_sway", "1", true, false, "Enable subtle flashlight sway")
+    local cvar_distance = CreateClientConVar("betterlights_flashlight_distance", "1200", true, false, "Flashlight beam length")
     local cvar_attachment_offset = CreateClientConVar("betterlights_flashlight_attachment_offset", "2", true, false, "Side offset for weapon-attached flashlights")
     local cvar_fallback_offset = CreateClientConVar("betterlights_flashlight_fallback_offset", "8", true, false, "Side offset for eye-position flashlights")
 
@@ -19,7 +41,8 @@ if CLIENT then
     local WALL_FOV_SCALE = 0.95
     local WALL_SHRINK_DISTANCE = 32
     local CLOSE_WALL_BRIGHTNESS_SCALE = 0.96
-    local DISTANCE = 1200
+    local MIN_DISTANCE = 128
+    local MAX_DISTANCE = 4096
     local NEAR_Z = 4
     local BRIGHTNESS = 1.35
     local FLICKER_AMOUNT = 0.08
@@ -46,6 +69,12 @@ if CLIENT then
 
         projectors[ply] = nil
         projectorData[ply] = nil
+    end
+
+    local function removeAllProjectors()
+        for ply in pairs(projectors) do
+            removeProjector(ply)
+        end
     end
 
     local function applyAttachmentOffset(pos, ang)
@@ -160,12 +189,13 @@ if CLIENT then
 
         ang = getSmoothedAngle(data, ang)
         local wallDist = getWallDistance(ply, pos, ang)
+        local distance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, MAX_DISTANCE)
 
         lamp:SetTexture(TEXTURE)
         lamp:SetPos(pos)
         lamp:SetAngles(ang)
         lamp:SetNearZ(NEAR_Z)
-        lamp:SetFarZ(DISTANCE)
+        lamp:SetFarZ(distance)
         lamp:SetFOV(getFOV(wallDist))
         lamp:SetBrightness(getBrightness(ply, wallDist))
         lamp:SetColor(COLOR)
@@ -173,20 +203,20 @@ if CLIENT then
         lamp:Update()
     end
 
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_PlayerFlashlights", function()
+    local function isRendererEnabled()
         local moduleCvar = GetConVar("betterlights_flashlight_enable")
-        local enabled = not moduleCvar or moduleCvar:GetBool()
+        return cvar_player_enable:GetBool() and (not moduleCvar or moduleCvar:GetBool())
+    end
+
+    local function runFlashlightThink()
         local seen = {}
 
-        if enabled then
-            local localPlayer = LocalPlayer()
+        local localPlayer = LocalPlayer()
 
-            for _, ply in ipairs(player.GetAll()) do
-                if IsValid(ply) and ply:Alive() and ply:GetNWBool("BetterLights_Flashlight", false) then
-                    seen[ply] = true
-                    updateProjector(ply, localPlayer)
-                end
+        for _, ply in ipairs(player.GetAll()) do
+            if IsValid(ply) and ply:Alive() and ply:GetNWBool("BetterLights_Flashlight", false) then
+                seen[ply] = true
+                updateProjector(ply, localPlayer)
             end
         end
 
@@ -195,11 +225,27 @@ if CLIENT then
                 removeProjector(ply)
             end
         end
-    end)
+    end
+
+    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
+    local RemoveThink = BL.RemoveThink or function(name) hook.Remove("Think", name) end
+
+    refreshThinkRegistration = function()
+        if isRendererEnabled() then
+            AddThink(THINK_NAME, runFlashlightThink)
+        else
+            RemoveThink(THINK_NAME)
+            removeAllProjectors()
+        end
+    end
+
+    cvars.AddChangeCallback("betterlights_flashlight_enable", function()
+        refreshThinkRegistration()
+    end, "BetterLights_FlashlightGlobalEnable")
+
+    refreshThinkRegistration()
 
     hook.Add("ShutDown", "BetterLights_PlayerFlashlightsCleanup", function()
-        for ply in pairs(projectors) do
-            removeProjector(ply)
-        end
+        removeAllProjectors()
     end)
 end

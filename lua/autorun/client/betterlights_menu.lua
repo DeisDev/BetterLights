@@ -473,18 +473,20 @@ if CLIENT then
     spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_PlayerFlashlight", "Player Flashlight", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Projected player flashlight with shadows.")
-            panel:CheckBox("Enable flashlight module", "betterlights_flashlight_enable")
+            panel:CheckBox("Enable flashlight module", "betterlights_flashlight_player_enable")
             panel:CheckBox("Cast shadows", "betterlights_flashlight_shadows")
             panel:CheckBox("Use weapon attachment", "betterlights_flashlight_weapon_attachment")
             panel:Help("Weapon attachment mode can cause clipping on some viewmodels or weapon models.")
             panel:CheckBox("Flicker", "betterlights_flashlight_flicker")
             panel:CheckBox("Flashlight sway", "betterlights_flashlight_sway")
             panel:NumSlider("FOV", "betterlights_flashlight_fov", 30, 90, 0)
+            panel:NumSlider("Beam length", "betterlights_flashlight_distance", 128, 4096, 0)
             panel:NumSlider("Attached side offset", "betterlights_flashlight_attachment_offset", -24, 24, 1)
             panel:NumSlider("Fallback side offset", "betterlights_flashlight_fallback_offset", -24, 24, 1)
             addResetButton(panel, {
-                betterlights_flashlight_enable = 1,
+                betterlights_flashlight_player_enable = 1,
                 betterlights_flashlight_fov = 45,
+                betterlights_flashlight_distance = 1200,
                 betterlights_flashlight_shadows = 1,
                 betterlights_flashlight_weapon_attachment = 1,
                 betterlights_flashlight_flicker = 0,
