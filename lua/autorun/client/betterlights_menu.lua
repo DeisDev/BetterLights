@@ -474,6 +474,8 @@ if CLIENT then
             panel:ClearControls()
             panel:Help("Projected player flashlight with shadows.")
             panel:CheckBox("Enable flashlight module", "betterlights_flashlight_player_enable")
+            panel:CheckBox("Use BetterLights flashlight sounds", "betterlights_flashlight_custom_sounds")
+            panel:Help("Disable this to use the vanilla flashlight sound events, including Workshop sound replacements.")
             panel:CheckBox("Cast shadows", "betterlights_flashlight_shadows")
             panel:CheckBox("Use weapon attachment", "betterlights_flashlight_weapon_attachment")
             panel:Help("Weapon attachment mode can cause clipping on some viewmodels or weapon models.")
@@ -485,6 +487,7 @@ if CLIENT then
             panel:NumSlider("Fallback side offset", "betterlights_flashlight_fallback_offset", -24, 24, 1)
             addResetButton(panel, {
                 betterlights_flashlight_player_enable = 1,
+                betterlights_flashlight_custom_sounds = 1,
                 betterlights_flashlight_fov = 45,
                 betterlights_flashlight_distance = 1200,
                 betterlights_flashlight_shadows = 1,

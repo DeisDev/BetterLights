@@ -1,13 +1,24 @@
 if SERVER then
     local cvar_enable = CreateConVar("betterlights_flashlight_enable", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Replace player flashlights with BetterLights projected flashlights")
+    local cvar_custom_sounds = CreateConVar("betterlights_flashlight_custom_sounds", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Use BetterLights flashlight on/off sounds instead of vanilla flashlight sound events")
     util.AddNetworkString("BetterLights_FlashlightClientEnable")
 
-    local SOUND_ON = "betterlights/flashlight_on.wav"
-    local SOUND_OFF = "betterlights/flashlight_off.wav"
-    local SOUND_LEVEL = 77
+    local CUSTOM_SOUND_ON = "betterlights/flashlight_on.wav"
+    local CUSTOM_SOUND_OFF = "betterlights/flashlight_off.wav"
+    local DEFAULT_SOUND_ON = "HL2Player.FlashLightOn"
+    local DEFAULT_SOUND_OFF = "HL2Player.FlashLightOff"
+    local CUSTOM_SOUND_LEVEL = 77
     local INPUT_DEBOUNCE = 0.05
 
     local PLAYER = FindMetaTable("Player")
+
+    local function emitFlashlightSound(ply, state)
+        if cvar_custom_sounds:GetBool() then
+            ply:EmitSound(state and CUSTOM_SOUND_ON or CUSTOM_SOUND_OFF, CUSTOM_SOUND_LEVEL)
+        else
+            ply:EmitSound(state and DEFAULT_SOUND_ON or DEFAULT_SOUND_OFF)
+        end
+    end
 
     local function isModuleEnabledFor(ply)
         return cvar_enable:GetBool() and IsValid(ply) and ply.BetterLights_FlashlightEnabled ~= false
@@ -80,7 +91,7 @@ if SERVER then
         ply:SetNWBool("BetterLights_Flashlight", state)
 
         if not silent then
-            ply:EmitSound(state and SOUND_ON or SOUND_OFF, SOUND_LEVEL)
+            emitFlashlightSound(ply, state)
         end
 
         return true
