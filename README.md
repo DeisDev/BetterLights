@@ -4,6 +4,18 @@
 
 Everything can be configured in the tool menu tab labeled "Better Lights". 
 
+## Steam Workshop
+
+<!-- steam-workshop-stats:start -->
+[Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225)
+
+- Subscribers: **109,734**
+- Lifetime subscribers: **193,099**
+- Favorites: **11,125**
+- Views: **115,529**
+- Last updated: **2026-06-16**
+<!-- steam-workshop-stats:end -->
+
 > [!IMPORTANT]
 > I Highly recommend that you use the 64-Bit branch for Garry's Mod. It's more stable. 
 

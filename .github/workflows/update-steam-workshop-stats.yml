@@ -1,0 +1,92 @@
+name: Update Steam Workshop stats
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 9 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Update README stats
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          async function main() {
+            const workshopId = "3597784225";
+            const readmePath = "README.md";
+            const endpoint = "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/";
+
+            const body = new URLSearchParams({
+              itemcount: "1",
+              "publishedfileids[0]": workshopId,
+            });
+
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body,
+            });
+
+            if (!response.ok) {
+              throw new Error(`Steam API request failed: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const details = data?.response?.publishedfiledetails?.[0];
+
+            if (!details || details.result !== 1) {
+              throw new Error(`Steam API returned invalid Workshop details: ${JSON.stringify(details)}`);
+            }
+
+            const format = (value) => new Intl.NumberFormat("en-US").format(Number(value || 0));
+            const updated = new Date().toISOString().slice(0, 10);
+            const block = `<!-- steam-workshop-stats:start -->
+          [Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=${workshopId})
+
+          - Subscribers: **${format(details.subscriptions)}**
+          - Lifetime subscribers: **${format(details.lifetime_subscriptions)}**
+          - Favorites: **${format(details.favorited)}**
+          - Views: **${format(details.views)}**
+          - Last updated: **${updated}**
+          <!-- steam-workshop-stats:end -->`.replace(/^          /gm, "");
+
+            const readme = fs.readFileSync(readmePath, "utf8");
+            const markerPattern = /<!-- steam-workshop-stats:start -->[\s\S]*?<!-- steam-workshop-stats:end -->/;
+
+            if (!markerPattern.test(readme)) {
+              throw new Error("Could not find Steam Workshop stats markers in README.md");
+            }
+
+            fs.writeFileSync(readmePath, readme.replace(markerPattern, block));
+          }
+
+          main().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Commit README update
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "README stats are already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update Steam Workshop stats"
+          git push
