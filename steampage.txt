@@ -1,67 +1,29 @@
 [b]Better Lights[/b]
 
-[i]Dynamic lighting for Garry's Mod[/i]
+[i]Dynamic lights for Garry's Mod.[/i]
 
 [img]https://i.imgur.com/VJ5aKv7.gif[/img]
 
 [hr][/hr]
 
-[b]Support / Issues / Feature Requests[/b]
+[b]What It Does[/b]
 
-If you encounter a bug or want to suggest a feature, please open an issue on the GitHub repository:
-
-[url=https://github.com/DeisDev/BetterLights/issues/new/choose][b]Better Lights GitHub Issues[/b][/url]
-
-I do not provide support through Steam comments or my profile.  
-GitHub is the best place to report problems so they can be tracked and fixed properly.
-
-[hr][/hr]
-
-[b]Overview[/b]
-
-Better Lights adds dynamic lighting to Garry's Mod, including:
+Better Lights adds extra lighting to weapons, NPCs, items, fires, explosions, projectiles, and more.
 
 [list]
-[*]Flashlight
-[*]Muzzle flashes
-[*]Bullet impacts
-[*]Projectiles
-[*]NPC lighting
-[*]Item glow
-[*]Fires and explosions
-[*]Combine eye glow
+[*]Better flashlight with shadows and optional custom sounds
+[*]Muzzle flashes, bullet impacts, and projectile lights
+[*]Glowing NPCs, items, Combine eyes, pickups, and effects
+[*]Fire, explosion, physgun, toolgun, and gravity gun lights
 [/list]
 
 [hr][/hr]
 
-[b]Recommended Branch[/b]
+[b]Settings[/b]
 
-[b]It is highly recommended to run this addon on the 64-bit branch.[/b]
+Open the spawn menu and go to the [b]Better Lights[/b] tab.
 
-This addon was developed and tested on the 64-bit version of Garry's Mod.  
-In most cases, the game will run significantly better on this branch.
-
-[hr][/hr]
-
-[b]Configuration[/b]
-
-Open the spawn menu and navigate to the tab:
-
-[b]Better Lights[/b]
-
-Each feature includes configurable options such as:
-
-[list]
-[*]Enable / Disable
-[*]Color
-[*]Size
-[*]Brightness
-[*]Decay
-[*]Flashlight FOV, sway, shadows, and origin offsets
-[*]Reset to Defaults
-[/list]
-
-The player flashlight module replaces the default flashlight with a projected Better Lights flashlight. It casts shadows, can attach to your weapon, sways and even has it's own custom sounds. 
+You can change colors, brightness, size, decay, flashlight options, and turn each feature on or off.
 
 [img]https://i.imgur.com/7tkSj2C.gif[/img]
 [img]https://i.imgur.com/Nfgu4bJ.gif[/img]
@@ -69,32 +31,61 @@ The player flashlight module replaces the default flashlight with a projected Be
 [img]https://i.imgur.com/98AMEjC.gif[/img]
 [img]https://i.imgur.com/FTiESdG.jpeg[/img]
 
+Maps used in screenshots:
+[url=https://steamcommunity.com/sharedfiles/filedetails/?id=3372671607]gm_darkhall[/url]
+gm_construct
+
 [hr][/hr]
 
-[b]Compatibility & Performance[/b]
+[b]Recommended[/b]
+
+[b]Use the 64-bit branch of Garry's Mod if you can.[/b]
+
+The addon was made and tested on 64-bit, and the game usually runs better there.
+
+[hr][/hr]
+
+[b]Compatibility[/b]
 
 [list]
-[*]Compatible with GShader Library and its addons
-[*]Most effects are client-side with minimal performance impact
-[*]Works with popular weapon packs such as ARC9
-[*]The player flashlight module will probably conflict with most flashlight mods out there. It can be fully disabled if you wish to use a different flashlight addon. Do not report flashlight related issues without first disabling any other flashlight addons. 
-[*]May conflict with other lighting mods, but each module can be disabled individually
+[*]Works with GShader Library addons
+[*]Works with popular weapon packs like ARC9
+[*]Flashlight mods may conflict with the Better Lights flashlight
+[*]Other lighting mods may conflict, but features can be disabled separately
 [/list]
 
-If you enjoy this addon, please consider [b]rating and favoriting it[/b].
+If you report a flashlight issue, please test without other flashlight addons first.
 
-You can also add me on discord if you want, [b]@catsniffur[/b]
+[hr][/hr]
 
-See more of my addons here:  
+[b]Support[/b]
+
+For bugs, support, or feature requests, please use GitHub:
+
+[url=https://github.com/DeisDev/BetterLights/issues/new/choose][b]Better Lights GitHub Issues[/b][/url]
+
+This addon is open source:
+
+[url=https://github.com/DeisDev/BetterLights][b]Better Lights Source Code[/b][/url]
+
+I do not consistently provide support through Steam comments or my Steam profile, so i'd really prefer if you used GitHub for reporting issues. 
+
+[hr][/hr]
+
+If you enjoy the addon, please consider [b]rating and favoriting it[/b].
+
+Discord: [b]@catsniffur[/b]
+
+More of my addons:
 [url=https://steamcommunity.com/workshop/filedetails/?id=3551812511]My Workshop Collection[/url]
 
 [img]https://i.imgur.com/7jzy9bl.png[/img]
 
 [hr][/hr]
 
-[b]About the Comment Section[/b]
+[b]Comments[/b]
 
-It's back for now, but please be civil and please dont spam with reports/errors. Obviously suggestions and criticism are welcome, but dont be an asshole. 
+Comments are open for now. Suggestions are welcome, but if you can, please report bugs on github so they are easier to track.
 
 [spoiler]
 keywords: Better Lights, BetterLights, gmod lighting, garry's mod lighting, garrys mod lights, dynamic lighting, dynamic lights, dlight, elight, projected flashlight, shadow flashlight, custom flashlight, weapon lights, muzzle flash, muzzle flashes, bullet impact lights, tracer lights, projectile lights, explosion lights, fire lights, glow effects, item glow, pickup glow, healthkit glow, health vial glow, battery glow, AR2 glow, AR2 orb light, combine ball light, combine eye glow, combine soldier glow, NPC lighting, NPC glow, antlion glow, antlion spit light, antlion grub glow, antlion guardian glow, manhack light, city scanner light, rollermine light, hacked rollermine light, RPG rocket light, grenade light, crossbow bolt light, magnusson light, heli bomb light, physgun light, toolgun light, gravity gun light, gmod effects, visual effects, VFX, realism, immersive lighting, Half-Life 2 lighting, HL2 effects, sandbox lighting, configurable lights, client-side lighting, optimized lighting, performance friendly, 64-bit branch, ARC9 compatible, GShader compatible
