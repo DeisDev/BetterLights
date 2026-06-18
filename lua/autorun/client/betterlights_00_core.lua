@@ -3,7 +3,7 @@ if CLIENT then
 
     local BL = BetterLights
 
-    BL.VERSION = "v1.3.5"
+    BL.VERSION = "v1.4.0"
 
     BL._thinks = BL._thinks or {}
     BL._classes = BL._classes or {}
@@ -16,6 +16,11 @@ if CLIENT then
     local NET_MUZZLE_FLASH = 1
     local NET_BULLET_IMPACT = 2
 
+    function BL.IsEnabled()
+        local cvar = GetConVar("betterlights_enable")
+        return not cvar or cvar:GetBool()
+    end
+
     function BL.AddNetworkHandler(msgType, fn)
         if not isfunction(fn) then return end
         BL._networkHandlers[msgType] = fn
@@ -23,6 +28,8 @@ if CLIENT then
 
     net.Receive("BetterLights_Event", function()
         local msgType = net.ReadUInt(4)
+        if not BL.IsEnabled() then return end
+
         local handler = BL._networkHandlers[msgType]
         if handler then
             handler()
@@ -96,6 +103,8 @@ if CLIENT then
     BL._flashIdCounter = BL._flashIdCounter or 0
 
     function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
+        if not BL.IsEnabled() then return nil end
+
         local now = CurTime()
         BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
         local flash = BL.GetFlashTable()
@@ -270,6 +279,8 @@ if CLIENT then
     end
 
     function BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight)
+        if not BL.IsEnabled() then return nil end
+
         local dl = DynamicLight(index, isElight or false)
         if dl then
             dl.pos = pos
@@ -559,6 +570,8 @@ if CLIENT then
     end
 
     hook.Add("Think", "BetterLights_CoreThink", function()
+        if not BL.IsEnabled() then return end
+
         BL.UpdateFlashes()
 
         for name, fn in pairs(BL._thinks) do

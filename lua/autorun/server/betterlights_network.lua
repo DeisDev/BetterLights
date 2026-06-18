@@ -1,9 +1,14 @@
 if SERVER then
     util.AddNetworkString("BetterLights_Event")
-    
+
     local MSG_MUZZLE_FLASH = 1
     local MSG_BULLET_IMPACT = 2
-    
+
+    local function isBetterLightsEnabled()
+        local cvar = GetConVar("betterlights_enable")
+        return not cvar or cvar:GetBool()
+    end
+
     local function isAR2Shot(shooter, bullet)
         if IsValid(shooter) and shooter.GetClass then
             local cls = string.lower(shooter:GetClass() or "")
@@ -29,8 +34,9 @@ if SERVER then
         end
         return false
     end
-    
+
     hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", function(ent, bullet)
+        if not isBetterLightsEnabled() then return end
         if not IsValid(ent) then return end
         if not bullet then return end
 
@@ -43,8 +49,9 @@ if SERVER then
             net.WriteBool(isAR2Shot(ent, bullet))
         net.SendPVS(src)
     end)
-    
+
     hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
+        if not isBetterLightsEnabled() then return end
         if not IsValid(ent) then return end
         if not bullet then return end
 
@@ -52,6 +59,7 @@ if SERVER then
         bullet.Callback = function(att, tr, dmginfo)
             local ret
             if isfunction(prev) then ret = prev(att, tr, dmginfo) end
+            if not isBetterLightsEnabled() then return ret end
             if not tr or not tr.Hit or not tr.HitPos then return ret end
 
             local pos = tr.HitPos

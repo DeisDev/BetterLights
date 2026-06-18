@@ -1,27 +1,22 @@
 if SERVER then
-    local cvar_enable = CreateConVar("betterlights_flashlight_enable", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Replace player flashlights with BetterLights projected flashlights")
-    local cvar_custom_sounds = CreateConVar("betterlights_flashlight_custom_sounds", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Use BetterLights flashlight on/off sounds instead of vanilla flashlight sound events")
+    local cvar_enable = CreateConVar("betterlights_flashlight_enable", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Allow players to opt in to BetterLights projected flashlights")
     util.AddNetworkString("BetterLights_FlashlightClientEnable")
+    util.AddNetworkString("BetterLights_FlashlightSound")
 
-    local CUSTOM_SOUND_ON = "betterlights/flashlight_on.wav"
-    local CUSTOM_SOUND_OFF = "betterlights/flashlight_off.wav"
-    local DEFAULT_SOUND_ON = "HL2Player.FlashLightOn"
-    local DEFAULT_SOUND_OFF = "HL2Player.FlashLightOff"
-    local CUSTOM_SOUND_LEVEL = 77
     local INPUT_DEBOUNCE = 0.05
 
     local PLAYER = FindMetaTable("Player")
 
     local function emitFlashlightSound(ply, state)
-        if cvar_custom_sounds:GetBool() then
-            ply:EmitSound(state and CUSTOM_SOUND_ON or CUSTOM_SOUND_OFF, CUSTOM_SOUND_LEVEL)
-        else
-            ply:EmitSound(state and DEFAULT_SOUND_ON or DEFAULT_SOUND_OFF)
-        end
+        net.Start("BetterLights_FlashlightSound")
+            net.WriteEntity(ply)
+            net.WriteBool(state)
+        net.SendPVS(ply:GetPos())
     end
 
     local function isModuleEnabledFor(ply)
-        return cvar_enable:GetBool() and IsValid(ply) and ply.BetterLights_FlashlightEnabled ~= false
+        local globalCvar = GetConVar("betterlights_enable")
+        return (not globalCvar or globalCvar:GetBool()) and cvar_enable:GetBool() and IsValid(ply) and ply.BetterLights_FlashlightEnabled == true
     end
 
     local function recentlyHandledInput(ply)
@@ -151,6 +146,14 @@ if SERVER then
             setFlashlight(ply, false, true, true)
         end
     end, "BetterLights_FlashlightEnable")
+
+    cvars.AddChangeCallback("betterlights_enable", function(_, _, new)
+        if new ~= "0" then return end
+
+        for _, ply in ipairs(player.GetAll()) do
+            setFlashlight(ply, false, true, true)
+        end
+    end, "BetterLights_FlashlightGlobalEnable")
 
     if PLAYER then
         if not PLAYER.BetterLights_OldFlashlight then

@@ -1,6 +1,12 @@
 if CLIENT then
-    local cvar_player_enable = CreateClientConVar("betterlights_flashlight_player_enable", "1", true, false, "Enable BetterLights flashlight replacement for your player")
+    local cvar_player_enable = CreateClientConVar("betterlights_flashlight_player_enable", "0", true, false, "Enable BetterLights flashlight replacement for your player")
+    local cvar_custom_sounds = CreateClientConVar("betterlights_flashlight_custom_sounds", "1", true, false, "Use BetterLights flashlight on/off sounds instead of vanilla flashlight sound events")
     local refreshThinkRegistration
+    local CUSTOM_SOUND_ON = "betterlights/flashlight_on.wav"
+    local CUSTOM_SOUND_OFF = "betterlights/flashlight_off.wav"
+    local DEFAULT_SOUND_ON = "HL2Player.FlashLightOn"
+    local DEFAULT_SOUND_OFF = "HL2Player.FlashLightOff"
+    local CUSTOM_SOUND_LEVEL = 77
 
     local function syncPlayerEnable()
         net.Start("BetterLights_FlashlightClientEnable")
@@ -18,6 +24,18 @@ if CLIENT then
             refreshThinkRegistration()
         end
     end, "BetterLights_FlashlightPlayerEnable")
+
+    net.Receive("BetterLights_FlashlightSound", function()
+        local ply = net.ReadEntity()
+        local state = net.ReadBool()
+        if not IsValid(ply) then return end
+
+        if cvar_custom_sounds:GetBool() then
+            ply:EmitSound(state and CUSTOM_SOUND_ON or CUSTOM_SOUND_OFF, CUSTOM_SOUND_LEVEL)
+        else
+            ply:EmitSound(state and DEFAULT_SOUND_ON or DEFAULT_SOUND_OFF)
+        end
+    end)
 
     if not ProjectedTexture then return end
 
@@ -204,8 +222,9 @@ if CLIENT then
     end
 
     local function isRendererEnabled()
+        local globalCvar = GetConVar("betterlights_enable")
         local moduleCvar = GetConVar("betterlights_flashlight_enable")
-        return cvar_player_enable:GetBool() and (not moduleCvar or moduleCvar:GetBool())
+        return (not globalCvar or globalCvar:GetBool()) and cvar_player_enable:GetBool() and (not moduleCvar or moduleCvar:GetBool())
     end
 
     local function runFlashlightThink()
@@ -242,6 +261,10 @@ if CLIENT then
     cvars.AddChangeCallback("betterlights_flashlight_enable", function()
         refreshThinkRegistration()
     end, "BetterLights_FlashlightGlobalEnable")
+
+    cvars.AddChangeCallback("betterlights_enable", function()
+        refreshThinkRegistration()
+    end, "BetterLights_GlobalEnableFlashlight")
 
     refreshThinkRegistration()
 

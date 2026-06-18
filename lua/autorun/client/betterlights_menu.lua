@@ -1,4 +1,6 @@
 if CLIENT then
+    local SERVER_BOOL_MESSAGE = "BetterLights_SetServerBool"
+
     local function addResetButton(panel, defaults)
         local btn = panel:Button("Reset to Defaults")
         btn.DoClick = function()
@@ -8,7 +10,129 @@ if CLIENT then
         end
     end
 
+    local function requestServerBool(cvarName, value)
+        net.Start(SERVER_BOOL_MESSAGE)
+            net.WriteString(cvarName)
+            net.WriteBool(value)
+        net.SendToServer()
+    end
+
+    local function canChangeServerSettings()
+        return game.SinglePlayer() or (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin())
+    end
+
+    concommand.Add("betterlights_toggle", function()
+        if not canChangeServerSettings() then
+            notification.AddLegacy("Only admins can toggle Better Lights globally.", NOTIFY_ERROR, 4)
+            surface.PlaySound("buttons/button10.wav")
+            return
+        end
+
+        local cvar = GetConVar("betterlights_enable")
+        requestServerBool("betterlights_enable", not (cvar and cvar:GetBool()))
+    end)
+
+    local function addServerBoolCheckbox(panel, label, cvarName)
+        local row = vgui.Create("DCheckBoxLabel")
+        local cvar = GetConVar(cvarName)
+        row:SetText(label)
+        row:SetTextColor(Color(0, 0, 0))
+        if row.Label then
+            row.Label:SetTextColor(Color(0, 0, 0))
+        end
+        row:SetValue((not cvar or cvar:GetBool()) and 1 or 0)
+        row:SizeToContents()
+
+        row.OnChange = function(_, value)
+            if canChangeServerSettings() then
+                requestServerBool(cvarName, value)
+                return
+            end
+
+            notification.AddLegacy("Only admins can change BetterLights server settings.", NOTIFY_ERROR, 4)
+            surface.PlaySound("buttons/button10.wav")
+            timer.Simple(0, function()
+                if not IsValid(row) then return end
+                local current = GetConVar(cvarName)
+                row:SetValue((not current or current:GetBool()) and 1 or 0)
+            end)
+        end
+
+        panel:AddItem(row)
+        return row
+    end
+
+    local function addServerBoolResetButton(panel, defaults)
+        local btn = panel:Button("Reset Server Settings")
+        btn.DoClick = function()
+            if not canChangeServerSettings() then
+                notification.AddLegacy("Only admins can reset BetterLights server settings.", NOTIFY_ERROR, 4)
+                surface.PlaySound("buttons/button10.wav")
+                return
+            end
+
+            for cvarName, value in pairs(defaults) do
+                requestServerBool(cvarName, value ~= 0 and value ~= false)
+            end
+        end
+    end
+
+    local function getClientDefaultSettings()
+        local defaults = {}
+        local files = file.Find("lua/autorun/client/betterlights_*.lua", "GAME")
+
+        for _, fileName in ipairs(files or {}) do
+            local source = file.Read("lua/autorun/client/" .. fileName, "GAME")
+            if source then
+                for cvarName, defaultValue in string.gmatch(source, [[CreateClientConVar%(%s*"([^"]+)"%s*,%s*"([^"]*)"]]) do
+                    defaults[cvarName] = defaultValue
+                end
+            end
+        end
+
+        return defaults
+    end
+
+    local function resetAllSettings()
+        if not canChangeServerSettings() then
+            notification.AddLegacy("Only admins can reset all BetterLights settings.", NOTIFY_ERROR, 4)
+            surface.PlaySound("buttons/button10.wav")
+            return
+        end
+
+        Derma_Query(
+            "Reset all Better Lights settings to their default values?",
+            "Reset Better Lights Settings",
+            "Reset All",
+            function()
+                for cvarName, defaultValue in pairs(getClientDefaultSettings()) do
+                    RunConsoleCommand(cvarName, defaultValue)
+                end
+
+                requestServerBool("betterlights_enable", true)
+                requestServerBool("betterlights_flashlight_enable", true)
+
+                notification.AddLegacy("BetterLights settings reset to defaults.", NOTIFY_GENERIC, 4)
+                surface.PlaySound("buttons/button14.wav")
+            end,
+            "Cancel"
+        )
+    end
+
     local function addClientPanels()
+        spawnmenu.AddToolMenuOption("Better Lights", "General", "BL_Admin", "Admin", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Global addon control")
+            panel:Help("Server settings require admin access.")
+            addServerBoolCheckbox(panel, "Enable Better Lights", "betterlights_enable")
+            addServerBoolResetButton(panel, {
+                betterlights_enable = 1,
+            })
+            local resetAllBtn = panel:Button("Reset All Better Lights Settings")
+            resetAllBtn.DoClick = resetAllSettings
+            panel:Help("Optional bind command: betterlights_toggle")
+        end)
+
         spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_CombineBall", "Combine AR2 Orb", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Blue/cyan light for prop_combine_ball")
@@ -470,12 +594,22 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_PlayerFlashlight", "Player Flashlight", "", "", function(panel)
+    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightServer", "Server Settings", "", "", function(panel)
             panel:ClearControls()
-            panel:Help("Projected player flashlight with shadows.")
-            panel:CheckBox("Enable flashlight module", "betterlights_flashlight_player_enable")
+            panel:Help("Server availability")
+            panel:Help("Server settings require admin access.")
+            addServerBoolCheckbox(panel, "Allow players to use BetterLights flashlights", "betterlights_flashlight_enable")
+            addServerBoolResetButton(panel, {
+                betterlights_flashlight_enable = 1,
+            })
+        end)
+
+    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightClient", "Client Settings", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Personal flashlight")
+            panel:CheckBox("Replace my flashlight with BetterLights", "betterlights_flashlight_player_enable")
             panel:CheckBox("Use BetterLights flashlight sounds", "betterlights_flashlight_custom_sounds")
-            panel:Help("Disable this to use the vanilla flashlight sound events, including Workshop sound replacements.")
+            panel:Help("Disable this to use vanilla flashlight sound events, including Workshop sound replacements.")
             panel:CheckBox("Cast shadows", "betterlights_flashlight_shadows")
             panel:CheckBox("Use weapon attachment", "betterlights_flashlight_weapon_attachment")
             panel:Help("Weapon attachment mode can cause clipping on some viewmodels or weapon models.")
@@ -486,7 +620,7 @@ if CLIENT then
             panel:NumSlider("Attached side offset", "betterlights_flashlight_attachment_offset", -24, 24, 1)
             panel:NumSlider("Fallback side offset", "betterlights_flashlight_fallback_offset", -24, 24, 1)
             addResetButton(panel, {
-                betterlights_flashlight_player_enable = 1,
+                betterlights_flashlight_player_enable = 0,
                 betterlights_flashlight_custom_sounds = 1,
                 betterlights_flashlight_fov = 45,
                 betterlights_flashlight_distance = 1200,
@@ -1070,6 +1204,11 @@ if CLIENT then
                 gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225")
             end
 
+            local changelogBtn = panel:Button("Changelog")
+            changelogBtn.DoClick = function()
+                gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/changelog/3597784225")
+            end
+
             local otherAddonsBtn = panel:Button("Other Addons")
             otherAddonsBtn.DoClick = function()
                 gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=3551812511")
@@ -1083,6 +1222,7 @@ if CLIENT then
     end)
 
     hook.Add("PopulateToolMenu", "BetterLights_Populate", function()
+        spawnmenu.AddToolCategory("Better Lights", "General", "General")
         spawnmenu.AddToolCategory("Better Lights", "Flashlight", "Flashlight")
         spawnmenu.AddToolCategory("Better Lights", "Weapons", "Weapons (Held)")
         spawnmenu.AddToolCategory("Better Lights", "Projectiles", "Projectiles & Explosives")
