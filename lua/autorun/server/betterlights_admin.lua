@@ -4,7 +4,6 @@ if SERVER then
 
     local SERVER_BOOL_CVARS = {
         betterlights_enable = true,
-        betterlights_flashlight_enable = true,
     }
 
     local function canChangeServerSettings(ply)

@@ -1,5 +1,4 @@
 if SERVER then
-    local cvar_enable = CreateConVar("betterlights_flashlight_enable", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Allow players to opt in to BetterLights projected flashlights")
     util.AddNetworkString("BetterLights_FlashlightClientEnable")
     util.AddNetworkString("BetterLights_FlashlightSound")
 
@@ -16,7 +15,7 @@ if SERVER then
 
     local function isModuleEnabledFor(ply)
         local globalCvar = GetConVar("betterlights_enable")
-        return (not globalCvar or globalCvar:GetBool()) and cvar_enable:GetBool() and IsValid(ply) and ply.BetterLights_FlashlightEnabled == true
+        return (not globalCvar or globalCvar:GetBool()) and IsValid(ply) and ply.BetterLights_FlashlightEnabled == true
     end
 
     local function recentlyHandledInput(ply)
@@ -139,21 +138,13 @@ if SERVER then
         setFlashlight(ply, false, true, true)
     end)
 
-    cvars.AddChangeCallback("betterlights_flashlight_enable", function(_, _, new)
-        if new ~= "0" then return end
-
-        for _, ply in ipairs(player.GetAll()) do
-            setFlashlight(ply, false, true, true)
-        end
-    end, "BetterLights_FlashlightEnable")
-
     cvars.AddChangeCallback("betterlights_enable", function(_, _, new)
         if new ~= "0" then return end
 
         for _, ply in ipairs(player.GetAll()) do
             setFlashlight(ply, false, true, true)
         end
-    end, "BetterLights_FlashlightGlobalEnable")
+    end, "BetterLights_FlashlightDisableOnGlobalDisable")
 
     if PLAYER then
         if not PLAYER.BetterLights_OldFlashlight then

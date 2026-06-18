@@ -110,8 +110,6 @@ if CLIENT then
                 end
 
                 requestServerBool("betterlights_enable", true)
-                requestServerBool("betterlights_flashlight_enable", true)
-
                 notification.AddLegacy("BetterLights settings reset to defaults.", NOTIFY_GENERIC, 4)
                 surface.PlaySound("buttons/button14.wav")
             end,
@@ -594,17 +592,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightServer", "Server Settings", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Server availability")
-            panel:Help("Server settings require admin access.")
-            addServerBoolCheckbox(panel, "Allow players to use BetterLights flashlights", "betterlights_flashlight_enable")
-            addServerBoolResetButton(panel, {
-                betterlights_flashlight_enable = 1,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightClient", "Client Settings", "", "", function(panel)
+    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightClient", "Player Flashlight", "", "", function(panel)
             panel:ClearControls()
             panel:Help("Personal flashlight")
             panel:CheckBox("Replace my flashlight with BetterLights", "betterlights_flashlight_player_enable")

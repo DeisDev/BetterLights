@@ -9,21 +9,37 @@ if CLIENT then
     local CUSTOM_SOUND_LEVEL = 77
 
     local function syncPlayerEnable()
+        if not IsValid(LocalPlayer()) then return end
+
         net.Start("BetterLights_FlashlightClientEnable")
             net.WriteBool(cvar_player_enable:GetBool())
         net.SendToServer()
     end
 
-    hook.Add("InitPostEntity", "BetterLights_FlashlightSyncPlayerEnable", function()
+    local function queuePlayerEnableSync()
         syncPlayerEnable()
+        timer.Simple(1, syncPlayerEnable)
+        timer.Simple(3, syncPlayerEnable)
+    end
+
+    hook.Add("InitPostEntity", "BetterLights_FlashlightSyncPlayerEnable", function()
+        queuePlayerEnableSync()
     end)
 
     cvars.AddChangeCallback("betterlights_flashlight_player_enable", function()
-        syncPlayerEnable()
+        queuePlayerEnableSync()
         if refreshThinkRegistration then
             refreshThinkRegistration()
         end
     end, "BetterLights_FlashlightPlayerEnable")
+
+    hook.Add("OnReloaded", "BetterLights_FlashlightSyncPlayerEnableReload", function()
+        queuePlayerEnableSync()
+    end)
+
+    if IsValid(LocalPlayer()) then
+        queuePlayerEnableSync()
+    end
 
     net.Receive("BetterLights_FlashlightSound", function()
         local ply = net.ReadEntity()
@@ -223,8 +239,7 @@ if CLIENT then
 
     local function isRendererEnabled()
         local globalCvar = GetConVar("betterlights_enable")
-        local moduleCvar = GetConVar("betterlights_flashlight_enable")
-        return (not globalCvar or globalCvar:GetBool()) and cvar_player_enable:GetBool() and (not moduleCvar or moduleCvar:GetBool())
+        return (not globalCvar or globalCvar:GetBool()) and cvar_player_enable:GetBool()
     end
 
     local function runFlashlightThink()
@@ -257,10 +272,6 @@ if CLIENT then
             removeAllProjectors()
         end
     end
-
-    cvars.AddChangeCallback("betterlights_flashlight_enable", function()
-        refreshThinkRegistration()
-    end, "BetterLights_FlashlightGlobalEnable")
 
     cvars.AddChangeCallback("betterlights_enable", function()
         refreshThinkRegistration()
