@@ -19,7 +19,11 @@ if SERVER then
     end
 
     local function recentlyHandledInput(ply)
-        return (ply.BetterLights_LastFlashlightInput or 0) + INPUT_DEBOUNCE > CurTime()
+        local lastInput = ply.BetterLights_LastFlashlightInput
+        if not lastInput then return false end
+
+        local elapsed = CurTime() - lastInput
+        return elapsed >= 0 and elapsed < INPUT_DEBOUNCE
     end
 
     local function markHandledInput(ply)

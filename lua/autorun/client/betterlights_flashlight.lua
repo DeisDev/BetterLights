@@ -86,6 +86,9 @@ if CLIENT then
     local EYE_OFFSET_FORWARD = 12
     local EYE_OFFSET_DOWN = 3
     local ATTACHMENT_NAMES = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
+    local EYE_FALLBACK_WEAPONS = {
+        weapon_crowbar = true
+    }
 
     local projectors = {}
     local projectorData = {}
@@ -130,11 +133,14 @@ if CLIENT then
         if not cvar_attachment:GetBool() then return end
         if isFirstPersonZooming(ply, localPlayer) then return end
 
+        local activeWeapon = ply:GetActiveWeapon()
+        if IsValid(activeWeapon) and EYE_FALLBACK_WEAPONS[activeWeapon:GetClass()] then return end
+
         local source
         if ply == localPlayer and not ply:ShouldDrawLocalPlayer() then
             source = ply:GetViewModel()
         else
-            source = ply:GetActiveWeapon()
+            source = activeWeapon
         end
 
         if not IsValid(source) or not source.LookupAttachment then return end
