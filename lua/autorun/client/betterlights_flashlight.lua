@@ -67,18 +67,29 @@ if CLIENT then
     local cvar_distance = CreateClientConVar("betterlights_flashlight_distance", "1200", true, false, "Flashlight beam length")
     local cvar_attachment_offset = CreateClientConVar("betterlights_flashlight_attachment_offset", "2", true, false, "Side offset for weapon-attached flashlights")
     local cvar_fallback_offset = CreateClientConVar("betterlights_flashlight_fallback_offset", "8", true, false, "Side offset for eye-position flashlights")
+    local cvar_brightness = CreateClientConVar("betterlights_flashlight_brightness", "1.35", true, false, "Flashlight brightness")
+    local cvar_texture = CreateClientConVar("betterlights_flashlight_texture", "effects/flashlight001", true, false, "Flashlight texture material path")
 
-    local TEXTURE = "effects/flashlight001"
+    local DEFAULT_TEXTURE = "effects/flashlight001"
+    local RECENT_TEXTURE_COOKIE = "betterlights_flashlight_recent_textures"
+    local MAX_RECENT_TEXTURES = 12
+    local TEXTURE_ROOTS = {
+        "effects/lightspill/",
+        "effects/flashlight/",
+        "effects/flashlights/",
+        "models/flashlight/"
+    }
     local COLOR = Color(255, 245, 225)
-    local MIN_FOV = 1
-    local MAX_FOV = 100
+    local MIN_FOV = 10
+    local MAX_FOV = 120
     local WALL_FOV_SCALE = 0.95
     local WALL_SHRINK_DISTANCE = 32
     local CLOSE_WALL_BRIGHTNESS_SCALE = 0.96
     local MIN_DISTANCE = 128
     local MAX_DISTANCE = 4096
     local NEAR_Z = 4
-    local BRIGHTNESS = 1.35
+    local MIN_BRIGHTNESS = 0.1
+    local MAX_BRIGHTNESS = 5
     local FLICKER_AMOUNT = 0.08
     local AIM_SMOOTHING = 18
     local ATTACHMENT_OFFSET_FORWARD = 1
@@ -92,6 +103,7 @@ if CLIENT then
 
     local projectors = {}
     local projectorData = {}
+    local knownTextureCache
     local traceData = {
         mins = Vector(-4, -4, -4),
         maxs = Vector(4, 4, 4),
@@ -113,6 +125,164 @@ if CLIENT then
             removeProjector(ply)
         end
     end
+
+    local function normalizeTexturePath(path)
+        path = string.Trim(tostring(path or ""))
+        path = string.Replace(path, "\\", "/")
+        path = string.gsub(path, "^materials/", "")
+        path = string.gsub(path, "%.vmt$", "")
+        path = string.gsub(path, "%.vtf$", "")
+        path = string.gsub(path, "^/+", "")
+        return path
+    end
+
+    local function isValidTexturePath(path)
+        path = normalizeTexturePath(path)
+        if path == "" then return false end
+
+        local mat = Material(path)
+        return mat and mat.IsError and not mat:IsError()
+    end
+
+    local function getTexturePath()
+        local path = normalizeTexturePath(cvar_texture:GetString())
+        if path == "" or not isValidTexturePath(path) then
+            return DEFAULT_TEXTURE
+        end
+
+        return path
+    end
+
+    local function getRecentTextures()
+        local raw = cookie.GetString(RECENT_TEXTURE_COOKIE, "")
+        local textures = {}
+        local seen = {}
+
+        for path in string.gmatch(raw, "([^|]+)") do
+            path = normalizeTexturePath(path)
+            if path ~= "" and not seen[path] then
+                textures[#textures + 1] = path
+                seen[path] = true
+            end
+        end
+
+        return textures
+    end
+
+    local function saveRecentTextures(textures)
+        cookie.Set(RECENT_TEXTURE_COOKIE, table.concat(textures, "|"))
+    end
+
+    local function rememberTexture(path)
+        path = normalizeTexturePath(path)
+        if path == "" or not isValidTexturePath(path) then return false end
+
+        local recent = getRecentTextures()
+
+        for i = #recent, 1, -1 do
+            if recent[i] == path then
+                table.remove(recent, i)
+            end
+        end
+
+        table.insert(recent, 1, path)
+
+        while #recent > MAX_RECENT_TEXTURES do
+            table.remove(recent)
+        end
+
+        saveRecentTextures(recent)
+        return true
+    end
+
+    local function addKnownTexture(path, output, seen)
+        path = normalizeTexturePath(path)
+        if seen[path] or not isValidTexturePath(path) then return end
+
+        output[#output + 1] = path
+        seen[path] = true
+    end
+
+    local function findTexturesInRoot(root, output, seen, depth)
+        if depth > 3 then return end
+
+        local files, dirs = file.Find("materials/" .. root .. "*", "GAME")
+
+        for _, fileName in ipairs(files or {}) do
+            if string.match(fileName, "%.vmt$") or string.match(fileName, "%.vtf$") then
+                addKnownTexture(root .. fileName, output, seen)
+            end
+        end
+
+        for _, dirName in ipairs(dirs or {}) do
+            findTexturesInRoot(root .. dirName .. "/", output, seen, depth + 1)
+        end
+    end
+
+    local function getKnownTextures()
+        if knownTextureCache then return knownTextureCache end
+
+        local textures = {}
+        local seen = {}
+
+        addKnownTexture(DEFAULT_TEXTURE, textures, seen)
+
+        for _, root in ipairs(TEXTURE_ROOTS) do
+            findTexturesInRoot(root, textures, seen, 0)
+        end
+
+        table.sort(textures)
+        knownTextureCache = textures
+        return knownTextureCache
+    end
+
+    local function setTexturePath(path)
+        path = normalizeTexturePath(path)
+        if not isValidTexturePath(path) then return false end
+
+        RunConsoleCommand("betterlights_flashlight_texture", path)
+        rememberTexture(path)
+        return true
+    end
+
+    function BL.NormalizeFlashlightTexturePath(path)
+        return normalizeTexturePath(path)
+    end
+
+    function BL.IsValidFlashlightTexturePath(path)
+        return isValidTexturePath(path)
+    end
+
+    function BL.SetFlashlightTexturePath(path)
+        return setTexturePath(path)
+    end
+
+    function BL.GetFlashlightTexturePath()
+        return getTexturePath()
+    end
+
+    function BL.GetFlashlightRecentTextures()
+        return getRecentTextures()
+    end
+
+    function BL.GetFlashlightKnownTextures()
+        return getKnownTextures()
+    end
+
+    function BL.ClearFlashlightKnownTextureCache()
+        knownTextureCache = nil
+    end
+
+    function BL.ClearFlashlightRecentTextures()
+        cookie.Set(RECENT_TEXTURE_COOKIE, "")
+    end
+
+    cvars.AddChangeCallback("betterlights_flashlight_texture", function(_, _, new)
+        local path = normalizeTexturePath(new)
+        if path ~= "" and isValidTexturePath(path) then
+            rememberTexture(path)
+        end
+    end, "BetterLights_FlashlightTextureRecent")
 
     local function applyAttachmentOffset(pos, ang)
         return pos
@@ -202,7 +372,8 @@ if CLIENT then
 
     local function getBrightness(ply, wallDist)
         local t = math.Clamp(wallDist / WALL_SHRINK_DISTANCE, 0, 1)
-        local brightness = BRIGHTNESS * Lerp(t, CLOSE_WALL_BRIGHTNESS_SCALE, 1)
+        local baseBrightness = math.Clamp(cvar_brightness:GetFloat(), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+        local brightness = baseBrightness * Lerp(t, CLOSE_WALL_BRIGHTNESS_SCALE, 1)
 
         if not cvar_flicker:GetBool() then return brightness end
 
@@ -231,7 +402,7 @@ if CLIENT then
         local wallDist = getWallDistance(ply, pos, ang)
         local distance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, MAX_DISTANCE)
 
-        lamp:SetTexture(TEXTURE)
+        lamp:SetTexture(getTexturePath())
         lamp:SetPos(pos)
         lamp:SetAngles(ang)
         lamp:SetNearZ(NEAR_Z)

@@ -1,14 +1,175 @@
 if CLIENT then
     local SERVER_BOOL_MESSAGE = "BetterLights_SetServerBool"
 
-    local function addResetButton(panel, defaults)
-        local btn = panel:Button("Reset to Defaults")
+    local function addResetButton(panel, defaults, label)
+        local btn = panel:Button(label or "Reset to Defaults")
         btn.DoClick = function()
             for cvar, def in pairs(defaults) do
                 RunConsoleCommand(cvar, tostring(def))
             end
         end
     end
+
+    local function addBrightnessResetButton(panel)
+        local resetBrightness = panel:Button("Reset Brightness")
+        resetBrightness.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_brightness", "1.35")
+        end
+    end
+
+    local function addFovResetButton(panel)
+        local resetFov = panel:Button("Reset FOV")
+        resetFov.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_fov", "45")
+        end
+    end
+
+    local function addBeamLengthResetButton(panel)
+        local resetBeamLength = panel:Button("Reset Beam Length")
+        resetBeamLength.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_distance", "1200")
+        end
+    end
+
+    local function copyText(text)
+        if not SetClipboardText then return end
+
+        SetClipboardText(text)
+        notification.AddLegacy("Copied texture path.", NOTIFY_GENERIC, 3)
+        surface.PlaySound("buttons/button14.wav")
+    end
+
+    local function addCurrentTexturePreview(panel, path)
+        local preview = vgui.Create("DPanel")
+        preview:SetTall(118)
+        preview.Paint = function(_, w, h)
+            surface.SetDrawColor(238, 238, 238, 255)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(170, 170, 170, 255)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+
+        local image = vgui.Create("DPanel", preview)
+        image:Dock(LEFT)
+        image:SetWide(112)
+
+        local mat = Material(path)
+        image.Paint = function(_, w, h)
+            surface.SetDrawColor(32, 32, 32, 255)
+            surface.DrawRect(8, 8, w - 16, h - 16)
+            surface.SetMaterial(mat)
+            surface.SetDrawColor(255, 255, 255, 255)
+            surface.DrawTexturedRect(18, 14, w - 36, h - 28)
+        end
+
+        local details = vgui.Create("DPanel", preview)
+        details:Dock(FILL)
+        details:DockMargin(8, 8, 8, 8)
+        details.Paint = nil
+
+        local title = vgui.Create("DLabel", details)
+        title:Dock(TOP)
+        title:SetTall(20)
+        title:SetText("Current texture")
+        title:SetTextColor(Color(35, 35, 35))
+
+        local value = vgui.Create("DLabel", details)
+        value:Dock(FILL)
+        value:SetWrap(true)
+        value:SetText(path)
+        value:SetTextColor(Color(35, 35, 35))
+
+        local copy = vgui.Create("DButton", details)
+        copy:Dock(BOTTOM)
+        copy:SetTall(24)
+        copy:SetText("Copy Path")
+        copy.DoClick = function()
+            copyText(path)
+        end
+
+        panel:AddItem(preview)
+    end
+
+    local function addTextureTile(layout, path, refresh)
+        local tile = vgui.Create("DPanel")
+        tile:SetSize(132, 164)
+        tile.Paint = function(_, w, h)
+            surface.SetDrawColor(238, 238, 238, 255)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(170, 170, 170, 255)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+
+        local preview = vgui.Create("DButton", tile)
+        preview:SetText("")
+        preview:Dock(TOP)
+        preview:SetTall(96)
+
+        local mat = Material(path)
+        preview.Paint = function(_, w, h)
+            surface.SetDrawColor(32, 32, 32, 255)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetMaterial(mat)
+            surface.SetDrawColor(255, 255, 255, 255)
+            surface.DrawTexturedRect(18, 8, w - 36, h - 16)
+        end
+
+        preview.DoClick = function()
+            if BetterLights.SetFlashlightTexturePath and BetterLights.SetFlashlightTexturePath(path) then
+                notification.AddLegacy("Flashlight texture changed.", NOTIFY_GENERIC, 3)
+                surface.PlaySound("buttons/button15.wav")
+            end
+        end
+
+        preview.DoRightClick = function()
+            copyText(path)
+        end
+
+        local label = vgui.Create("DLabel", tile)
+        label:Dock(TOP)
+        label:SetTall(36)
+        label:SetWrap(true)
+        label:SetText(path)
+        label:SetTextColor(Color(35, 35, 35))
+
+        local buttons = vgui.Create("DPanel", tile)
+        buttons:Dock(BOTTOM)
+        buttons:SetTall(28)
+        buttons.Paint = nil
+
+        local use = vgui.Create("DButton", buttons)
+        use:Dock(LEFT)
+        use:SetWide(64)
+        use:SetText("Use")
+        use.DoClick = preview.DoClick
+
+        local copy = vgui.Create("DButton", buttons)
+        copy:Dock(RIGHT)
+        copy:SetWide(64)
+        copy:SetText("Copy")
+        copy.DoClick = function()
+            copyText(path)
+        end
+
+        layout:Add(tile)
+    end
+
+    local function addTextureGrid(parent, paths, refresh)
+        local layout = vgui.Create("DIconLayout")
+        layout:SetSpaceX(8)
+        layout:SetSpaceY(8)
+        layout:SetTall(math.max(172, #paths * 172))
+
+        for _, path in ipairs(paths) do
+            addTextureTile(layout, path, refresh)
+        end
+
+        parent:AddItem(layout)
+    end
+
+    local populateFlashlightVisualPanel
+    local activeFlashlightVisualPanel
+    local activeFlashlightVisualFilter
 
     local function requestServerBool(cvarName, value)
         net.Start(SERVER_BOOL_MESSAGE)
@@ -109,6 +270,16 @@ if CLIENT then
                     RunConsoleCommand(cvarName, defaultValue)
                 end
 
+                if BetterLights then
+                    if BetterLights.ClearFlashlightRecentTextures then
+                        BetterLights.ClearFlashlightRecentTextures()
+                    end
+
+                    if BetterLights.ClearFlashlightKnownTextureCache then
+                        BetterLights.ClearFlashlightKnownTextureCache()
+                    end
+                end
+
                 requestServerBool("betterlights_enable", true)
                 notification.AddLegacy("BetterLights settings reset to defaults.", NOTIFY_GENERIC, 4)
                 surface.PlaySound("buttons/button14.wav")
@@ -116,6 +287,168 @@ if CLIENT then
             "Cancel"
         )
     end
+
+    populateFlashlightVisualPanel = function(panel, filterText)
+        panel:ClearControls()
+        activeFlashlightVisualPanel = panel
+        activeFlashlightVisualFilter = filterText
+
+        if not BetterLights or not BetterLights.SetFlashlightTexturePath then
+            panel:Help("Flashlight visual controls are unavailable because projected textures are not available.")
+            return
+        end
+
+        panel:Help("Beam")
+        panel:CheckBox("Cast shadows", "betterlights_flashlight_shadows")
+        panel:CheckBox("Flicker", "betterlights_flashlight_flicker")
+        panel:CheckBox("Flashlight sway", "betterlights_flashlight_sway")
+        panel:NumSlider("Brightness", "betterlights_flashlight_brightness", 0.1, 5, 2)
+        addBrightnessResetButton(panel)
+        panel:NumSlider("FOV", "betterlights_flashlight_fov", 10, 120, 0)
+        addFovResetButton(panel)
+        panel:NumSlider("Beam length", "betterlights_flashlight_distance", 128, 4096, 0)
+        addBeamLengthResetButton(panel)
+
+        panel:Help("Texture")
+        panel:Help("Use a material path such as effects/flashlight001. You can also paste paths with materials/ or .vmt/.vtf.")
+
+        local currentCvar = GetConVar("betterlights_flashlight_texture")
+        local typedPath = currentCvar and currentCvar:GetString() or "effects/flashlight001"
+        local currentPath = BetterLights.GetFlashlightTexturePath and BetterLights.GetFlashlightTexturePath() or typedPath
+
+        panel:Help("Current: " .. currentPath)
+        addCurrentTexturePreview(panel, currentPath)
+
+        local manualEntry = vgui.Create("DTextEntry")
+        manualEntry:SetText(typedPath)
+        manualEntry:SetUpdateOnType(false)
+        panel:AddItem(manualEntry)
+
+        local manualButtons = vgui.Create("DPanel")
+        manualButtons:SetTall(28)
+        manualButtons.Paint = nil
+
+        local useManual = vgui.Create("DButton", manualButtons)
+        useManual:Dock(LEFT)
+        useManual:SetWide(76)
+        useManual:SetText("Use")
+        useManual.DoClick = function()
+            local path = BetterLights.NormalizeFlashlightTexturePath(manualEntry:GetText())
+            if BetterLights.SetFlashlightTexturePath(path) then
+                notification.AddLegacy("Flashlight texture changed.", NOTIFY_GENERIC, 3)
+                surface.PlaySound("buttons/button15.wav")
+                return
+            end
+
+            notification.AddLegacy("That texture path was not found.", NOTIFY_ERROR, 4)
+            surface.PlaySound("buttons/button10.wav")
+        end
+
+        local copyCurrent = vgui.Create("DButton", manualButtons)
+        copyCurrent:Dock(LEFT)
+        copyCurrent:DockMargin(6, 0, 0, 0)
+        copyCurrent:SetWide(76)
+        copyCurrent:SetText("Copy")
+        copyCurrent.DoClick = function()
+            copyText(currentPath)
+        end
+
+        local useDefault = vgui.Create("DButton", manualButtons)
+        useDefault:Dock(LEFT)
+        useDefault:DockMargin(6, 0, 0, 0)
+        useDefault:SetWide(76)
+        useDefault:SetText("Default")
+        useDefault.DoClick = function()
+            if BetterLights.SetFlashlightTexturePath then
+                BetterLights.SetFlashlightTexturePath("effects/flashlight001")
+            end
+        end
+
+        panel:AddItem(manualButtons)
+
+        local recent = BetterLights.GetFlashlightRecentTextures and BetterLights.GetFlashlightRecentTextures() or {}
+        if #recent > 0 then
+            panel:Help("Recent")
+            addTextureGrid(panel, recent, function()
+                populateFlashlightVisualPanel(panel, filterText)
+            end)
+
+            local clearRecent = panel:Button("Clear Recent Textures")
+            clearRecent.DoClick = function()
+                if BetterLights.ClearFlashlightRecentTextures then
+                    BetterLights.ClearFlashlightRecentTextures()
+                end
+
+                populateFlashlightVisualPanel(panel, filterText)
+            end
+        end
+
+        panel:Help("Known textures")
+
+        local refreshTextures = panel:Button("Refresh Textures")
+        refreshTextures.DoClick = function()
+            if BetterLights.ClearFlashlightKnownTextureCache then
+                BetterLights.ClearFlashlightKnownTextureCache()
+            end
+
+            populateFlashlightVisualPanel(panel, filterText)
+        end
+
+        local filterRow = vgui.Create("DPanel")
+        filterRow:SetTall(28)
+        filterRow.Paint = nil
+
+        local filter = vgui.Create("DTextEntry", filterRow)
+        filter:Dock(FILL)
+        filter:SetPlaceholderText("Search texture paths")
+        filter:SetText(filterText or "")
+
+        local applyFilter = vgui.Create("DButton", filterRow)
+        applyFilter:Dock(RIGHT)
+        applyFilter:SetWide(72)
+        applyFilter:SetText("Search")
+        applyFilter.DoClick = function()
+            populateFlashlightVisualPanel(panel, filter:GetText())
+        end
+
+        filter.OnEnter = applyFilter.DoClick
+        panel:AddItem(filterRow)
+
+        local known = BetterLights.GetFlashlightKnownTextures and BetterLights.GetFlashlightKnownTextures() or {}
+        local filtered = {}
+        local needle = string.lower(string.Trim(filterText or ""))
+
+        for _, path in ipairs(known) do
+            if needle == "" or string.find(string.lower(path), needle, 1, true) then
+                filtered[#filtered + 1] = path
+            end
+        end
+
+        if #filtered > 0 then
+            addTextureGrid(panel, filtered, function()
+                populateFlashlightVisualPanel(panel, filterText)
+            end)
+        else
+            panel:Help("No matching textures found.")
+        end
+
+        addResetButton(panel, {
+            betterlights_flashlight_brightness = 1.35,
+            betterlights_flashlight_fov = 45,
+            betterlights_flashlight_distance = 1200,
+            betterlights_flashlight_shadows = 1,
+            betterlights_flashlight_flicker = 0,
+            betterlights_flashlight_sway = 1,
+            betterlights_flashlight_texture = "effects/flashlight001",
+        }, "Reset Visual Settings")
+    end
+
+    cvars.AddChangeCallback("betterlights_flashlight_texture", function()
+        timer.Simple(0, function()
+            if not IsValid(activeFlashlightVisualPanel) then return end
+            populateFlashlightVisualPanel(activeFlashlightVisualPanel, activeFlashlightVisualFilter)
+        end)
+    end, "BetterLights_FlashlightVisualRefresh")
 
     local function addClientPanels()
         spawnmenu.AddToolMenuOption("Better Lights", "General", "BL_Admin", "Admin", "", "", function(panel)
@@ -592,33 +925,38 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightClient", "Player Flashlight", "", "", function(panel)
+    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightGeneral", "General", "", "", function(panel)
             panel:ClearControls()
-            panel:Help("Personal flashlight")
+            panel:Help("Flashlight replacement")
             panel:CheckBox("Replace my flashlight with BetterLights", "betterlights_flashlight_player_enable")
             panel:CheckBox("Use BetterLights flashlight sounds", "betterlights_flashlight_custom_sounds")
             panel:Help("Disable this to use vanilla flashlight sound events, including Workshop sound replacements.")
-            panel:CheckBox("Cast shadows", "betterlights_flashlight_shadows")
-            panel:CheckBox("Use weapon attachment", "betterlights_flashlight_weapon_attachment")
-            panel:Help("Weapon attachment mode can cause clipping on some viewmodels or weapon models.")
-            panel:CheckBox("Flicker", "betterlights_flashlight_flicker")
-            panel:CheckBox("Flashlight sway", "betterlights_flashlight_sway")
-            panel:NumSlider("FOV", "betterlights_flashlight_fov", 30, 90, 0)
-            panel:NumSlider("Beam length", "betterlights_flashlight_distance", 128, 4096, 0)
-            panel:NumSlider("Attached side offset", "betterlights_flashlight_attachment_offset", -24, 24, 1)
-            panel:NumSlider("Fallback side offset", "betterlights_flashlight_fallback_offset", -24, 24, 1)
             addResetButton(panel, {
                 betterlights_flashlight_player_enable = 0,
                 betterlights_flashlight_custom_sounds = 1,
-                betterlights_flashlight_fov = 45,
-                betterlights_flashlight_distance = 1200,
-                betterlights_flashlight_shadows = 1,
+            })
+        end)
+
+    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightPosition", "Position", "", "", function(panel)
+            panel:ClearControls()
+            panel:Help("Beam position")
+            panel:CheckBox("Attach beam to weapon", "betterlights_flashlight_weapon_attachment")
+            panel:Help("When disabled, the flashlight uses your eye position instead.")
+            panel:NumSlider("Attached side offset", "betterlights_flashlight_attachment_offset", -24, 24, 1)
+            panel:NumSlider("Fallback side offset", "betterlights_flashlight_fallback_offset", -24, 24, 1)
+            addResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
-                betterlights_flashlight_flicker = 0,
-                betterlights_flashlight_sway = 1,
                 betterlights_flashlight_attachment_offset = 2,
                 betterlights_flashlight_fallback_offset = 8,
             })
+        end)
+
+    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightVisual", "Visual", "", "", function(panel)
+            if BetterLights and BetterLights.ClearFlashlightKnownTextureCache then
+                BetterLights.ClearFlashlightKnownTextureCache()
+            end
+
+            populateFlashlightVisualPanel(panel)
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_HeliBomb", "Helicopter Bomb", "", "", function(panel)

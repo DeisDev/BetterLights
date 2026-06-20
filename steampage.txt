@@ -11,7 +11,7 @@
 Better Lights adds extra lighting to weapons, NPCs, items, fires, explosions, projectiles, and more.
 
 [list]
-[*]Better flashlight with shadows and optional custom sounds
+[*]Better flashlight with shadows, custom sounds, brightness, beam, and texture options
 [*]Muzzle flashes, bullet impacts, and projectile lights
 [*]Glowing NPCs, items, Combine eyes, pickups, and effects
 [*]Fire, explosion, physgun, toolgun, and gravity gun lights
@@ -23,13 +23,15 @@ Better Lights adds extra lighting to weapons, NPCs, items, fires, explosions, pr
 
 Open the spawn menu and go to the [b]Better Lights[/b] tab.
 
-You can change colors, brightness, size, decay, flashlight options, and turn each feature on or off.
+You can change colors, brightness, size, decay, player flashlight visuals, custom flashlight textures, and turn each feature on or off.
 
 [img]https://i.imgur.com/7tkSj2C.gif[/img]
 [img]https://i.imgur.com/Nfgu4bJ.gif[/img]
 [img]https://i.imgur.com/U5wAcKx.gif[/img]
 [img]https://i.imgur.com/98AMEjC.gif[/img]
 [img]https://i.imgur.com/FTiESdG.jpeg[/img]
+[img]https://i.imgur.com/ZR69Btp.jpeg[/img]
+[img]https://i.imgur.com/4ZLj4tD.jpeg[/img]
 
 Maps used in screenshots:
 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3372671607]gm_darkhall[/url]
@@ -88,5 +90,5 @@ More of my addons:
 Comments are open for now. Suggestions are welcome, but if you can, please report bugs on github so they are easier to track.
 
 [spoiler]
-keywords: Better Lights, BetterLights, gmod lighting, garry's mod lighting, garrys mod lights, dynamic lighting, dynamic lights, dlight, elight, projected flashlight, shadow flashlight, custom flashlight, weapon lights, muzzle flash, muzzle flashes, bullet impact lights, tracer lights, projectile lights, explosion lights, fire lights, glow effects, item glow, pickup glow, healthkit glow, health vial glow, battery glow, AR2 glow, AR2 orb light, combine ball light, combine eye glow, combine soldier glow, NPC lighting, NPC glow, antlion glow, antlion spit light, antlion grub glow, antlion guardian glow, manhack light, city scanner light, rollermine light, hacked rollermine light, RPG rocket light, grenade light, crossbow bolt light, magnusson light, heli bomb light, physgun light, toolgun light, gravity gun light, gmod effects, visual effects, VFX, realism, immersive lighting, Half-Life 2 lighting, HL2 effects, sandbox lighting, configurable lights, client-side lighting, optimized lighting, performance friendly, 64-bit branch, ARC9 compatible, GShader compatible
+keywords: Better Lights, BetterLights, gmod lighting, garry's mod lighting, garrys mod lights, dynamic lighting, dynamic lights, dlight, elight, projected flashlight, shadow flashlight, custom flashlight, flashlight texture, custom flashlight texture, weapon lights, muzzle flash, muzzle flashes, bullet impact lights, tracer lights, projectile lights, explosion lights, fire lights, glow effects, item glow, pickup glow, healthkit glow, health vial glow, battery glow, AR2 glow, AR2 orb light, combine ball light, combine eye glow, combine soldier glow, NPC lighting, NPC glow, antlion glow, antlion spit light, antlion grub glow, antlion guardian glow, manhack light, city scanner light, rollermine light, hacked rollermine light, RPG rocket light, grenade light, crossbow bolt light, magnusson light, heli bomb light, physgun light, toolgun light, gravity gun light, gmod effects, visual effects, VFX, realism, immersive lighting, Half-Life 2 lighting, HL2 effects, sandbox lighting, configurable lights, client-side lighting, optimized lighting, performance friendly, 64-bit branch, ARC9 compatible, GShader compatible
 [/spoiler]
