@@ -2,7 +2,7 @@
 
 [i]Dynamic lights for Garry's Mod.[/i]
 
-[img]https://i.imgur.com/VJ5aKv7.gif[/img]
+[img]https://files.catbox.moe/8uylmi.gif[/img]
 
 [hr][/hr]
 
@@ -25,13 +25,13 @@ Open the spawn menu and go to the [b]Better Lights[/b] tab.
 
 You can change colors, brightness, size, decay, player flashlight visuals, custom flashlight textures, and turn each feature on or off.
 
-[img]https://i.imgur.com/7tkSj2C.gif[/img]
-[img]https://i.imgur.com/Nfgu4bJ.gif[/img]
-[img]https://i.imgur.com/U5wAcKx.gif[/img]
-[img]https://i.imgur.com/98AMEjC.gif[/img]
-[img]https://i.imgur.com/FTiESdG.jpeg[/img]
-[img]https://i.imgur.com/ZR69Btp.jpeg[/img]
-[img]https://i.imgur.com/4ZLj4tD.jpeg[/img]
+[img]https://files.catbox.moe/z9kpr2.gif[/img]
+[img]https://files.catbox.moe/okwsv1.gif[/img]
+[img]https://files.catbox.moe/ks7l2f.gif[/img]
+[img]https://files.catbox.moe/6vadmh.gif[/img]
+[img]https://files.catbox.moe/r0zebt.jpeg[/img]
+[img]https://files.catbox.moe/p4kbpu.jpeg[/img]
+[img]https://files.catbox.moe/266p30.jpeg[/img]
 
 Maps used in screenshots:
 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3372671607]gm_darkhall[/url]
@@ -81,7 +81,7 @@ Discord: [b]@catsniffur[/b]
 More of my addons:
 [url=https://steamcommunity.com/workshop/filedetails/?id=3551812511]My Workshop Collection[/url]
 
-[img]https://i.imgur.com/7jzy9bl.png[/img]
+[img]https://files.catbox.moe/i2y0t7.png[/img]
 
 [hr][/hr]
 
