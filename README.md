@@ -9,11 +9,11 @@ Everything can be configured in the tool menu tab labeled "Better Lights".
 <!-- steam-workshop-stats:start -->
 [Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225)
 
-- Subscribers: **111,226**
-- Lifetime subscribers: **196,466**
-- Favorites: **11,215**
-- Views: **116,405**
-- Last updated: **2026-06-21**
+- Subscribers: **111,651**
+- Lifetime subscribers: **197,256**
+- Favorites: **11,226**
+- Views: **116,584**
+- Last updated: **2026-06-22**
 <!-- steam-workshop-stats:end -->
 
 > [!IMPORTANT]
