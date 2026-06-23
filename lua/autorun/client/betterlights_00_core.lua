@@ -3,7 +3,7 @@ if CLIENT then
 
     local BL = BetterLights
 
-    BL.VERSION = "v1.4.2"
+    BL.VERSION = "v1.4.3"
 
     BL._thinks = BL._thinks or {}
     BL._classes = BL._classes or {}
@@ -568,6 +568,62 @@ if CLIENT then
         BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, isElight)
         return true
     end
+
+    local function PrintDebugAttachmentsForEntity(label, ent)
+        MsgN("[BetterLights] " .. label)
+
+        if not IsValid(ent) then
+            MsgN("  Entity: invalid")
+            return
+        end
+
+        MsgN(string.format("  Entity: #%d %s", ent:EntIndex(), ent.GetClass and ent:GetClass() or "unknown"))
+        MsgN("  Model: " .. tostring(ent.GetModel and ent:GetModel() or "unknown"))
+
+        MsgN("  Attachments:")
+        local foundAttachment = false
+        if ent.GetAttachments then
+            local attachments = ent:GetAttachments() or {}
+            for _, attachment in ipairs(attachments) do
+                foundAttachment = true
+                MsgN(string.format("    %d: %s", attachment.id or 0, tostring(attachment.name)))
+            end
+        end
+
+        if not foundAttachment then
+            MsgN("    none")
+        end
+
+        MsgN("  Bones:")
+        local foundBone = false
+        if ent.GetBoneCount and ent.GetBoneName then
+            local count = ent:GetBoneCount() or 0
+            for i = 0, count - 1 do
+                foundBone = true
+                MsgN(string.format("    %d: %s", i, tostring(ent:GetBoneName(i))))
+            end
+        end
+
+        if not foundBone then
+            MsgN("    none")
+        end
+    end
+
+    concommand.Add("betterlights_debug_attachmentsd", function()
+        local ply = LocalPlayer()
+        if not IsValid(ply) then return end
+
+        MsgN("[BetterLights] Attachment and bone debug")
+
+        local trace = ply:GetEyeTrace()
+        PrintDebugAttachmentsForEntity("Looked-at entity", trace and trace.Entity)
+        PrintDebugAttachmentsForEntity("Active weapon", ply:GetActiveWeapon())
+        PrintDebugAttachmentsForEntity("Viewmodel", ply:GetViewModel())
+    end)
+
+    concommand.Add("betterlights_debug_attachments", function()
+        RunConsoleCommand("betterlights_debug_attachmentsd")
+    end)
 
     hook.Add("Think", "BetterLights_CoreThink", function()
         if not BL.IsEnabled() then return end

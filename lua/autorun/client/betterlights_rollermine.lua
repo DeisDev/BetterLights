@@ -26,16 +26,12 @@ if CLIENT then
     local rm2_r = CreateClientConVar("betterlights_rollermine_skin2_color_r", "255", true, false, "Rollermine skin2 (red) color - red (0-255)")
     local rm2_g = CreateClientConVar("betterlights_rollermine_skin2_color_g", "80", true, false, "Rollermine skin2 (red) color - green (0-255)")
     local rm2_b = CreateClientConVar("betterlights_rollermine_skin2_color_b", "80", true, false, "Rollermine skin2 (red) color - blue (0-255)")
-    local hk_r = CreateClientConVar("betterlights_rollermine_hacked_color_r", "255", true, false, "Hacked rollermine color - red (0-255)")
-    local hk_g = CreateClientConVar("betterlights_rollermine_hacked_color_g", "160", true, false, "Hacked rollermine color - green (0-255)")
-    local hk_b = CreateClientConVar("betterlights_rollermine_hacked_color_b", "60", true, false, "Hacked rollermine color - blue (0-255)")
-
     local skinColors = {
         [0] = function() return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b) end,
         [1] = function() return BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b) end,
         [2] = function() return BL.GetColorFromCvars(rm2_r, rm2_g, rm2_b) end
     }
-    
+
     local function BL_GetRollermineColor(ent)
         local colorFn = BL.DetectSkinVariant(ent, skinColors)
         if colorFn then return colorFn() end
@@ -80,7 +76,7 @@ if CLIENT then
             local r, g, b
             local size, brightness, decay, use_elight, el_mult
             if hacked then
-                r, g, b = BL.GetColorFromCvars(hk_r, hk_g, hk_b)
+                r, g, b = BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b)
                 size = math.max(0, cvar_h_size:GetFloat())
                 brightness = math.max(0, cvar_h_brightness:GetFloat())
                 decay = math.max(0, cvar_h_decay:GetFloat())
@@ -94,7 +90,7 @@ if CLIENT then
                 use_elight = cvar_models_elight:GetBool()
                 el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
             end
-            
+
             if BL.MatchesModel(ent, "roller_spikes") then
                 brightness = brightness * 2.5
                 size = size * 1.5

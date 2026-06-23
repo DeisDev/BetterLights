@@ -1,13 +1,30 @@
 if CLIENT then
     local SERVER_BOOL_MESSAGE = "BetterLights_SetServerBool"
+    local COLOR_BG = Color(245, 247, 250)
+    local COLOR_BORDER = Color(175, 185, 196)
+    local COLOR_TEXT = Color(32, 36, 40)
+    local COLOR_MUTED = Color(84, 92, 102)
+    local COLOR_ACCENT = Color(80, 150, 230)
 
     local function addResetButton(panel, defaults, label)
-        local btn = panel:Button(label or "Reset to Defaults")
+        local btn = vgui.Create("DButton")
+        btn:SetTall(30)
+        btn:SetText(label or "Reset to Defaults")
+        btn:SetTooltip("Restore the settings on this page to their default values.")
+        btn.Paint = function(self, w, h)
+            local hovered = self:IsHovered()
+            surface.SetDrawColor(hovered and Color(235, 241, 248) or Color(248, 249, 251))
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_BORDER)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
         btn.DoClick = function()
             for cvar, def in pairs(defaults) do
                 RunConsoleCommand(cvar, tostring(def))
             end
         end
+
+        panel:AddItem(btn)
     end
 
     local function addBrightnessResetButton(panel)
@@ -29,6 +46,161 @@ if CLIENT then
         resetBeamLength.DoClick = function()
             RunConsoleCommand("betterlights_flashlight_distance", "1200")
         end
+    end
+
+    local function setupPage(panel, title, subtitle)
+        panel:ClearControls()
+
+        local header = vgui.Create("DPanel")
+        header:SetTall(subtitle and subtitle ~= "" and 62 or 42)
+        header.Paint = function(_, w, h)
+            surface.SetDrawColor(COLOR_BG)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_ACCENT)
+            surface.DrawRect(0, 0, 4, h)
+            surface.SetDrawColor(COLOR_BORDER)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+
+        local titleLabel = vgui.Create("DLabel", header)
+        titleLabel:Dock(TOP)
+        titleLabel:DockMargin(12, 8, 12, 0)
+        titleLabel:SetTall(20)
+        titleLabel:SetText(title)
+        titleLabel:SetFont("DermaDefaultBold")
+        titleLabel:SetTextColor(COLOR_TEXT)
+
+        if subtitle and subtitle ~= "" then
+            local body = vgui.Create("DLabel", header)
+            body:Dock(FILL)
+            body:DockMargin(12, 0, 12, 8)
+            body:SetWrap(true)
+            body:SetText(subtitle)
+            body:SetTextColor(COLOR_MUTED)
+        end
+
+        panel:AddItem(header)
+    end
+
+    local function addSection(panel, title, subtitle, expanded)
+        local form = vgui.Create("DForm")
+        form:SetName(title)
+        form:SetExpanded(expanded ~= false)
+
+        if subtitle and subtitle ~= "" then
+            form:Help(subtitle)
+        end
+
+        panel:AddItem(form)
+        return form
+    end
+
+    local function addModelElightControls(panel, prefix, label)
+        panel:CheckBox(label or "Add model elight", prefix .. "_models_elight")
+        panel:NumSlider("Model elight radius x", prefix .. "_models_elight_size_mult", 0, 3, 2)
+    end
+
+    local function addLightControls(panel, prefix, options)
+        options = options or {}
+
+        if options.enableLabel ~= false then
+            panel:CheckBox(options.enableLabel or "Enable", prefix .. "_enable")
+        end
+
+        if options.radiusCvar or options.radiusLabel ~= false then
+            panel:NumSlider(options.radiusLabel or "Radius", options.radiusCvar or prefix .. "_size", options.radiusMin or 0, options.radiusMax or 400, options.radiusDecimals or 0)
+        end
+
+        if options.brightnessCvar or options.brightnessLabel ~= false then
+            panel:NumSlider(options.brightnessLabel or "Brightness", options.brightnessCvar or prefix .. "_brightness", options.brightnessMin or 0, options.brightnessMax or 5, options.brightnessDecimals or 2)
+        end
+
+        if options.decayLabel ~= false then
+            panel:NumSlider(options.decayLabel or "Decay", prefix .. "_decay", options.decayMin or 0, options.decayMax or 5000, options.decayDecimals or 0)
+        end
+
+        if options.modelElight then
+            addModelElightControls(panel, prefix, options.modelElightLabel)
+        end
+    end
+
+    local function addColorMixerControl(panel, label, rCvar, gCvar, bCvar, defaultR, defaultG, defaultB)
+        local container = vgui.Create("DPanel")
+        container:SetTall(254)
+        container.Paint = function(_, w, h)
+            surface.SetDrawColor(250, 251, 253)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_BORDER)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+
+        if label and label ~= "" then
+            local text = vgui.Create("DLabel", container)
+            text:Dock(TOP)
+            text:DockMargin(8, 5, 8, 0)
+            text:SetTall(18)
+            text:SetText(label)
+            text:SetFont("DermaDefaultBold")
+            text:SetTextColor(COLOR_TEXT)
+        end
+
+        local mixer = vgui.Create("DColorMixer", container)
+        mixer:Dock(FILL)
+        mixer:DockMargin(8, label and label ~= "" and 3 or 8, 8, 8)
+        mixer:SetTall(190)
+        mixer:SetPalette(true)
+        mixer:SetAlphaBar(false)
+        mixer:SetWangs(true)
+
+        local currentR = GetConVar(rCvar)
+        local currentG = GetConVar(gCvar)
+        local currentB = GetConVar(bCvar)
+        mixer:SetColor(Color(
+            currentR and currentR:GetInt() or defaultR or 255,
+            currentG and currentG:GetInt() or defaultG or 255,
+            currentB and currentB:GetInt() or defaultB or 255
+        ))
+
+        mixer.ValueChanged = function(_, color)
+            if mixer.BetterLightsUpdating then return end
+
+            RunConsoleCommand(rCvar, tostring(color.r))
+            RunConsoleCommand(gCvar, tostring(color.g))
+            RunConsoleCommand(bCvar, tostring(color.b))
+        end
+
+        mixer.Think = function()
+            local cr = GetConVar(rCvar)
+            local cg = GetConVar(gCvar)
+            local cb = GetConVar(bCvar)
+            if not (cr and cg and cb) then return end
+
+            local r = cr:GetInt()
+            local g = cg:GetInt()
+            local b = cb:GetInt()
+            local last = mixer.BetterLightsLastColor
+            if last and last.r == r and last.g == g and last.b == b then return end
+
+            mixer.BetterLightsUpdating = true
+            mixer:SetColor(Color(r, g, b))
+            mixer.BetterLightsUpdating = false
+            mixer.BetterLightsLastColor = { r = r, g = g, b = b }
+        end
+
+        local reset = vgui.Create("DButton", container)
+        reset:Dock(BOTTOM)
+        reset:DockMargin(8, 0, 8, 8)
+        reset:SetTall(26)
+        reset:SetText("Reset Color")
+        reset:SetTooltip("Restore only this color to its default value.")
+        reset.DoClick = function()
+            RunConsoleCommand(rCvar, tostring(defaultR or 255))
+            RunConsoleCommand(gCvar, tostring(defaultG or 255))
+            RunConsoleCommand(bCvar, tostring(defaultB or 255))
+        end
+
+        panel:AddItem(container)
+        return mixer
     end
 
     local function copyText(text)
@@ -238,6 +410,326 @@ if CLIENT then
         end
     end
 
+    local function normalizeVersion(version)
+        if not version then return "" end
+
+        local normalized = string.match(version, "v%d+%.%d+%.%d+")
+        if normalized then return normalized end
+
+        normalized = string.match(version, "%d+%.%d+%.%d+")
+        if normalized then return "v" .. normalized end
+
+        return string.Trim(tostring(version))
+    end
+
+    local function readChangelogJson()
+        if not file or not file.Read then return nil end
+
+        return file.Read("data_static/betterlights_changelog.json", "GAME")
+    end
+
+    local function createChangelogEntry(version)
+        return {
+            title = "Better Lights " .. version,
+            version = version,
+            items = {},
+            placeholder = true
+        }
+    end
+
+    local function parseChangelogJsonEntries(source)
+        if not source or source == "" or not util or not util.JSONToTable then return {} end
+
+        local decoded = util.JSONToTable(source)
+        if not istable(decoded) then return {} end
+
+        local entries = {}
+        for _, entry in ipairs(decoded) do
+            if istable(entry) then
+                local version = normalizeVersion(entry.version or entry.title)
+                local title = tostring(entry.title or ("Better Lights " .. version))
+                local items = {}
+
+                if istable(entry.items) then
+                    for _, item in ipairs(entry.items) do
+                        table.insert(items, tostring(item))
+                    end
+                end
+
+                table.insert(entries, {
+                    title = title,
+                    version = version,
+                    items = items
+                })
+            end
+        end
+
+        return entries
+    end
+
+    local function getChangelogEntries()
+        local currentVersion = normalizeVersion(BetterLights and BetterLights.VERSION)
+        local entries = parseChangelogJsonEntries(readChangelogJson())
+
+        local currentIndex
+
+        for index, entry in ipairs(entries) do
+            if entry.version == currentVersion then
+                currentIndex = index
+                break
+            end
+        end
+
+        if currentVersion ~= "" and not currentIndex then
+            table.insert(entries, 1, createChangelogEntry(currentVersion))
+        elseif currentIndex and currentIndex > 1 then
+            local currentEntry = table.remove(entries, currentIndex)
+            table.insert(entries, 1, currentEntry)
+        end
+
+        return entries, currentVersion
+    end
+
+    local function styleScrollBar(scrollPanel)
+        local bar = scrollPanel:GetVBar()
+        if not IsValid(bar) then return end
+
+        bar:SetWide(10)
+        bar.Paint = function(_, w, h)
+            surface.SetDrawColor(235, 239, 244)
+            surface.DrawRect(0, 0, w, h)
+        end
+        bar.btnGrip.Paint = function(_, w, h)
+            surface.SetDrawColor(150, 164, 178)
+            surface.DrawRect(2, 0, w - 4, h)
+        end
+        bar.btnUp.Paint = function(_, w, h)
+            surface.SetDrawColor(235, 239, 244)
+            surface.DrawRect(0, 0, w, h)
+        end
+        bar.btnDown.Paint = bar.btnUp.Paint
+    end
+
+    local function addChangelogText(parent, text, font, color, marginBottom)
+        local label = vgui.Create("DLabel", parent)
+        label:Dock(TOP)
+        label:DockMargin(0, 0, 8, marginBottom or 8)
+        label:SetText(text)
+        label:SetFont(font or "DermaDefault")
+        label:SetTextColor(color or COLOR_TEXT)
+        label:SetWrap(true)
+        label:SetAutoStretchVertical(true)
+        return label
+    end
+
+    local function addChangelogItem(parent, text)
+        local row = vgui.Create("DPanel", parent)
+        row:Dock(TOP)
+        row:DockMargin(0, 0, 8, 10)
+        row:SetTall(math.max(48, 36 + (math.ceil(string.len(text) / 72) - 1) * 18))
+        row.Paint = function(_, w, h)
+            surface.SetDrawColor(248, 250, 252)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(215, 223, 232)
+            surface.DrawOutlinedRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_ACCENT)
+            surface.DrawRect(0, 0, 4, h)
+        end
+
+        local label = vgui.Create("DLabel", row)
+        label:Dock(FILL)
+        label:DockMargin(18, 9, 12, 9)
+        label:SetText(text)
+        label:SetTextColor(COLOR_TEXT)
+        label:SetWrap(true)
+        label:SetAutoStretchVertical(true)
+
+        return row
+    end
+
+    local function populateChangelogDetail(panel, entry)
+        panel:Clear()
+        if not entry then return end
+
+        local canvas = panel:GetCanvas()
+        if IsValid(canvas) then
+            canvas:DockPadding(12, 12, 12, 12)
+        end
+
+        local header = vgui.Create("DPanel", panel)
+        header:Dock(TOP)
+        header:DockMargin(0, 0, 8, 12)
+        header:SetTall(98)
+        header.Paint = function(_, w, h)
+            surface.SetDrawColor(COLOR_BG)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_ACCENT)
+            surface.DrawRect(0, 0, 5, h)
+            surface.SetDrawColor(COLOR_BORDER)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+
+        local title = vgui.Create("DLabel", header)
+        title:Dock(TOP)
+        title:DockMargin(16, 12, 16, 0)
+        title:SetTall(34)
+        title:SetText(entry.title)
+        title:SetFont("DermaLarge")
+        title:SetTextColor(COLOR_TEXT)
+
+        local subtitle = vgui.Create("DLabel", header)
+        subtitle:Dock(TOP)
+        subtitle:DockMargin(16, 4, 16, 0)
+        subtitle:SetTall(24)
+        subtitle:SetText(entry.version ~= "" and ("Release notes for " .. entry.version) or "Release notes")
+        subtitle:SetTextColor(COLOR_MUTED)
+
+        if entry.placeholder then
+            addChangelogText(panel, "No changelog written yet", "DermaDefaultBold", COLOR_MUTED)
+            return
+        end
+
+        if #entry.items == 0 then
+            addChangelogText(panel, "No changelog entries found.", "DermaDefaultBold", COLOR_MUTED)
+            return
+        end
+
+        for _, item in ipairs(entry.items) do
+            addChangelogItem(panel, item)
+        end
+    end
+
+    local function openChangelogWindow()
+        local entries, currentVersion = getChangelogEntries()
+
+        local frame = vgui.Create("DFrame")
+        frame:SetTitle("Better Lights Changelog")
+        frame:SetSize(math.min(ScrW() - 80, 780), math.min(ScrH() - 80, 560))
+        frame:Center()
+        frame:MakePopup()
+
+        local body = vgui.Create("DPanel", frame)
+        body:Dock(FILL)
+        body:DockMargin(10, 10, 10, 10)
+        body.Paint = function(_, w, h)
+            surface.SetDrawColor(242, 245, 248)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_BORDER)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+
+        local footer = vgui.Create("DPanel", frame)
+        footer:Dock(BOTTOM)
+        footer:DockMargin(10, 0, 10, 10)
+        footer:SetTall(32)
+        footer.Paint = nil
+
+        local workshopChangelog = vgui.Create("DButton", footer)
+        workshopChangelog:Dock(RIGHT)
+        workshopChangelog:SetWide(190)
+        workshopChangelog:SetText("Workshop Changelog")
+        workshopChangelog:SetTooltip("Open the Steam Workshop changelog page.")
+        workshopChangelog.DoClick = function()
+            gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/changelog/3597784225")
+        end
+
+        local versions = vgui.Create("DScrollPanel", body)
+        versions:Dock(LEFT)
+        versions:DockMargin(10, 10, 0, 10)
+        versions:SetWide(196)
+        versions.Paint = function(_, w, h)
+            surface.SetDrawColor(250, 251, 253)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_BORDER)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+        versions:GetCanvas():DockPadding(8, 8, 8, 8)
+        styleScrollBar(versions)
+
+        local versionTitle = vgui.Create("DLabel", versions)
+        versionTitle:Dock(TOP)
+        versionTitle:DockMargin(0, 0, 0, 8)
+        versionTitle:SetTall(20)
+        versionTitle:SetText("Versions")
+        versionTitle:SetFont("DermaDefaultBold")
+        versionTitle:SetTextColor(COLOR_TEXT)
+
+        local detail = vgui.Create("DScrollPanel", body)
+        detail:Dock(FILL)
+        detail:DockMargin(10, 10, 10, 10)
+        detail.Paint = function(_, w, h)
+            surface.SetDrawColor(255, 255, 255)
+            surface.DrawRect(0, 0, w, h)
+            surface.SetDrawColor(COLOR_BORDER)
+            surface.DrawOutlinedRect(0, 0, w, h)
+        end
+        detail:GetCanvas():DockPadding(12, 12, 12, 12)
+        styleScrollBar(detail)
+
+        if #entries == 0 then
+            populateChangelogDetail(detail, {
+                title = "Better Lights",
+                items = { "No changelog entries found." }
+            })
+            return
+        end
+
+        local selectedButton
+        local function selectEntry(entry, button)
+            if IsValid(selectedButton) then
+                selectedButton.BetterLightsSelected = false
+            end
+
+            selectedButton = button
+            if IsValid(selectedButton) then
+                selectedButton.BetterLightsSelected = true
+            end
+
+            populateChangelogDetail(detail, entry)
+        end
+
+        local firstButton
+        local currentButton
+        local currentEntry
+
+        for _, entry in ipairs(entries) do
+            local button = vgui.Create("DButton", versions)
+            button:Dock(TOP)
+            button:DockMargin(0, 0, 0, 6)
+            button:SetTall(42)
+            button:SetText("")
+            button:SetTooltip(entry.title)
+            button.Paint = function(self, w, h)
+                local selected = self.BetterLightsSelected
+                local hovered = self:IsHovered()
+                surface.SetDrawColor(selected and Color(225, 237, 250) or hovered and Color(243, 247, 252) or Color(248, 249, 251))
+                surface.DrawRect(0, 0, w, h)
+                surface.SetDrawColor(selected and COLOR_ACCENT or COLOR_BORDER)
+                surface.DrawOutlinedRect(0, 0, w, h)
+                if selected then
+                    surface.SetDrawColor(COLOR_ACCENT)
+                    surface.DrawRect(0, 0, 4, h)
+                end
+
+                draw.SimpleText(entry.version ~= "" and entry.version or entry.title, "DermaDefaultBold", 12, 9, COLOR_TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                if entry.version == currentVersion then
+                    draw.SimpleText("Current", "DermaDefault", 12, 24, COLOR_MUTED, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                end
+            end
+            button.DoClick = function()
+                selectEntry(entry, button)
+            end
+
+            firstButton = firstButton or button
+            if entry.version == currentVersion then
+                currentButton = button
+                currentEntry = entry
+            end
+        end
+
+        selectEntry(currentEntry or entries[1], currentButton or firstButton)
+    end
+
     local function getClientDefaultSettings()
         local defaults = {}
         local files = file.Find("lua/autorun/client/betterlights_*.lua", "GAME")
@@ -289,7 +781,7 @@ if CLIENT then
     end
 
     populateFlashlightVisualPanel = function(panel, filterText)
-        panel:ClearControls()
+        setupPage(panel, "Flashlight Visuals", "Beam appearance, projected texture, and texture library tools.")
         activeFlashlightVisualPanel = panel
         activeFlashlightVisualFilter = filterText
 
@@ -298,31 +790,30 @@ if CLIENT then
             return
         end
 
-        panel:Help("Beam")
-        panel:CheckBox("Cast shadows", "betterlights_flashlight_shadows")
-        panel:CheckBox("Flicker", "betterlights_flashlight_flicker")
-        panel:CheckBox("Flashlight sway", "betterlights_flashlight_sway")
-        panel:NumSlider("Brightness", "betterlights_flashlight_brightness", 0.1, 5, 2)
-        addBrightnessResetButton(panel)
-        panel:NumSlider("FOV", "betterlights_flashlight_fov", 10, 120, 0)
-        addFovResetButton(panel)
-        panel:NumSlider("Beam length", "betterlights_flashlight_distance", 128, 4096, 0)
-        addBeamLengthResetButton(panel)
+        local beam = addSection(panel, "Beam", "Core projected texture settings.", true)
+        beam:CheckBox("Cast shadows", "betterlights_flashlight_shadows")
+        beam:CheckBox("Flicker", "betterlights_flashlight_flicker")
+        beam:CheckBox("Flashlight sway", "betterlights_flashlight_sway")
+        beam:NumSlider("Brightness", "betterlights_flashlight_brightness", 0.1, 5, 2)
+        addBrightnessResetButton(beam)
+        beam:NumSlider("FOV", "betterlights_flashlight_fov", 10, 120, 0)
+        addFovResetButton(beam)
+        beam:NumSlider("Beam length", "betterlights_flashlight_distance", 128, 4096, 0)
+        addBeamLengthResetButton(beam)
 
-        panel:Help("Texture")
-        panel:Help("Use a material path such as effects/flashlight001. You can also paste paths with materials/ or .vmt/.vtf.")
+        local texture = addSection(panel, "Texture", "Use a material path such as effects/flashlight001. You can also paste paths with materials/ or .vmt/.vtf.", true)
 
         local currentCvar = GetConVar("betterlights_flashlight_texture")
         local typedPath = currentCvar and currentCvar:GetString() or "effects/flashlight001"
         local currentPath = BetterLights.GetFlashlightTexturePath and BetterLights.GetFlashlightTexturePath() or typedPath
 
-        panel:Help("Current: " .. currentPath)
-        addCurrentTexturePreview(panel, currentPath)
+        texture:Help("Current: " .. currentPath)
+        addCurrentTexturePreview(texture, currentPath)
 
         local manualEntry = vgui.Create("DTextEntry")
         manualEntry:SetText(typedPath)
         manualEntry:SetUpdateOnType(false)
-        panel:AddItem(manualEntry)
+        texture:AddItem(manualEntry)
 
         local manualButtons = vgui.Create("DPanel")
         manualButtons:SetTall(28)
@@ -364,16 +855,16 @@ if CLIENT then
             end
         end
 
-        panel:AddItem(manualButtons)
+        texture:AddItem(manualButtons)
 
         local recent = BetterLights.GetFlashlightRecentTextures and BetterLights.GetFlashlightRecentTextures() or {}
         if #recent > 0 then
-            panel:Help("Recent")
-            addTextureGrid(panel, recent, function()
+            local recentSection = addSection(panel, "Recent Textures", nil, false)
+            addTextureGrid(recentSection, recent, function()
                 populateFlashlightVisualPanel(panel, filterText)
             end)
 
-            local clearRecent = panel:Button("Clear Recent Textures")
+            local clearRecent = recentSection:Button("Clear Recent Textures")
             clearRecent.DoClick = function()
                 if BetterLights.ClearFlashlightRecentTextures then
                     BetterLights.ClearFlashlightRecentTextures()
@@ -383,9 +874,9 @@ if CLIENT then
             end
         end
 
-        panel:Help("Known textures")
+        local knownSection = addSection(panel, "Known Textures", "Search material paths discovered by Better Lights.", false)
 
-        local refreshTextures = panel:Button("Refresh Textures")
+        local refreshTextures = knownSection:Button("Refresh Textures")
         refreshTextures.DoClick = function()
             if BetterLights.ClearFlashlightKnownTextureCache then
                 BetterLights.ClearFlashlightKnownTextureCache()
@@ -412,7 +903,7 @@ if CLIENT then
         end
 
         filter.OnEnter = applyFilter.DoClick
-        panel:AddItem(filterRow)
+        knownSection:AddItem(filterRow)
 
         local known = BetterLights.GetFlashlightKnownTextures and BetterLights.GetFlashlightKnownTextures() or {}
         local filtered = {}
@@ -425,9 +916,9 @@ if CLIENT then
         end
 
         if #filtered > 0 then
-            addTextureGrid(panel, filtered, function()
-                populateFlashlightVisualPanel(panel, filterText)
-            end)
+        addTextureGrid(knownSection, filtered, function()
+            populateFlashlightVisualPanel(panel, filterText)
+        end)
         else
             panel:Help("No matching textures found.")
         end
@@ -450,31 +941,255 @@ if CLIENT then
         end)
     end, "BetterLights_FlashlightVisualRefresh")
 
+    local WORLD_WEAPON_DEFAULTS = {
+        { slug = "crossbow", name = "Crossbow", size = 34, brightness = 0.12, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 110, b = 25 },
+        { slug = "toolgun", name = "Tool Gun", size = 42, brightness = 0.22, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 255, b = 255 },
+        { slug = "gravitygun", name = "Gravity Gun", size = 48, brightness = 0.25, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 140, b = 40 },
+        { slug = "physgun", name = "Physics Gun", size = 48, brightness = 0.25, decay = 0, elight = 1, elightMult = 1.0, r = 70, g = 130, b = 255 },
+        { slug = "medkit", name = "Medkit", size = 42, brightness = 0.22, decay = 0, elight = 1, elightMult = 1.0, r = 150, g = 255, b = 150 },
+        { slug = "bugbait", name = "Bugbait", size = 34, brightness = 0.12, decay = 0, elight = 1, elightMult = 1.0, r = 90, g = 170, b = 255 },
+        { slug = "ar2", name = "Pulse Rifle", size = 38, brightness = 0.14, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 70, b = 55 },
+        { slug = "frag", name = "Frag Grenade", size = 36, brightness = 0.2, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 40, b = 40 },
+    }
+
+    local function addWorldWeaponPanel(panel)
+        setupPage(panel, "World Weapon Pickups", "Subtle lights for spawned or dropped weapon entities. Each weapon keeps its own radius, brightness, elight, and color.")
+        local resetDefaults = {}
+
+        local defs = BetterLights and BetterLights.GetWorldWeaponLightDefinitions and BetterLights.GetWorldWeaponLightDefinitions() or WORLD_WEAPON_DEFAULTS
+
+        for _, info in ipairs(defs) do
+            local prefix = "betterlights_world_weapon_" .. info.slug
+            local form = addSection(panel, info.name, nil, false)
+            addLightControls(form, prefix, {
+                radiusMax = 300,
+                brightnessMax = 2,
+                modelElight = true,
+                modelElightLabel = "Add model elight"
+            })
+
+            addColorMixerControl(form, "Color", prefix .. "_color_r", prefix .. "_color_g", prefix .. "_color_b", info.r, info.g, info.b)
+
+            resetDefaults[prefix .. "_enable"] = 1
+            resetDefaults[prefix .. "_size"] = info.size
+            resetDefaults[prefix .. "_brightness"] = info.brightness
+            resetDefaults[prefix .. "_decay"] = info.decay
+            resetDefaults[prefix .. "_models_elight"] = info.elight
+            resetDefaults[prefix .. "_models_elight_size_mult"] = info.elightMult
+            resetDefaults[prefix .. "_color_r"] = info.r
+            resetDefaults[prefix .. "_color_g"] = info.g
+            resetDefaults[prefix .. "_color_b"] = info.b
+        end
+
+        addResetButton(panel, resetDefaults)
+    end
+
+    local AMMO_PICKUP_DEFAULTS = {
+        { slug = "ar2", name = "AR2 Ammo", enable = 1, size = 40, brightness = 0.14, decay = 0, elight = 1, elightMult = 1.0, r = 90, g = 170, b = 255 },
+        { slug = "ar2_large", name = "AR2 Ammo Large", enable = 1, size = 48, brightness = 0.16, decay = 0, elight = 1, elightMult = 1.0, r = 90, g = 170, b = 255 },
+        { slug = "ar2_alt", name = "AR2 Alt Ammo", enable = 1, size = 60, brightness = 0.25, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 220, b = 60 },
+        { slug = "smg1", name = "SMG Ammo", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "smg1_large", name = "SMG Ammo Large", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "smg1_grenade", name = "SMG Grenade", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "357", name = ".357 Ammo", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "357_large", name = ".357 Ammo Large", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "crossbow", name = "Crossbow Bolts", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "pistol", name = "Pistol Ammo", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "pistol_large", name = "Pistol Ammo Large", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "rpg_round", name = "RPG Round", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+        { slug = "buckshot", name = "Buckshot", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
+    }
+
+    local function addAmmoPickupPanel(panel)
+        setupPage(panel, "Ammo Pickups", "AR2 ammo glows by default. Other ammo pickups are off by default and can be enabled here.")
+
+        local resetDefaults = {}
+        local defs = BetterLights and BetterLights.GetAmmoPickupLightDefinitions and BetterLights.GetAmmoPickupLightDefinitions() or AMMO_PICKUP_DEFAULTS
+
+        for _, info in ipairs(defs) do
+            local prefix = "betterlights_ammo_" .. info.slug
+            local form = addSection(panel, info.name, info.enable == 0 and "Off by default." or "Enabled by default.", false)
+            addLightControls(form, prefix, {
+                radiusMax = 300,
+                brightnessMax = 2,
+                modelElight = true,
+                modelElightLabel = "Add model elight"
+            })
+            addColorMixerControl(form, "Color", prefix .. "_color_r", prefix .. "_color_g", prefix .. "_color_b", info.r, info.g, info.b)
+
+            resetDefaults[prefix .. "_enable"] = info.enable
+            resetDefaults[prefix .. "_size"] = info.size
+            resetDefaults[prefix .. "_brightness"] = info.brightness
+            resetDefaults[prefix .. "_decay"] = info.decay
+            resetDefaults[prefix .. "_models_elight"] = info.elight
+            resetDefaults[prefix .. "_models_elight_size_mult"] = info.elightMult
+            resetDefaults[prefix .. "_color_r"] = info.r
+            resetDefaults[prefix .. "_color_g"] = info.g
+            resetDefaults[prefix .. "_color_b"] = info.b
+        end
+
+        addResetButton(panel, resetDefaults)
+    end
+
+    local COMBINE_EYE_GLOW_DEFAULTS = {
+        {
+            title = "Combine Elite",
+            subtitle = "combine_super_soldier",
+            prefix = "bl_combine_soldier_elite",
+            size = 40,
+            brightness = 0.5,
+            decay = 1500,
+            r = 255,
+            g = 72,
+            b = 72
+        },
+        {
+            title = "Prison Guard - Yellow",
+            subtitle = "combine_soldier_prisonguard skin 0",
+            prefix = "bl_combine_soldier_prisonguard_yellow",
+            size = 40,
+            brightness = 0.5,
+            decay = 1500,
+            r = 255,
+            g = 220,
+            b = 70
+        },
+        {
+            title = "Prison Guard - Red",
+            subtitle = "combine_soldier_prisonguard skin 1",
+            prefix = "bl_combine_soldier_prisonguard_red",
+            size = 40,
+            brightness = 0.5,
+            decay = 1500,
+            r = 255,
+            g = 72,
+            b = 72
+        },
+        {
+            title = "Standard Soldier - Blue",
+            subtitle = "combine_soldier skin 0",
+            prefix = "bl_combine_soldier_standard_blue",
+            size = 40,
+            brightness = 0.5,
+            decay = 1500,
+            r = 95,
+            g = 150,
+            b = 255
+        },
+        {
+            title = "Standard Soldier - Orange",
+            subtitle = "combine_soldier skin 1",
+            prefix = "bl_combine_soldier_standard_orange",
+            size = 40,
+            brightness = 0.5,
+            decay = 1500,
+            r = 255,
+            g = 155,
+            b = 48
+        }
+    }
+
+    local function addCombineEyeGlowPanel(panel)
+        setupPage(panel, "Combine Soldier Eye Glow", "Eye glow colors for Combine Soldier variants and detected skins.")
+
+        local resetDefaults = {}
+
+        for _, info in ipairs(COMBINE_EYE_GLOW_DEFAULTS) do
+            local prefix = info.prefix
+            local form = addSection(panel, info.title, info.subtitle, false)
+            addLightControls(form, prefix, {
+                radiusMax = 200
+            })
+            addColorMixerControl(form, "Color", prefix .. "_color_r", prefix .. "_color_g", prefix .. "_color_b", info.r, info.g, info.b)
+
+            resetDefaults[prefix .. "_enable"] = 1
+            resetDefaults[prefix .. "_size"] = info.size
+            resetDefaults[prefix .. "_brightness"] = info.brightness
+            resetDefaults[prefix .. "_decay"] = info.decay
+            resetDefaults[prefix .. "_color_r"] = info.r
+            resetDefaults[prefix .. "_color_g"] = info.g
+            resetDefaults[prefix .. "_color_b"] = info.b
+        end
+
+        addResetButton(panel, resetDefaults)
+    end
+
+    local ROLLERMINE_DEFAULTS = {
+        {
+            title = "Rollermines",
+            subtitle = "Shared settings for npc_rollermine lights. Colors are chosen from the rollermine skin.",
+            prefix = "betterlights_rollermine",
+            size = 110,
+            brightness = 0.6,
+            decay = 2000,
+            elight = 1,
+            elightMult = 1.0,
+            colors = {
+                { label = "Default Rollermine - Blue", suffix = "color", r = 110, g = 190, b = 255 },
+                { label = "Hacked Rollermine - Yellow", suffix = "skin1_color", r = 255, g = 220, b = 60 },
+                { label = "Hostile Rollermine - Red", suffix = "skin2_color", r = 255, g = 80, b = 80 }
+            }
+        }
+    }
+
+    local function addRollerminePanel(panel)
+        setupPage(panel, "Rollermines", "Glow for rollermines and their color variants. The chosen color gets brighter when it attacks.")
+
+        local resetDefaults = {}
+
+        for _, info in ipairs(ROLLERMINE_DEFAULTS) do
+            local prefix = info.prefix
+            local form = addSection(panel, info.title, info.subtitle, true)
+            addLightControls(form, prefix, {
+                radiusMax = 400,
+                modelElight = true,
+                modelElightLabel = "Add model elight"
+            })
+
+            resetDefaults[prefix .. "_enable"] = 1
+            resetDefaults[prefix .. "_size"] = info.size
+            resetDefaults[prefix .. "_brightness"] = info.brightness
+            resetDefaults[prefix .. "_decay"] = info.decay
+            resetDefaults[prefix .. "_models_elight"] = info.elight
+            resetDefaults[prefix .. "_models_elight_size_mult"] = info.elightMult
+
+            if info.colors then
+                for _, colorInfo in ipairs(info.colors) do
+                    local colorPrefix = prefix .. "_" .. colorInfo.suffix
+                    addColorMixerControl(form, colorInfo.label, colorPrefix .. "_r", colorPrefix .. "_g", colorPrefix .. "_b", colorInfo.r, colorInfo.g, colorInfo.b)
+                    resetDefaults[colorPrefix .. "_r"] = colorInfo.r
+                    resetDefaults[colorPrefix .. "_g"] = colorInfo.g
+                    resetDefaults[colorPrefix .. "_b"] = colorInfo.b
+                end
+            end
+        end
+
+        addResetButton(panel, resetDefaults)
+    end
+
     local function addClientPanels()
         spawnmenu.AddToolMenuOption("Better Lights", "General", "BL_Admin", "Admin", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Global addon control")
-            panel:Help("Server settings require admin access.")
-            addServerBoolCheckbox(panel, "Enable Better Lights", "betterlights_enable")
-            addServerBoolResetButton(panel, {
+            setupPage(panel, "Better Lights", "Global controls and maintenance tools. Server settings require admin access.")
+
+            local server = addSection(panel, "Server", "Controls the addon globally for this server.", true)
+            addServerBoolCheckbox(server, "Enable Better Lights", "betterlights_enable")
+            addServerBoolResetButton(server, {
                 betterlights_enable = 1,
             })
-            local resetAllBtn = panel:Button("Reset All Better Lights Settings")
+
+            local maintenance = addSection(panel, "Maintenance", "Reset local client options, cached flashlight textures, and global enable state.", true)
+            local resetAllBtn = maintenance:Button("Reset All Better Lights Settings")
             resetAllBtn.DoClick = resetAllSettings
-            panel:Help("Optional bind command: betterlights_toggle")
+            maintenance:Help("Optional bind command: betterlights_toggle")
         end)
 
         spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_CombineBall", "Combine AR2 Orb", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Blue/cyan light for prop_combine_ball")
+            setupPage(panel, "Combine AR2 Orb", "Blue/cyan light for prop_combine_ball.")
             panel:CheckBox("Enable", "betterlights_combineball_enable")
             panel:NumSlider("Radius", "betterlights_combineball_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_combineball_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_combineball_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_combineball_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_combineball_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_combineball_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_combineball_color_r", "betterlights_combineball_color_g", "betterlights_combineball_color_b")
             addResetButton(panel, {
                 betterlights_combineball_enable = 1,
                 betterlights_combineball_size = 320,
@@ -487,23 +1202,25 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Gunfire", "BL_BulletImpacts", "Bullet Impacts", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle flashes when bullets hit surfaces. AR2 impacts use a blue tint; others use warm orange.")
-            panel:CheckBox("Enable", "betterlights_bullet_impact_enable")
-            panel:NumSlider("Generic radius", "betterlights_bullet_impact_size", 0, 300, 0)
-            panel:NumSlider("Generic brightness", "betterlights_bullet_impact_brightness", 0, 2, 2)
-            panel:Help("Generic Color (RGB)")
-            panel:NumSlider("Red", "betterlights_bullet_impact_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_bullet_impact_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_bullet_impact_color_b", 0, 255, 0)
-            panel:Help("AR2 (Combine Rifle) overrides")
-            panel:CheckBox("Enable AR2 tint", "betterlights_bullet_impact_ar2_enable")
-            panel:NumSlider("AR2 radius", "betterlights_bullet_impact_ar2_size", 0, 300, 0)
-            panel:NumSlider("AR2 brightness", "betterlights_bullet_impact_ar2_brightness", 0, 2, 2)
-            panel:Help("AR2 Color (RGB)")
-            panel:NumSlider("Red", "betterlights_bullet_impact_ar2_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_bullet_impact_ar2_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_bullet_impact_ar2_color_b", 0, 255, 0)
+            setupPage(panel, "Bullet Impacts", "Subtle flashes when bullets hit surfaces. AR2 impacts can use their own blue tint.")
+            local generic = addSection(panel, "Generic Impacts", "Used for most bullet impact flashes.", true)
+            addLightControls(generic, "betterlights_bullet_impact", {
+                radiusMax = 300,
+                brightnessMax = 2,
+                decayLabel = false
+            })
+            addColorMixerControl(generic, "Color", "betterlights_bullet_impact_color_r", "betterlights_bullet_impact_color_g", "betterlights_bullet_impact_color_b")
+
+            local ar2 = addSection(panel, "AR2 Impacts", "Optional Combine Rifle tint override.", true)
+            addLightControls(ar2, "betterlights_bullet_impact_ar2", {
+                enableLabel = "Enable AR2 tint",
+                radiusLabel = "Radius",
+                radiusMax = 300,
+                brightnessLabel = "Brightness",
+                brightnessMax = 2,
+                decayLabel = false
+            })
+            addColorMixerControl(ar2, "Color", "betterlights_bullet_impact_ar2_color_r", "betterlights_bullet_impact_ar2_color_g", "betterlights_bullet_impact_ar2_color_b")
             addResetButton(panel, {
                 betterlights_bullet_impact_enable = 1,
                 betterlights_bullet_impact_size = 60,
@@ -521,23 +1238,23 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Gunfire", "BL_MuzzleFlash", "Muzzle Flash", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Brief flash at the muzzle when a weapon fires. AR2 uses a blue tint.")
-            panel:CheckBox("Enable", "betterlights_muzzle_enable")
-            panel:NumSlider("Generic radius", "betterlights_muzzle_size", 0, 300, 0)
-            panel:NumSlider("Generic brightness", "betterlights_muzzle_brightness", 0, 2, 2)
-            panel:Help("Generic Color (RGB)")
-            panel:NumSlider("Red", "betterlights_muzzle_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_muzzle_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_muzzle_color_b", 0, 255, 0)
-            panel:Help("AR2 (Combine Rifle) overrides")
-            panel:CheckBox("Enable AR2 tint", "betterlights_muzzle_ar2_enable")
-            panel:NumSlider("AR2 radius", "betterlights_muzzle_ar2_size", 0, 300, 0)
-            panel:NumSlider("AR2 brightness", "betterlights_muzzle_ar2_brightness", 0, 2, 2)
-            panel:Help("AR2 Color (RGB)")
-            panel:NumSlider("Red", "betterlights_muzzle_ar2_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_muzzle_ar2_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_muzzle_ar2_color_b", 0, 255, 0)
+            setupPage(panel, "Muzzle Flash", "Brief light at the muzzle when a weapon fires. AR2 muzzle flashes can use their own tint.")
+            local generic = addSection(panel, "Generic Muzzle Flash", nil, true)
+            addLightControls(generic, "betterlights_muzzle", {
+                radiusMax = 300,
+                brightnessMax = 2,
+                decayLabel = false
+            })
+            addColorMixerControl(generic, "Color", "betterlights_muzzle_color_r", "betterlights_muzzle_color_g", "betterlights_muzzle_color_b")
+
+            local ar2 = addSection(panel, "AR2 Muzzle Flash", "Optional Combine Rifle tint override.", true)
+            addLightControls(ar2, "betterlights_muzzle_ar2", {
+                enableLabel = "Enable AR2 tint",
+                radiusMax = 300,
+                brightnessMax = 2,
+                decayLabel = false
+            })
+            addColorMixerControl(ar2, "Color", "betterlights_muzzle_ar2_color_r", "betterlights_muzzle_ar2_color_g", "betterlights_muzzle_ar2_color_b")
             addResetButton(panel, {
                 betterlights_muzzle_enable = 1,
                 betterlights_muzzle_size = 250,
@@ -555,16 +1272,12 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Bolt", "Crossbow Bolt", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Warm orange light for crossbow bolts")
+            setupPage(panel, "Crossbow Bolt", "Warm orange light for crossbow bolts.")
             panel:CheckBox("Enable", "betterlights_bolt_enable")
             panel:NumSlider("Radius", "betterlights_bolt_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_bolt_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_bolt_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_bolt_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_bolt_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_bolt_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_bolt_color_r", "betterlights_bolt_color_g", "betterlights_bolt_color_b")
             addResetButton(panel, {
                 betterlights_bolt_enable = 1,
                 betterlights_bolt_size = 220,
@@ -577,16 +1290,12 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_CrossbowHeld", "Crossbow (Held)", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle orange light while holding the Crossbow")
+            setupPage(panel, "Crossbow (Held)", "Subtle orange light while holding the Crossbow.")
             panel:CheckBox("Enable", "betterlights_crossbow_hold_enable")
             panel:NumSlider("Radius", "betterlights_crossbow_hold_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_crossbow_hold_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_crossbow_hold_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_crossbow_hold_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_crossbow_hold_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_crossbow_hold_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_crossbow_hold_color_r", "betterlights_crossbow_hold_color_g", "betterlights_crossbow_hold_color_b")
             addResetButton(panel, {
                 betterlights_crossbow_hold_enable = 1,
                 betterlights_crossbow_hold_size = 30,
@@ -598,17 +1307,21 @@ if CLIENT then
             })
         end)
 
+    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_WorldWeapons", "World Weapons", "", "", function(panel)
+            addWorldWeaponPanel(panel)
+        end)
+
+    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_AmmoPickups", "Ammo Pickups", "", "", function(panel)
+            addAmmoPickupPanel(panel)
+        end)
+
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_RPG", "RPG Rocket", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Warm flame light for RPG rockets in flight")
+            setupPage(panel, "RPG Rocket", "Warm flame light for RPG rockets in flight.")
             panel:CheckBox("Enable", "betterlights_rpg_enable")
             panel:NumSlider("Radius", "betterlights_rpg_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_rpg_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_rpg_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_rpg_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_rpg_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_rpg_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_rpg_color_r", "betterlights_rpg_color_g", "betterlights_rpg_color_b")
             addResetButton(panel, {
                 betterlights_rpg_enable = 1,
                 betterlights_rpg_size = 280,
@@ -621,25 +1334,20 @@ if CLIENT then
         end)
 
         spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_AntlionSpit", "Antlion Spit", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Acid-green glow on Antlion Worker spit (grenade_spit) and a small flash on impact")
-            panel:CheckBox("Enable glow", "betterlights_antlion_spit_enable")
-            panel:NumSlider("Glow radius", "betterlights_antlion_spit_size", 0, 400, 0)
-            panel:NumSlider("Glow brightness", "betterlights_antlion_spit_brightness", 0, 5, 2)
-            panel:NumSlider("Glow decay", "betterlights_antlion_spit_decay", 0, 5000, 0)
-            panel:Help("Glow Color (RGB)")
-            panel:NumSlider("Red", "betterlights_antlion_spit_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_antlion_spit_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_antlion_spit_color_b", 0, 255, 0)
-            panel:Help("Impact Flash")
-            panel:CheckBox("Flash on impact", "betterlights_antlion_spit_flash_enable")
-            panel:NumSlider("Flash radius", "betterlights_antlion_spit_flash_size", 0, 800, 0)
-            panel:NumSlider("Flash brightness", "betterlights_antlion_spit_flash_brightness", 0, 10, 2)
-            panel:NumSlider("Flash time (s)", "betterlights_antlion_spit_flash_time", 0, 1, 2)
-            panel:Help("Flash Color (RGB)")
-            panel:NumSlider("Red", "betterlights_antlion_spit_flash_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_antlion_spit_flash_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_antlion_spit_flash_color_b", 0, 255, 0)
+            setupPage(panel, "Antlion Spit", "Acid-green glow on Antlion Worker spit with a small impact flash.")
+            local glow = addSection(panel, "In-Flight Glow", "grenade_spit while it is moving.", true)
+            glow:CheckBox("Enable glow", "betterlights_antlion_spit_enable")
+            glow:NumSlider("Radius", "betterlights_antlion_spit_size", 0, 400, 0)
+            glow:NumSlider("Brightness", "betterlights_antlion_spit_brightness", 0, 5, 2)
+            glow:NumSlider("Decay", "betterlights_antlion_spit_decay", 0, 5000, 0)
+            addColorMixerControl(glow, "Glow Color", "betterlights_antlion_spit_color_r", "betterlights_antlion_spit_color_g", "betterlights_antlion_spit_color_b")
+
+            local flash = addSection(panel, "Impact Flash", nil, true)
+            flash:CheckBox("Flash on impact", "betterlights_antlion_spit_flash_enable")
+            flash:NumSlider("Radius", "betterlights_antlion_spit_flash_size", 0, 800, 0)
+            flash:NumSlider("Brightness", "betterlights_antlion_spit_flash_brightness", 0, 10, 2)
+            flash:NumSlider("Duration", "betterlights_antlion_spit_flash_time", 0, 1, 2)
+            addColorMixerControl(flash, "Flash Color", "betterlights_antlion_spit_flash_color_r", "betterlights_antlion_spit_flash_color_g", "betterlights_antlion_spit_flash_color_b")
             addResetButton(panel, {
                 betterlights_antlion_spit_enable = 1,
                 betterlights_antlion_spit_size = 100,
@@ -659,18 +1367,14 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Fire", "Burning Entities", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Light for entities on fire, with optional flicker and model-only elight")
+            setupPage(panel, "Burning Entities", "Light for entities on fire, with optional flicker and model-only elight.")
             panel:CheckBox("Enable", "betterlights_fire_enable")
             panel:NumSlider("Radius", "betterlights_fire_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_fire_brightness", 0, 10, 2)
             panel:NumSlider("Decay", "betterlights_fire_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_fire_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_fire_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_fire_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_fire_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_fire_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_fire_color_r", "betterlights_fire_color_g", "betterlights_fire_color_b")
             panel:CheckBox("Flicker", "betterlights_fire_flicker_enable")
             panel:NumSlider("Flicker amount", "betterlights_fire_flicker_amount", 0, 1, 2)
             panel:NumSlider("Flicker size amt", "betterlights_fire_flicker_size_amount", 0, 1, 2)
@@ -693,8 +1397,7 @@ if CLIENT then
         end)
 
         spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Explosions", "Explosion Flash (Generic)", "", "", function(panel)
-                panel:ClearControls()
-                panel:Help("Brief flash when generic explosions occur (env_explosion, explosive barrels)")
+                setupPage(panel, "Explosion Flash", "Brief flash when generic explosions occur, such as env_explosion or explosive barrels.")
                 panel:CheckBox("Enable", "betterlights_explosion_flash_enable")
                 panel:NumSlider("Radius", "betterlights_explosion_flash_size", 0, 800, 0)
                 panel:NumSlider("Brightness", "betterlights_explosion_flash_brightness", 0, 10, 2)
@@ -702,10 +1405,7 @@ if CLIENT then
                 panel:Help("Detection")
                 panel:CheckBox("Detect env_* explosion entities", "betterlights_explosion_detect_env")
                 panel:CheckBox("Detect explosive barrels", "betterlights_explosion_detect_barrels")
-                panel:Help("Color (RGB)")
-                panel:NumSlider("Red", "betterlights_explosion_flash_color_r", 0, 255, 0)
-                panel:NumSlider("Green", "betterlights_explosion_flash_color_g", 0, 255, 0)
-                panel:NumSlider("Blue", "betterlights_explosion_flash_color_b", 0, 255, 0)
+                addColorMixerControl(panel, "Color", "betterlights_explosion_flash_color_r", "betterlights_explosion_flash_color_g", "betterlights_explosion_flash_color_b")
                 addResetButton(panel, {
                     betterlights_explosion_flash_enable = 1,
                     betterlights_explosion_flash_size = 380,
@@ -719,18 +1419,14 @@ if CLIENT then
                 })
             end)
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Grenade", "Frag Grenade", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Dim red light for thrown frag grenades")
+            setupPage(panel, "Frag Grenade", "Dim red light for thrown frag grenades.")
             panel:CheckBox("Enable", "betterlights_grenade_enable")
             panel:NumSlider("Radius", "betterlights_grenade_size", 0, 400, 0)
             panel:NumSlider("Brightness", "betterlights_grenade_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_grenade_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_grenade_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_grenade_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_grenade_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_grenade_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_grenade_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_grenade_color_r", "betterlights_grenade_color_g", "betterlights_grenade_color_b")
             addResetButton(panel, {
                 betterlights_grenade_enable = 1,
                 betterlights_grenade_size = 80,
@@ -745,30 +1441,26 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CombineMine", "Combine Mine", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Idle blue glow; red alert glow when you're within range")
-            panel:CheckBox("Enable", "betterlights_combine_mine_enable")
-            panel:NumSlider("Alert radius (units)", "betterlights_combine_mine_range", 0, 1024, 0)
-            panel:NumSlider("Alert radius size", "betterlights_combine_mine_size", 0, 400, 0)
-            panel:NumSlider("Alert brightness", "betterlights_combine_mine_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "betterlights_combine_mine_decay", 0, 5000, 0)
-            panel:CheckBox("Idle glow", "betterlights_combine_mine_idle_enable")
-            panel:NumSlider("Idle radius size", "betterlights_combine_mine_idle_size", 0, 400, 0)
-            panel:NumSlider("Idle brightness", "betterlights_combine_mine_idle_brightness", 0, 2, 2)
-            panel:Help("Colors (RGB)")
-            panel:Help("Idle Color")
-            panel:NumSlider("Idle Red", "betterlights_combine_mine_idle_color_r", 0, 255, 0)
-            panel:NumSlider("Idle Green", "betterlights_combine_mine_idle_color_g", 0, 255, 0)
-            panel:NumSlider("Idle Blue", "betterlights_combine_mine_idle_color_b", 0, 255, 0)
-            panel:Help("Alert Color")
-            panel:NumSlider("Alert Red", "betterlights_combine_mine_alert_color_r", 0, 255, 0)
-            panel:NumSlider("Alert Green", "betterlights_combine_mine_alert_color_g", 0, 255, 0)
-            panel:NumSlider("Alert Blue", "betterlights_combine_mine_alert_color_b", 0, 255, 0)
-            panel:CheckBox("Pulse on alert", "betterlights_combine_mine_pulse_enable")
-            panel:NumSlider("Pulse amount", "betterlights_combine_mine_pulse_amount", 0, 1, 2)
-            panel:NumSlider("Pulse speed", "betterlights_combine_mine_pulse_speed", 0, 30, 1)
-            panel:CheckBox("Add model elight", "betterlights_combine_mine_models_elight")
-            panel:NumSlider("Model elight radius x", "betterlights_combine_mine_models_elight_size_mult", 0, 3, 2)
+            setupPage(panel, "Combine Mine", "Idle blue glow with a red alert glow when you are within range.")
+            local alert = addSection(panel, "Alert Glow", "Visible when the mine is armed or a player is nearby.", true)
+            alert:CheckBox("Enable", "betterlights_combine_mine_enable")
+            alert:NumSlider("Detection range", "betterlights_combine_mine_range", 0, 1024, 0)
+            alert:NumSlider("Radius", "betterlights_combine_mine_size", 0, 400, 0)
+            alert:NumSlider("Brightness", "betterlights_combine_mine_brightness", 0, 5, 2)
+            alert:NumSlider("Decay", "betterlights_combine_mine_decay", 0, 5000, 0)
+            addColorMixerControl(alert, "Alert Color", "betterlights_combine_mine_alert_color_r", "betterlights_combine_mine_alert_color_g", "betterlights_combine_mine_alert_color_b")
+
+            local idle = addSection(panel, "Idle Glow", "Low blue light while the mine is idle.", false)
+            idle:CheckBox("Idle glow", "betterlights_combine_mine_idle_enable")
+            idle:NumSlider("Radius", "betterlights_combine_mine_idle_size", 0, 400, 0)
+            idle:NumSlider("Brightness", "betterlights_combine_mine_idle_brightness", 0, 2, 2)
+            addColorMixerControl(idle, "Idle Color", "betterlights_combine_mine_idle_color_r", "betterlights_combine_mine_idle_color_g", "betterlights_combine_mine_idle_color_b")
+
+            local behavior = addSection(panel, "Pulse and Model Light", nil, false)
+            behavior:CheckBox("Pulse on alert", "betterlights_combine_mine_pulse_enable")
+            behavior:NumSlider("Pulse amount", "betterlights_combine_mine_pulse_amount", 0, 1, 2)
+            behavior:NumSlider("Pulse speed", "betterlights_combine_mine_pulse_speed", 0, 30, 1)
+            addModelElightControls(behavior, "betterlights_combine_mine", "Add model elight")
             addResetButton(panel, {
                 betterlights_combine_mine_enable = 1,
                 betterlights_combine_mine_range = 260,
@@ -793,18 +1485,12 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CombineMineResistance", "Resistance Mine", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Idle blue glow; green alert glow when you're within range")
+            setupPage(panel, "Resistance Mine", "Friendly mine alert glow. Uses the hostile Combine Mine range and idle settings.")
             panel:CheckBox("Enable", "betterlights_combine_mine_resistance_enable")
-            panel:Help("Alert Settings")
             panel:NumSlider("Alert radius size", "betterlights_combine_mine_resistance_size", 0, 400, 0)
             panel:NumSlider("Alert brightness", "betterlights_combine_mine_resistance_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_combine_mine_resistance_decay", 0, 5000, 0)
-            panel:Help("Alert Color (RGB)")
-            panel:NumSlider("Red", "betterlights_combine_mine_resistance_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_combine_mine_resistance_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_combine_mine_resistance_color_b", 0, 255, 0)
-            panel:Help("Note: Uses same detection range and idle settings as hostile Combine Mine")
+            addColorMixerControl(panel, "Alert Color", "betterlights_combine_mine_resistance_color_r", "betterlights_combine_mine_resistance_color_g", "betterlights_combine_mine_resistance_color_b")
             addResetButton(panel, {
                 betterlights_combine_mine_resistance_enable = 1,
                 betterlights_combine_mine_resistance_size = 140,
@@ -817,8 +1503,7 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_Physgun", "Physics Gun", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Light that matches your Weapon Color; wall-safe world placement")
+            setupPage(panel, "Physics Gun", "Light that matches your Weapon Color, with optional override color.")
             panel:CheckBox("Enable", "betterlights_physgun_enable")
             panel:NumSlider("Radius", "betterlights_physgun_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_physgun_brightness", 0, 5, 2)
@@ -826,10 +1511,7 @@ if CLIENT then
             panel:CheckBox("Add model elight", "betterlights_physgun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_physgun_models_elight_size_mult", 0, 3, 2)
             panel:CheckBox("Override Weapon Color", "betterlights_physgun_color_override")
-            panel:Help("Override Color (RGB)")
-            panel:NumSlider("Red", "betterlights_physgun_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_physgun_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_physgun_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Override Color", "betterlights_physgun_color_r", "betterlights_physgun_color_g", "betterlights_physgun_color_b")
             addResetButton(panel, {
                 betterlights_physgun_enable = 1,
                 betterlights_physgun_size = 33,
@@ -845,22 +1527,15 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_GravityGun", "Gravity Gun", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Warm orange light from the physcannon; wall-safe world placement")
+            setupPage(panel, "Gravity Gun", "Warm orange physcannon light with a separate supercharged color.")
             panel:CheckBox("Enable", "betterlights_gravitygun_enable")
             panel:NumSlider("Radius", "betterlights_gravitygun_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_gravitygun_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_gravitygun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_gravitygun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_gravitygun_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_gravitygun_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_gravitygun_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_gravitygun_color_b", 0, 255, 0)
-            panel:Help("Supercharged Color (RGB)")
-            panel:NumSlider("Red", "betterlights_gravitygun_super_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_gravitygun_super_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_gravitygun_super_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_gravitygun_color_r", "betterlights_gravitygun_color_g", "betterlights_gravitygun_color_b")
+            addColorMixerControl(panel, "Supercharged Color", "betterlights_gravitygun_super_color_r", "betterlights_gravitygun_super_color_g", "betterlights_gravitygun_super_color_b")
             addResetButton(panel, {
                 betterlights_gravitygun_enable = 1,
                 betterlights_gravitygun_size = 36,
@@ -878,16 +1553,12 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_RPG_Held", "RPG (Held)", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle red light at the laser dot and on your left hand (ValveBiped.Bip01_L_Hand)")
+            setupPage(panel, "RPG (Held)", "Subtle red light at the laser dot and on your left hand.")
             panel:CheckBox("Enable", "betterlights_rpg_hold_enable")
             panel:NumSlider("Radius", "betterlights_rpg_hold_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_rpg_hold_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_rpg_hold_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_rpg_hold_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_rpg_hold_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_rpg_hold_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_rpg_hold_color_r", "betterlights_rpg_hold_color_g", "betterlights_rpg_hold_color_b")
             addResetButton(panel, {
                 betterlights_rpg_hold_enable = 1,
                 betterlights_rpg_hold_size = 24,
@@ -900,18 +1571,14 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_ToolGun", "Tool Gun", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Small white light at the tip; wall-safe world placement")
+            setupPage(panel, "Tool Gun", "Small white light at the muzzle with wall-safe placement.")
             panel:CheckBox("Enable", "betterlights_toolgun_enable")
             panel:NumSlider("Radius", "betterlights_toolgun_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_toolgun_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_toolgun_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_toolgun_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_toolgun_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_toolgun_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_toolgun_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_toolgun_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_toolgun_color_r", "betterlights_toolgun_color_g", "betterlights_toolgun_color_b")
             addResetButton(panel, {
                 betterlights_toolgun_enable = 1,
                 betterlights_toolgun_size = 28,
@@ -926,11 +1593,11 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightGeneral", "General", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Flashlight replacement")
-            panel:CheckBox("Replace my flashlight with BetterLights", "betterlights_flashlight_player_enable")
-            panel:CheckBox("Use BetterLights flashlight sounds", "betterlights_flashlight_custom_sounds")
-            panel:Help("Disable this to use vanilla flashlight sound events, including Workshop sound replacements.")
+            setupPage(panel, "Player Flashlight", "Replacement flashlight controls. Server and gamemode flashlight rules are still respected.")
+            local behavior = addSection(panel, "Behavior", nil, true)
+            behavior:CheckBox("Replace my flashlight with Better Lights", "betterlights_flashlight_player_enable")
+            behavior:CheckBox("Use Better Lights flashlight sounds", "betterlights_flashlight_custom_sounds")
+            behavior:Help("Disable custom sounds to use vanilla flashlight sound events, including Workshop sound replacements.")
             addResetButton(panel, {
                 betterlights_flashlight_player_enable = 0,
                 betterlights_flashlight_custom_sounds = 1,
@@ -938,14 +1605,17 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightPosition", "Position", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Beam position")
-            panel:CheckBox("Attach beam to weapon", "betterlights_flashlight_weapon_attachment")
-            panel:Help("When disabled, the flashlight uses your eye position instead.")
-            panel:NumSlider("Attached side offset", "betterlights_flashlight_attachment_offset", -24, 24, 1)
-            panel:NumSlider("Fallback side offset", "betterlights_flashlight_fallback_offset", -24, 24, 1)
+            setupPage(panel, "Flashlight Position", "Fine tune where the player flashlight starts from.")
+            local origin = addSection(panel, "Origin", nil, true)
+            origin:CheckBox("Attach beam to weapon", "betterlights_flashlight_weapon_attachment")
+            origin:Help("When disabled, the flashlight uses your eye position instead.")
+            origin:NumSlider("Forward offset", "betterlights_flashlight_forward_offset", -32, 96, 1)
+            origin:Help("This value is added on top of the default beam position.")
+            origin:NumSlider("Attached side offset", "betterlights_flashlight_attachment_offset", -24, 24, 1)
+            origin:NumSlider("Fallback side offset", "betterlights_flashlight_fallback_offset", -24, 24, 1)
             addResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
+                betterlights_flashlight_forward_offset = 0,
                 betterlights_flashlight_attachment_offset = 2,
                 betterlights_flashlight_fallback_offset = 8,
             })
@@ -960,27 +1630,21 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_HeliBomb", "Helicopter Bomb", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Red glow on helicopter bombs and a brief flash on explosion")
-            panel:CheckBox("Enable", "betterlights_heli_bomb_enable")
-            panel:NumSlider("Radius", "betterlights_heli_bomb_size", 0, 400, 0)
-            panel:NumSlider("Brightness", "betterlights_heli_bomb_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "betterlights_heli_bomb_decay", 0, 5000, 0)
-            panel:CheckBox("Add model elight", "betterlights_heli_bomb_models_elight")
-            panel:NumSlider("Model elight radius x", "betterlights_heli_bomb_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Glow Color (RGB)")
-            panel:NumSlider("Red", "betterlights_heli_bomb_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_heli_bomb_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_heli_bomb_color_b", 0, 255, 0)
-            panel:Help("Explosion Flash")
-            panel:CheckBox("Flash on explosion", "betterlights_heli_bomb_flash_enable")
-            panel:NumSlider("Flash radius", "betterlights_heli_bomb_flash_size", 0, 800, 0)
-            panel:NumSlider("Flash brightness", "betterlights_heli_bomb_flash_brightness", 0, 10, 2)
-            panel:NumSlider("Flash time (s)", "betterlights_heli_bomb_flash_time", 0, 1, 2)
-            panel:Help("Flash Color (RGB)")
-            panel:NumSlider("Red", "betterlights_heli_bomb_flash_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_heli_bomb_flash_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_heli_bomb_flash_color_b", 0, 255, 0)
+            setupPage(panel, "Helicopter Bomb", "Red glow on helicopter bombs with a brief explosion flash.")
+            local glow = addSection(panel, "Bomb Glow", nil, true)
+            addLightControls(glow, "betterlights_heli_bomb", {
+                radiusMax = 400,
+                modelElight = true,
+                modelElightLabel = "Add model elight"
+            })
+            addColorMixerControl(glow, "Glow Color", "betterlights_heli_bomb_color_r", "betterlights_heli_bomb_color_g", "betterlights_heli_bomb_color_b")
+
+            local flash = addSection(panel, "Explosion Flash", nil, true)
+            flash:CheckBox("Flash on explosion", "betterlights_heli_bomb_flash_enable")
+            flash:NumSlider("Radius", "betterlights_heli_bomb_flash_size", 0, 800, 0)
+            flash:NumSlider("Brightness", "betterlights_heli_bomb_flash_brightness", 0, 10, 2)
+            flash:NumSlider("Duration", "betterlights_heli_bomb_flash_time", 0, 1, 2)
+            addColorMixerControl(flash, "Flash Color", "betterlights_heli_bomb_flash_color_r", "betterlights_heli_bomb_flash_color_g", "betterlights_heli_bomb_flash_color_b")
             addResetButton(panel, {
                 betterlights_heli_bomb_enable = 1,
                 betterlights_heli_bomb_size = 140,
@@ -1002,27 +1666,21 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Magnusson", "Magnusson Device", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Light blue glow on Magnusson devices and a brief flash on explosion")
-            panel:CheckBox("Enable", "betterlights_magnusson_enable")
-            panel:NumSlider("Radius", "betterlights_magnusson_size", 0, 400, 0)
-            panel:NumSlider("Brightness", "betterlights_magnusson_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "betterlights_magnusson_decay", 0, 5000, 0)
-            panel:CheckBox("Add model elight", "betterlights_magnusson_models_elight")
-            panel:NumSlider("Model elight radius x", "betterlights_magnusson_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Glow Color (RGB)")
-            panel:NumSlider("Red", "betterlights_magnusson_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_magnusson_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_magnusson_color_b", 0, 255, 0)
-            panel:Help("Explosion Flash")
-            panel:CheckBox("Flash on explosion", "betterlights_magnusson_flash_enable")
-            panel:NumSlider("Flash radius", "betterlights_magnusson_flash_size", 0, 800, 0)
-            panel:NumSlider("Flash brightness", "betterlights_magnusson_flash_brightness", 0, 10, 2)
-            panel:NumSlider("Flash time (s)", "betterlights_magnusson_flash_time", 0, 1, 2)
-            panel:Help("Flash Color (RGB)")
-            panel:NumSlider("Red", "betterlights_magnusson_flash_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_magnusson_flash_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_magnusson_flash_color_b", 0, 255, 0)
+            setupPage(panel, "Magnusson Device", "Light blue glow on Magnusson devices with a brief explosion flash.")
+            local glow = addSection(panel, "Device Glow", nil, true)
+            addLightControls(glow, "betterlights_magnusson", {
+                radiusMax = 400,
+                modelElight = true,
+                modelElightLabel = "Add model elight"
+            })
+            addColorMixerControl(glow, "Glow Color", "betterlights_magnusson_color_r", "betterlights_magnusson_color_g", "betterlights_magnusson_color_b")
+
+            local flash = addSection(panel, "Explosion Flash", nil, true)
+            flash:CheckBox("Flash on explosion", "betterlights_magnusson_flash_enable")
+            flash:NumSlider("Radius", "betterlights_magnusson_flash_size", 0, 800, 0)
+            flash:NumSlider("Brightness", "betterlights_magnusson_flash_brightness", 0, 10, 2)
+            flash:NumSlider("Duration", "betterlights_magnusson_flash_time", 0, 1, 2)
+            addColorMixerControl(flash, "Flash Color", "betterlights_magnusson_flash_color_r", "betterlights_magnusson_flash_color_g", "betterlights_magnusson_flash_color_b")
             addResetButton(panel, {
                 betterlights_magnusson_enable = 1,
                 betterlights_magnusson_size = 130,
@@ -1044,18 +1702,14 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Manhack", "Manhack", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Red glow for Combine Manhacks")
+            setupPage(panel, "Manhack", "Red glow for Combine Manhacks.")
             panel:CheckBox("Enable", "betterlights_manhack_enable")
             panel:NumSlider("Radius", "betterlights_manhack_size", 0, 400, 0)
             panel:NumSlider("Brightness", "betterlights_manhack_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_manhack_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_manhack_models_elight")
             panel:NumSlider("Model elight radius x", "betterlights_manhack_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_manhack_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_manhack_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_manhack_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_manhack_color_r", "betterlights_manhack_color_g", "betterlights_manhack_color_b")
             addResetButton(panel, {
                 betterlights_manhack_enable = 1,
                 betterlights_manhack_size = 70,
@@ -1070,16 +1724,12 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionGrub", "Antlion Grub", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle green glow on antlion grubs (abdomen)")
+            setupPage(panel, "Antlion Grub", "Subtle green glow on antlion grubs.")
             panel:CheckBox("Enable", "betterlights_antlion_grub_enable")
             panel:NumSlider("Radius", "betterlights_antlion_grub_size", 0, 400, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_grub_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_grub_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_antlion_grub_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_antlion_grub_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_antlion_grub_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_antlion_grub_color_r", "betterlights_antlion_grub_color_g", "betterlights_antlion_grub_color_b")
             addResetButton(panel, {
                 betterlights_antlion_grub_enable = 1,
                 betterlights_antlion_grub_size = 70,
@@ -1092,16 +1742,12 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionGuardian", "Antlion Guardian", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Green glow for Antlion Guardian (heuristic detection)")
+            setupPage(panel, "Antlion Guardian", "Green glow for Antlion Guardian detection.")
             panel:CheckBox("Enable", "betterlights_antlion_guardian_enable")
             panel:NumSlider("Radius", "betterlights_antlion_guardian_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_guardian_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_guardian_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_antlion_guardian_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_antlion_guardian_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_antlion_guardian_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_antlion_guardian_color_r", "betterlights_antlion_guardian_color_g", "betterlights_antlion_guardian_color_b")
             addResetButton(panel, {
                 betterlights_antlion_guardian_enable = 1,
                 betterlights_antlion_guardian_size = 180,
@@ -1114,16 +1760,12 @@ if CLIENT then
         end)
 
         spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionWorker", "Antlion Worker", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle glow for Antlion Workers attached to Antlion.Back_Bone")
+            setupPage(panel, "Antlion Worker", "Subtle glow for Antlion Workers.")
             panel:CheckBox("Enable", "betterlights_antlion_worker_enable")
             panel:NumSlider("Radius", "betterlights_antlion_worker_size", 0, 800, 0)
             panel:NumSlider("Brightness", "betterlights_antlion_worker_brightness", 0, 5, 2)
             panel:NumSlider("Decay", "betterlights_antlion_worker_decay", 0, 5000, 0)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_antlion_worker_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_antlion_worker_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_antlion_worker_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_antlion_worker_color_r", "betterlights_antlion_worker_color_g", "betterlights_antlion_worker_color_b")
             addResetButton(panel, {
                 betterlights_antlion_worker_enable = 1,
                 betterlights_antlion_worker_size = 120,
@@ -1135,98 +1777,29 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Rollermine", "Rollermine", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Neutral blue glow for rollermines")
-            panel:CheckBox("Enable", "betterlights_rollermine_enable")
-            panel:NumSlider("Radius", "betterlights_rollermine_size", 0, 400, 0)
-            panel:NumSlider("Brightness", "betterlights_rollermine_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "betterlights_rollermine_decay", 0, 5000, 0)
-            panel:CheckBox("Add model elight", "betterlights_rollermine_models_elight")
-            panel:NumSlider("Model elight radius x", "betterlights_rollermine_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Colors (RGB) by skin")
-            panel:Help("Skin 0 (Default)")
-            panel:NumSlider("Red", "betterlights_rollermine_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_rollermine_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_rollermine_color_b", 0, 255, 0)
-            panel:Help("Skin 1 (Yellow)")
-            panel:NumSlider("Red", "betterlights_rollermine_skin1_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_rollermine_skin1_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_rollermine_skin1_color_b", 0, 255, 0)
-            panel:Help("Skin 2 (Red)")
-            panel:NumSlider("Red", "betterlights_rollermine_skin2_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_rollermine_skin2_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_rollermine_skin2_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                betterlights_rollermine_enable = 1,
-                betterlights_rollermine_size = 110,
-                betterlights_rollermine_brightness = 0.6,
-                betterlights_rollermine_decay = 2000,
-                betterlights_rollermine_models_elight = 1,
-                betterlights_rollermine_models_elight_size_mult = 1.0,
-                betterlights_rollermine_color_r = 110,
-                betterlights_rollermine_color_g = 190,
-                betterlights_rollermine_color_b = 255,
-                betterlights_rollermine_skin1_color_r = 255,
-                betterlights_rollermine_skin1_color_g = 220,
-                betterlights_rollermine_skin1_color_b = 60,
-                betterlights_rollermine_skin2_color_r = 255,
-                betterlights_rollermine_skin2_color_g = 80,
-                betterlights_rollermine_skin2_color_b = 80,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_RollermineHacked", "Rollermine (Hacked)", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Orange glow for hacked rollermines")
-            panel:CheckBox("Enable", "betterlights_rollermine_hacked_enable")
-            panel:NumSlider("Radius", "betterlights_rollermine_hacked_size", 0, 400, 0)
-            panel:NumSlider("Brightness", "betterlights_rollermine_hacked_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "betterlights_rollermine_hacked_decay", 0, 5000, 0)
-            panel:CheckBox("Add model elight", "betterlights_rollermine_hacked_models_elight")
-            panel:NumSlider("Model elight radius x", "betterlights_rollermine_hacked_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_rollermine_hacked_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_rollermine_hacked_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_rollermine_hacked_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                betterlights_rollermine_hacked_enable = 1,
-                betterlights_rollermine_hacked_size = 110,
-                betterlights_rollermine_hacked_brightness = 0.6,
-                betterlights_rollermine_hacked_decay = 2000,
-                betterlights_rollermine_hacked_models_elight = 1,
-                betterlights_rollermine_hacked_models_elight_size_mult = 1.0,
-                betterlights_rollermine_hacked_color_r = 255,
-                betterlights_rollermine_hacked_color_g = 160,
-                betterlights_rollermine_hacked_color_b = 60,
-            })
+    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Rollermines", "Rollermines", "", "", function(panel)
+            addRollerminePanel(panel)
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CScanner", "Combine Scanner", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Cool white/blue glow for Combine Scanners")
-            panel:CheckBox("Enable", "betterlights_cscanner_enable")
-            panel:NumSlider("Radius", "betterlights_cscanner_size", 0, 600, 0)
-            panel:NumSlider("Brightness", "betterlights_cscanner_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "betterlights_cscanner_decay", 0, 5000, 0)
-            panel:CheckBox("Add model elight", "betterlights_cscanner_models_elight")
-            panel:NumSlider("Model elight radius x", "betterlights_cscanner_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Glow Color (RGB)")
-            panel:NumSlider("Red", "betterlights_cscanner_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_cscanner_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_cscanner_color_b", 0, 255, 0)
-            panel:Help("Searchlight (shadow-casting)")
-            panel:CheckBox("Enable searchlight", "betterlights_cscanner_searchlight_enable")
-            panel:CheckBox("Include npc_clawscanner", "betterlights_scanner_searchlight_include_clawscanner")
-            panel:CheckBox("Cast shadows (expensive)", "betterlights_cscanner_searchlight_shadows")
-            panel:NumSlider("Searchlight FOV", "betterlights_cscanner_searchlight_fov", 1, 175, 0)
-            panel:NumSlider("Searchlight distance", "betterlights_cscanner_searchlight_distance", 0, 3000, 0)
-            panel:NumSlider("Searchlight near Z", "betterlights_cscanner_searchlight_near", 0, 128, 0)
-            panel:NumSlider("Searchlight brightness", "betterlights_cscanner_searchlight_brightness", 0, 2, 2)
-            panel:Help("Searchlight Color (RGB)")
-            panel:NumSlider("Red", "betterlights_cscanner_searchlight_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_cscanner_searchlight_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_cscanner_searchlight_color_b", 0, 255, 0)
+            setupPage(panel, "Combine Scanner", "Cool white/blue glow for Combine Scanners with optional searchlight.")
+            local glow = addSection(panel, "Body Glow", nil, true)
+            addLightControls(glow, "betterlights_cscanner", {
+                radiusMax = 600,
+                modelElight = true,
+                modelElightLabel = "Add model elight"
+            })
+            addColorMixerControl(glow, "Glow Color", "betterlights_cscanner_color_r", "betterlights_cscanner_color_g", "betterlights_cscanner_color_b")
+
+            local searchlight = addSection(panel, "Searchlight", "Projected scanner light. Shadows can be expensive.", true)
+            searchlight:CheckBox("Enable searchlight", "betterlights_cscanner_searchlight_enable")
+            searchlight:CheckBox("Include npc_clawscanner", "betterlights_scanner_searchlight_include_clawscanner")
+            searchlight:CheckBox("Cast shadows", "betterlights_cscanner_searchlight_shadows")
+            searchlight:NumSlider("FOV", "betterlights_cscanner_searchlight_fov", 1, 175, 0)
+            searchlight:NumSlider("Distance", "betterlights_cscanner_searchlight_distance", 0, 3000, 0)
+            searchlight:NumSlider("Near Z", "betterlights_cscanner_searchlight_near", 0, 128, 0)
+            searchlight:NumSlider("Brightness", "betterlights_cscanner_searchlight_brightness", 0, 2, 2)
+            addColorMixerControl(searchlight, "Searchlight Color", "betterlights_cscanner_searchlight_color_r", "betterlights_cscanner_searchlight_color_g", "betterlights_cscanner_searchlight_color_b")
             addResetButton(panel, {
                 betterlights_cscanner_enable = 1,
                 betterlights_cscanner_size = 120,
@@ -1250,150 +1823,19 @@ if CLIENT then
             })
         end)
 
-        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierElite", "Combine Soldier - Elite", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Color used for combine_super_soldier.")
-            panel:CheckBox("Enable", "bl_combine_soldier_elite_enable")
-            panel:NumSlider("Radius", "bl_combine_soldier_elite_size", 0, 200, 0)
-            panel:NumSlider("Brightness", "bl_combine_soldier_elite_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "bl_combine_soldier_elite_decay", 0, 5000, 0)
-            panel:NumSlider("Red", "bl_combine_soldier_elite_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "bl_combine_soldier_elite_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "bl_combine_soldier_elite_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                bl_combine_soldier_elite_enable = 1,
-                bl_combine_soldier_elite_size = 40,
-                bl_combine_soldier_elite_brightness = 0.5,
-                bl_combine_soldier_elite_decay = 1500,
-                bl_combine_soldier_elite_color_r = 255,
-                bl_combine_soldier_elite_color_g = 72,
-                bl_combine_soldier_elite_color_b = 72,
-            })
-        end)
-
-        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierPrisonYellow", "Combine Soldier - Prison Guard Yellow", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Color used for prisonguard skin 0.")
-            panel:CheckBox("Enable", "bl_combine_soldier_prisonguard_yellow_enable")
-            panel:NumSlider("Radius", "bl_combine_soldier_prisonguard_yellow_size", 0, 200, 0)
-            panel:NumSlider("Brightness", "bl_combine_soldier_prisonguard_yellow_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "bl_combine_soldier_prisonguard_yellow_decay", 0, 5000, 0)
-            panel:NumSlider("Red", "bl_combine_soldier_prisonguard_yellow_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "bl_combine_soldier_prisonguard_yellow_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "bl_combine_soldier_prisonguard_yellow_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                bl_combine_soldier_prisonguard_yellow_enable = 1,
-                bl_combine_soldier_prisonguard_yellow_size = 40,
-                bl_combine_soldier_prisonguard_yellow_brightness = 0.5,
-                bl_combine_soldier_prisonguard_yellow_decay = 1500,
-                bl_combine_soldier_prisonguard_yellow_color_r = 255,
-                bl_combine_soldier_prisonguard_yellow_color_g = 220,
-                bl_combine_soldier_prisonguard_yellow_color_b = 70,
-            })
-        end)
-
-        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierPrisonRed", "Combine Soldier - Prison Guard Red", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Color used for prisonguard skin 1.")
-            panel:CheckBox("Enable", "bl_combine_soldier_prisonguard_red_enable")
-            panel:NumSlider("Radius", "bl_combine_soldier_prisonguard_red_size", 0, 200, 0)
-            panel:NumSlider("Brightness", "bl_combine_soldier_prisonguard_red_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "bl_combine_soldier_prisonguard_red_decay", 0, 5000, 0)
-            panel:NumSlider("Red", "bl_combine_soldier_prisonguard_red_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "bl_combine_soldier_prisonguard_red_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "bl_combine_soldier_prisonguard_red_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                bl_combine_soldier_prisonguard_red_enable = 1,
-                bl_combine_soldier_prisonguard_red_size = 40,
-                bl_combine_soldier_prisonguard_red_brightness = 0.5,
-                bl_combine_soldier_prisonguard_red_decay = 1500,
-                bl_combine_soldier_prisonguard_red_color_r = 255,
-                bl_combine_soldier_prisonguard_red_color_g = 72,
-                bl_combine_soldier_prisonguard_red_color_b = 72,
-            })
-        end)
-
-        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierStandardBlue", "Combine Soldier - Standard Blue", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Color used for combine_soldier skin 0.")
-            panel:CheckBox("Enable", "bl_combine_soldier_standard_blue_enable")
-            panel:NumSlider("Radius", "bl_combine_soldier_standard_blue_size", 0, 200, 0)
-            panel:NumSlider("Brightness", "bl_combine_soldier_standard_blue_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "bl_combine_soldier_standard_blue_decay", 0, 5000, 0)
-            panel:NumSlider("Red", "bl_combine_soldier_standard_blue_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "bl_combine_soldier_standard_blue_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "bl_combine_soldier_standard_blue_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                bl_combine_soldier_standard_blue_enable = 1,
-                bl_combine_soldier_standard_blue_size = 40,
-                bl_combine_soldier_standard_blue_brightness = 0.5,
-                bl_combine_soldier_standard_blue_decay = 1500,
-                bl_combine_soldier_standard_blue_color_r = 95,
-                bl_combine_soldier_standard_blue_color_g = 150,
-                bl_combine_soldier_standard_blue_color_b = 255,
-            })
-        end)
-
-        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldierStandardOrange", "Combine Soldier - Standard Orange", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Color used for combine_soldier skin 1.")
-            panel:CheckBox("Enable", "bl_combine_soldier_standard_orange_enable")
-            panel:NumSlider("Radius", "bl_combine_soldier_standard_orange_size", 0, 200, 0)
-            panel:NumSlider("Brightness", "bl_combine_soldier_standard_orange_brightness", 0, 5, 2)
-            panel:NumSlider("Decay", "bl_combine_soldier_standard_orange_decay", 0, 5000, 0)
-            panel:NumSlider("Red", "bl_combine_soldier_standard_orange_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "bl_combine_soldier_standard_orange_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "bl_combine_soldier_standard_orange_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                bl_combine_soldier_standard_orange_enable = 1,
-                bl_combine_soldier_standard_orange_size = 40,
-                bl_combine_soldier_standard_orange_brightness = 0.5,
-                bl_combine_soldier_standard_orange_decay = 1500,
-                bl_combine_soldier_standard_orange_color_r = 255,
-                bl_combine_soldier_standard_orange_color_g = 155,
-                bl_combine_soldier_standard_orange_color_b = 48,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_AR2Alt", "AR2 Alt Ammo", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle glow for item_ammo_ar2_altfire")
-            panel:CheckBox("Enable", "betterlights_item_ar2alt_enable")
-            panel:NumSlider("Radius", "betterlights_item_ar2alt_size", 0, 300, 0)
-            panel:NumSlider("Brightness", "betterlights_item_ar2alt_brightness", 0, 2, 2)
-            panel:NumSlider("Decay", "betterlights_item_ar2alt_decay", 0, 5000, 0)
-            panel:CheckBox("Add model elight", "betterlights_item_ar2alt_models_elight")
-            panel:NumSlider("Elight radius x", "betterlights_item_ar2alt_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_item_ar2alt_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_item_ar2alt_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_item_ar2alt_color_b", 0, 255, 0)
-            addResetButton(panel, {
-                betterlights_item_ar2alt_enable = 1,
-                betterlights_item_ar2alt_size = 60,
-                betterlights_item_ar2alt_brightness = 0.25,
-                betterlights_item_ar2alt_decay = 1800,
-                betterlights_item_ar2alt_models_elight = 1,
-                betterlights_item_ar2alt_models_elight_size_mult = 1.0,
-                betterlights_item_ar2alt_color_r = 255,
-                betterlights_item_ar2alt_color_g = 220,
-                betterlights_item_ar2alt_color_b = 60,
-            })
+        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldiers", "Combine Soldiers", "", "", function(panel)
+            addCombineEyeGlowPanel(panel)
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Battery", "Battery", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle glow for item_battery")
+            setupPage(panel, "Battery", "Subtle glow for item_battery.")
             panel:CheckBox("Enable", "betterlights_item_battery_enable")
             panel:NumSlider("Radius", "betterlights_item_battery_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_item_battery_brightness", 0, 2, 2)
             panel:NumSlider("Decay", "betterlights_item_battery_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_item_battery_models_elight")
             panel:NumSlider("Elight radius x", "betterlights_item_battery_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_item_battery_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_item_battery_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_item_battery_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_item_battery_color_r", "betterlights_item_battery_color_g", "betterlights_item_battery_color_b")
             addResetButton(panel, {
                 betterlights_item_battery_enable = 1,
                 betterlights_item_battery_size = 55,
@@ -1408,18 +1850,14 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Vial", "Health Vial", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle glow for item_healthvial")
+            setupPage(panel, "Health Vial", "Subtle glow for item_healthvial.")
             panel:CheckBox("Enable", "betterlights_item_healthvial_enable")
             panel:NumSlider("Radius", "betterlights_item_healthvial_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_item_healthvial_brightness", 0, 2, 2)
             panel:NumSlider("Decay", "betterlights_item_healthvial_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_item_healthvial_models_elight")
             panel:NumSlider("Elight radius x", "betterlights_item_healthvial_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_item_healthvial_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_item_healthvial_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_item_healthvial_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_item_healthvial_color_r", "betterlights_item_healthvial_color_g", "betterlights_item_healthvial_color_b")
             addResetButton(panel, {
                 betterlights_item_healthvial_enable = 1,
                 betterlights_item_healthvial_size = 45,
@@ -1434,18 +1872,14 @@ if CLIENT then
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_HealthKit", "Health Kit", "", "", function(panel)
-            panel:ClearControls()
-            panel:Help("Subtle glow for item_healthkit")
+            setupPage(panel, "Health Kit", "Subtle glow for item_healthkit.")
             panel:CheckBox("Enable", "betterlights_item_healthkit_enable")
             panel:NumSlider("Radius", "betterlights_item_healthkit_size", 0, 300, 0)
             panel:NumSlider("Brightness", "betterlights_item_healthkit_brightness", 0, 2, 2)
             panel:NumSlider("Decay", "betterlights_item_healthkit_decay", 0, 5000, 0)
             panel:CheckBox("Add model elight", "betterlights_item_healthkit_models_elight")
             panel:NumSlider("Elight radius x", "betterlights_item_healthkit_models_elight_size_mult", 0, 3, 2)
-            panel:Help("Color (RGB)")
-            panel:NumSlider("Red", "betterlights_item_healthkit_color_r", 0, 255, 0)
-            panel:NumSlider("Green", "betterlights_item_healthkit_color_g", 0, 255, 0)
-            panel:NumSlider("Blue", "betterlights_item_healthkit_color_b", 0, 255, 0)
+            addColorMixerControl(panel, "Color", "betterlights_item_healthkit_color_r", "betterlights_item_healthkit_color_g", "betterlights_item_healthkit_color_b")
             addResetButton(panel, {
                 betterlights_item_healthkit_enable = 1,
                 betterlights_item_healthkit_size = 55,
@@ -1460,28 +1894,26 @@ if CLIENT then
         end)
 
         spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Chargers", "Chargers", "", "", function(panel)
-                panel:ClearControls()
-                panel:Help("Subtle glows for suit and health wall chargers")
-                panel:CheckBox("Suit Charger", "betterlights_suitcharger_enable")
-                panel:NumSlider("Suit Radius", "betterlights_suitcharger_size", 0, 300, 0)
-                panel:NumSlider("Suit Brightness", "betterlights_suitcharger_brightness", 0, 2, 2)
-                panel:NumSlider("Suit Decay", "betterlights_suitcharger_decay", 0, 5000, 0)
-                panel:CheckBox("Suit model elight", "betterlights_suitcharger_models_elight")
-                panel:NumSlider("Suit elight radius x", "betterlights_suitcharger_models_elight_size_mult", 0, 3, 2)
-                panel:Help("Suit Color (RGB)")
-                panel:NumSlider("Red", "betterlights_suitcharger_color_r", 0, 255, 0)
-                panel:NumSlider("Green", "betterlights_suitcharger_color_g", 0, 255, 0)
-                panel:NumSlider("Blue", "betterlights_suitcharger_color_b", 0, 255, 0)
-                panel:CheckBox("Health Charger", "betterlights_healthcharger_enable")
-                panel:NumSlider("Health Radius", "betterlights_healthcharger_size", 0, 300, 0)
-                panel:NumSlider("Health Brightness", "betterlights_healthcharger_brightness", 0, 2, 2)
-                panel:NumSlider("Health Decay", "betterlights_healthcharger_decay", 0, 5000, 0)
-                panel:CheckBox("Health model elight", "betterlights_healthcharger_models_elight")
-                panel:NumSlider("Health elight radius x", "betterlights_healthcharger_models_elight_size_mult", 0, 3, 2)
-                panel:Help("Health Color (RGB)")
-                panel:NumSlider("Red", "betterlights_healthcharger_color_r", 0, 255, 0)
-                panel:NumSlider("Green", "betterlights_healthcharger_color_g", 0, 255, 0)
-                panel:NumSlider("Blue", "betterlights_healthcharger_color_b", 0, 255, 0)
+                setupPage(panel, "Chargers", "Subtle glows for suit and health wall chargers.")
+                local suit = addSection(panel, "Suit Charger", nil, true)
+                addLightControls(suit, "betterlights_suitcharger", {
+                    enableLabel = "Enable",
+                    radiusMax = 300,
+                    brightnessMax = 2,
+                    modelElight = true,
+                    modelElightLabel = "Add model elight"
+                })
+                addColorMixerControl(suit, "Suit Color", "betterlights_suitcharger_color_r", "betterlights_suitcharger_color_g", "betterlights_suitcharger_color_b")
+
+                local health = addSection(panel, "Health Charger", nil, true)
+                addLightControls(health, "betterlights_healthcharger", {
+                    enableLabel = "Enable",
+                    radiusMax = 300,
+                    brightnessMax = 2,
+                    modelElight = true,
+                    modelElightLabel = "Add model elight"
+                })
+                addColorMixerControl(health, "Health Color", "betterlights_healthcharger_color_r", "betterlights_healthcharger_color_g", "betterlights_healthcharger_color_b")
                 addResetButton(panel, {
                     betterlights_suitcharger_enable = 1,
                     betterlights_suitcharger_size = 75,
@@ -1508,34 +1940,84 @@ if CLIENT then
 
     local function addAboutPanel()
         spawnmenu.AddToolMenuOption("Better Lights", "About", "BL_About", "About", "", "", function(panel)
-            panel:ClearControls()
+            setupPage(panel, "About Better Lights", "Version, support links, source code, and changelog.")
             local version = BetterLights.VERSION
-            panel:Help("Better Lights " .. version)
-            panel:Help("Author: Catsniffer")
+
+            local author = vgui.Create("DPanel")
+            author:SetTall(96)
+            author.Paint = function(_, w, h)
+                surface.SetDrawColor(250, 251, 253)
+                surface.DrawRect(0, 0, w, h)
+                surface.SetDrawColor(COLOR_BORDER)
+                surface.DrawOutlinedRect(0, 0, w, h)
+                surface.SetDrawColor(COLOR_ACCENT)
+                surface.DrawRect(0, 0, 4, h)
+            end
+
+            local avatar = vgui.Create("AvatarImage", author)
+            avatar:Dock(LEFT)
+            avatar:DockMargin(14, 14, 14, 14)
+            avatar:SetWide(64)
+            avatar:SetSteamID("76561199216202475", 64)
+
+            local authorInfo = vgui.Create("DPanel", author)
+            authorInfo:Dock(FILL)
+            authorInfo:DockMargin(0, 12, 12, 12)
+            authorInfo.Paint = nil
+
+            local title = vgui.Create("DLabel", authorInfo)
+            title:Dock(TOP)
+            title:SetTall(22)
+            title:SetText("Better Lights " .. version)
+            title:SetFont("DermaDefaultBold")
+            title:SetTextColor(COLOR_TEXT)
+
+            local byline = vgui.Create("DLabel", authorInfo)
+            byline:Dock(TOP)
+            byline:SetTall(20)
+            byline:SetText("Created by Catsniffer")
+            byline:SetTextColor(COLOR_MUTED)
+
+            local profileBtn = vgui.Create("DButton", authorInfo)
+            profileBtn:Dock(BOTTOM)
+            profileBtn:SetTall(26)
+            profileBtn:SetText("Open Steam Profile")
+            profileBtn.DoClick = function()
+                gui.OpenURL("https://steamcommunity.com/id/catsniffermeow/")
+            end
+
+            panel:AddItem(author)
             panel:Help("Please report bugs and feature requests on GitHub.")
             panel:Help("Please do not use Steam comments or the author's Steam profile for support.")
+            panel:Help("License: GPL-3.0-or-later. You may share and modify this addon under the GPL terms; it is provided without warranty.")
 
-            local issueBtn = panel:Button("Report Issue / Request Feature")
+            local links = addSection(panel, "Links", nil, true)
+            local issueBtn = links:Button("Report Issue / Request Feature")
             issueBtn.DoClick = function()
                 gui.OpenURL("https://github.com/DeisDev/BetterLights/issues/new/choose")
             end
 
-            local sourceBtn = panel:Button("View Source Code on GitHub")
+            local sourceBtn = links:Button("View Source Code on GitHub")
             sourceBtn.DoClick = function()
                 gui.OpenURL("https://github.com/DeisDev/BetterLights")
             end
 
-            local workshopBtn = panel:Button("Steam Workshop Page")
+            local licenseBtn = links:Button("View License")
+            licenseBtn.DoClick = function()
+                gui.OpenURL("https://github.com/DeisDev/BetterLights/blob/main/LICENSE.md")
+            end
+
+            local workshopBtn = links:Button("Steam Workshop Page")
             workshopBtn.DoClick = function()
                 gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225")
             end
 
-            local changelogBtn = panel:Button("Changelog")
+            local changelogBtn = links:Button("Changelog")
             changelogBtn.DoClick = function()
-                gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/changelog/3597784225")
+                openChangelogWindow()
             end
 
-            local otherAddonsBtn = panel:Button("Other Addons")
+            local otherAddonsBtn = links:Button("Other Addons")
             otherAddonsBtn.DoClick = function()
                 gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=3551812511")
             end
@@ -1550,13 +2032,13 @@ if CLIENT then
     hook.Add("PopulateToolMenu", "BetterLights_Populate", function()
         spawnmenu.AddToolCategory("Better Lights", "General", "General")
         spawnmenu.AddToolCategory("Better Lights", "Flashlight", "Flashlight")
-        spawnmenu.AddToolCategory("Better Lights", "Weapons", "Weapons (Held)")
-        spawnmenu.AddToolCategory("Better Lights", "Projectiles", "Projectiles & Explosives")
+        spawnmenu.AddToolCategory("Better Lights", "Weapons", "Held Weapon Lights")
+        spawnmenu.AddToolCategory("Better Lights", "Projectiles", "Projectiles & Explosions")
         spawnmenu.AddToolCategory("Better Lights", "NPCs", "NPCs & Traps")
-        spawnmenu.AddToolCategory("Better Lights", "Eye Glow", "Eye Glow")
-        spawnmenu.AddToolCategory("Better Lights", "Gunfire", "Gunfire")
-        spawnmenu.AddToolCategory("Better Lights", "Environment", "Environment")
-        spawnmenu.AddToolCategory("Better Lights", "Pickups", "Pickups")
+        spawnmenu.AddToolCategory("Better Lights", "Eye Glow", "NPC Eye Glow")
+        spawnmenu.AddToolCategory("Better Lights", "Gunfire", "Gunfire Effects")
+        spawnmenu.AddToolCategory("Better Lights", "Environment", "World & Environment")
+        spawnmenu.AddToolCategory("Better Lights", "Pickups", "Pickups & Ammo")
         spawnmenu.AddToolCategory("Better Lights", "About", "About")
         addClientPanels()
         addAboutPanel()

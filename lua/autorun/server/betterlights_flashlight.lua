@@ -142,6 +142,10 @@ if SERVER then
         setFlashlight(ply, false, true, true)
     end)
 
+    hook.Add("PlayerSilentDeath", "BetterLights_FlashlightSilentDeath", function(ply)
+        setFlashlight(ply, false, true, true)
+    end)
+
     cvars.AddChangeCallback("betterlights_enable", function(_, _, new)
         if new ~= "0" then return end
 
@@ -149,6 +153,14 @@ if SERVER then
             setFlashlight(ply, false, true, true)
         end
     end, "BetterLights_FlashlightDisableOnGlobalDisable")
+
+    cvars.AddChangeCallback("mp_flashlight", function(_, _, new)
+        if new ~= "0" then return end
+
+        for _, ply in ipairs(player.GetAll()) do
+            setFlashlight(ply, false, true, true)
+        end
+    end, "BetterLights_FlashlightDisableOnMpFlashlightDisable")
 
     if PLAYER then
         if not PLAYER.BetterLights_OldFlashlight then

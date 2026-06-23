@@ -1,0 +1,96 @@
+[
+  {
+    "version": "v1.4.3",
+    "title": "Better Lights v1.4.3",
+    "items": [
+      "Added lights for spawned and dropped weapon pickups.",
+      "Added pickup lights for AR2 ammo and optional lights for other ammo pickups.",
+      "Added a flashlight forward offset setting.",
+      "Improved the settings menu with better grouping and color pickers.",
+      "Added an in-game changelog browser.",
+      "Improved the About page with author, license, and support links.",
+      "Improved rollermine color settings for detected skins.",
+      "Improved flashlight behavior when no weapon is equipped.",
+      "Improved flashlight compatibility with vehicles and server settings."
+    ]
+  },
+  {
+    "version": "v1.4.2",
+    "title": "Better Lights v1.4.2",
+    "items": [
+      "Added more player flashlight visual options.",
+      "Added custom flashlight texture selection with previews.",
+      "Improved the flashlight settings layout.",
+      "Fixed flashlight behavior when changing levels."
+    ]
+  },
+  {
+    "version": "v1.4.1",
+    "title": "Better Lights v1.4.1",
+    "items": [
+      "Simplified the Better Lights flashlight settings."
+    ]
+  },
+  {
+    "version": "v1.4.0",
+    "title": "Better Lights v1.4.0",
+    "items": [
+      "Added a new toggle to quickly enable or disable Better Lights.",
+      "Added an option to reset all Better Lights settings.",
+      "Made the Better Lights flashlight disabled by default for new users.",
+      "Reworked the flashlight settings menu to separate personal and server options.",
+      "Moved flashlight sound preference to a personal setting.",
+      "Added a changelog button to the About menu."
+    ]
+  },
+  {
+    "version": "v1.3.5",
+    "title": "Better Lights v1.3.5",
+    "items": [
+      "Added an option to disable Better Lights flashlight sounds and use the vanilla flashlight sounds."
+    ]
+  },
+  {
+    "version": "v1.3.4",
+    "title": "Better Lights v1.3.4",
+    "items": [
+      "When the flashlight module is disabled, it no longer still intercepts player input.",
+      "Added a Beam Length slider for the Better Lights player flashlight."
+    ]
+  },
+  {
+    "version": "v1.3.3",
+    "title": "Better Lights v1.3.3",
+    "items": [
+      "Fixed the Better Lights player flashlight disappearing when using suit zoom with HUD addons such as HoloHUD2.",
+      "The flashlight now falls back to a stable eye-position origin while zooming instead of relying on the first-person viewmodel attachment."
+    ]
+  },
+  {
+    "version": "v1.3.2",
+    "title": "Better Lights v1.3.2",
+    "items": [
+      "Improved player flashlight compatibility with addons and gamemodes."
+    ]
+  },
+  {
+    "version": "v1.3.1",
+    "title": "Better Lights v1.3.1",
+    "items": [
+      "Fixed the player flashlight sometimes turning on but not turning off.",
+      "Improved flashlight toggle handling so it behaves more like the vanilla flashlight.",
+      "Added protection against duplicate flashlight input events.",
+      "Prevented the vanilla flashlight from getting stuck on behind the Better Lights flashlight."
+    ]
+  },
+  {
+    "version": "v1.3.0",
+    "title": "Better Lights v1.3.0",
+    "items": [
+      "Added a new BetterLights player flashlight module.",
+      "Added a dedicated Flashlight settings category.",
+      "Custom sounds for the flashlight.",
+      "Code cleanup and slight performance improvements."
+    ]
+  }
+]

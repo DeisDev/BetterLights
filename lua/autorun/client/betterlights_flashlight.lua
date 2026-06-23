@@ -65,6 +65,7 @@ if CLIENT then
     local cvar_flicker = CreateClientConVar("betterlights_flashlight_flicker", "0", true, false, "Enable subtle flashlight flicker")
     local cvar_sway = CreateClientConVar("betterlights_flashlight_sway", "1", true, false, "Enable subtle flashlight sway")
     local cvar_distance = CreateClientConVar("betterlights_flashlight_distance", "1200", true, false, "Flashlight beam length")
+    local cvar_forward_offset = CreateClientConVar("betterlights_flashlight_forward_offset", "0", true, false, "Extra forward offset for the flashlight beam")
     local cvar_attachment_offset = CreateClientConVar("betterlights_flashlight_attachment_offset", "2", true, false, "Side offset for weapon-attached flashlights")
     local cvar_fallback_offset = CreateClientConVar("betterlights_flashlight_fallback_offset", "8", true, false, "Side offset for eye-position flashlights")
     local cvar_brightness = CreateClientConVar("betterlights_flashlight_brightness", "1.35", true, false, "Flashlight brightness")
@@ -90,11 +91,13 @@ if CLIENT then
     local NEAR_Z = 4
     local MIN_BRIGHTNESS = 0.1
     local MAX_BRIGHTNESS = 5
+    local MIN_FORWARD_OFFSET = -32
+    local MAX_FORWARD_OFFSET = 96
     local FLICKER_AMOUNT = 0.08
     local AIM_SMOOTHING = 18
     local ATTACHMENT_OFFSET_FORWARD = 1
     local ATTACHMENT_OFFSET_DOWN = 2
-    local EYE_OFFSET_FORWARD = 12
+    local EYE_OFFSET_FORWARD = 26
     local EYE_OFFSET_DOWN = 3
     local ATTACHMENT_NAMES = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
     local EYE_FALLBACK_WEAPONS = {
@@ -286,7 +289,7 @@ if CLIENT then
 
     local function applyAttachmentOffset(pos, ang)
         return pos
-            + ang:Forward() * ATTACHMENT_OFFSET_FORWARD
+            + ang:Forward() * (ATTACHMENT_OFFSET_FORWARD + math.Clamp(cvar_forward_offset:GetFloat(), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
             + ang:Right() * cvar_attachment_offset:GetFloat()
             - ang:Up() * ATTACHMENT_OFFSET_DOWN
     end
@@ -304,7 +307,8 @@ if CLIENT then
         if isFirstPersonZooming(ply, localPlayer) then return end
 
         local activeWeapon = ply:GetActiveWeapon()
-        if IsValid(activeWeapon) and EYE_FALLBACK_WEAPONS[activeWeapon:GetClass()] then return end
+        if not IsValid(activeWeapon) then return end
+        if EYE_FALLBACK_WEAPONS[activeWeapon:GetClass()] then return end
 
         local source
         if ply == localPlayer and not ply:ShouldDrawLocalPlayer() then
@@ -327,11 +331,12 @@ if CLIENT then
     end
 
     local function getEyeTransform(ply)
-        local ang = ply:EyeAngles()
+        local aim = ply.GetAimVector and ply:GetAimVector() or nil
+        local ang = aim and aim:Angle() or ply:EyeAngles()
         local pos = ply:EyePos()
 
         pos = pos
-            + ang:Forward() * EYE_OFFSET_FORWARD
+            + ang:Forward() * (EYE_OFFSET_FORWARD + math.Clamp(cvar_forward_offset:GetFloat(), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
             + ang:Right() * cvar_fallback_offset:GetFloat()
             - ang:Up() * EYE_OFFSET_DOWN
 
