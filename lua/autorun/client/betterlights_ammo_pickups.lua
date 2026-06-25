@@ -6,6 +6,7 @@ if CLIENT then
         {
             class = "item_ammo_ar2",
             slug = "ar2",
+            nameKey = "ammo.ar2",
             name = "AR2 Ammo",
             enable = 1,
             size = 40,
@@ -17,6 +18,7 @@ if CLIENT then
         {
             class = "item_ammo_ar2_large",
             slug = "ar2_large",
+            nameKey = "ammo.ar2_large",
             name = "AR2 Ammo Large",
             enable = 1,
             size = 48,
@@ -28,6 +30,7 @@ if CLIENT then
         {
             class = "item_ammo_ar2_altfire",
             slug = "ar2_alt",
+            nameKey = "ammo.ar2_alt",
             name = "AR2 Alt Ammo",
             enable = 1,
             size = 60,
@@ -36,16 +39,16 @@ if CLIENT then
             g = 220,
             b = 60
         },
-        { class = "item_ammo_smg1", slug = "smg1", name = "SMG Ammo", enable = 0 },
-        { class = "item_ammo_smg1_large", slug = "smg1_large", name = "SMG Ammo Large", enable = 0 },
-        { class = "item_ammo_smg1_grenade", slug = "smg1_grenade", name = "SMG Grenade", enable = 0 },
-        { class = "item_ammo_357", slug = "357", name = ".357 Ammo", enable = 0 },
-        { class = "item_ammo_357_large", slug = "357_large", name = ".357 Ammo Large", enable = 0 },
-        { class = "item_ammo_crossbow", slug = "crossbow", name = "Crossbow Bolts", enable = 0 },
-        { class = "item_ammo_pistol", slug = "pistol", name = "Pistol Ammo", enable = 0 },
-        { class = "item_ammo_pistol_large", slug = "pistol_large", name = "Pistol Ammo Large", enable = 0 },
-        { class = "item_rpg_round", slug = "rpg_round", name = "RPG Round", enable = 0 },
-        { class = "item_box_buckshot", slug = "buckshot", name = "Buckshot", enable = 0 }
+        { class = "item_ammo_smg1", slug = "smg1", nameKey = "ammo.smg1", name = "SMG Ammo", enable = 0 },
+        { class = "item_ammo_smg1_large", slug = "smg1_large", nameKey = "ammo.smg1_large", name = "SMG Ammo Large", enable = 0 },
+        { class = "item_ammo_smg1_grenade", slug = "smg1_grenade", nameKey = "ammo.smg1_grenade", name = "SMG Grenade", enable = 0 },
+        { class = "item_ammo_357", slug = "357", nameKey = "ammo.357", name = ".357 Ammo", enable = 0 },
+        { class = "item_ammo_357_large", slug = "357_large", nameKey = "ammo.357_large", name = ".357 Ammo Large", enable = 0 },
+        { class = "item_ammo_crossbow", slug = "crossbow", nameKey = "ammo.crossbow", name = "Crossbow Bolts", enable = 0 },
+        { class = "item_ammo_pistol", slug = "pistol", nameKey = "ammo.pistol", name = "Pistol Ammo", enable = 0 },
+        { class = "item_ammo_pistol_large", slug = "pistol_large", nameKey = "ammo.pistol_large", name = "Pistol Ammo Large", enable = 0 },
+        { class = "item_rpg_round", slug = "rpg_round", nameKey = "ammo.rpg_round", name = "RPG Round", enable = 0 },
+        { class = "item_box_buckshot", slug = "buckshot", nameKey = "ammo.buckshot", name = "Buckshot", enable = 0 }
     }
 
     for _, info in ipairs(AMMO) do

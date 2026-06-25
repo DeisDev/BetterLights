@@ -6,6 +6,7 @@ if CLIENT then
         {
             class = "weapon_crossbow",
             slug = "crossbow",
+            nameKey = "weapon.crossbow",
             name = "Crossbow",
             size = 34,
             brightness = 0.12,
@@ -20,6 +21,7 @@ if CLIENT then
         {
             class = "gmod_tool",
             slug = "toolgun",
+            nameKey = "weapon.toolgun",
             name = "Tool Gun",
             size = 42,
             brightness = 0.22,
@@ -35,6 +37,7 @@ if CLIENT then
         {
             class = "weapon_physcannon",
             slug = "gravitygun",
+            nameKey = "weapon.gravitygun",
             name = "Gravity Gun",
             size = 48,
             brightness = 0.25,
@@ -49,6 +52,7 @@ if CLIENT then
         {
             class = "weapon_physgun",
             slug = "physgun",
+            nameKey = "weapon.physgun",
             name = "Physics Gun",
             size = 48,
             brightness = 0.25,
@@ -63,6 +67,7 @@ if CLIENT then
         {
             class = "weapon_medkit",
             slug = "medkit",
+            nameKey = "weapon.medkit",
             name = "Medkit",
             size = 42,
             brightness = 0.22,
@@ -77,6 +82,7 @@ if CLIENT then
         {
             class = "weapon_bugbait",
             slug = "bugbait",
+            nameKey = "weapon.bugbait",
             name = "Bugbait",
             size = 34,
             brightness = 0.12,
@@ -91,6 +97,7 @@ if CLIENT then
         {
             class = "weapon_ar2",
             slug = "ar2",
+            nameKey = "weapon.pulse_rifle",
             name = "Pulse Rifle",
             size = 38,
             brightness = 0.14,
@@ -105,6 +112,7 @@ if CLIENT then
         {
             class = "weapon_frag",
             slug = "frag",
+            nameKey = "weapon.frag_grenade",
             name = "Frag Grenade",
             size = 36,
             brightness = 0.2,

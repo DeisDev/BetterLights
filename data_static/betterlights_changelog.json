@@ -1,5 +1,14 @@
 [
   {
+    "version": "v1.5.0",
+    "title": "Better Lights v1.5.0",
+    "items": [
+      "Added menu translations for several popular Garry's Mod languages.",
+      "Added contributor notes for translation fixes and improvements.",
+      "Updated the Workshop page with translation support details."
+    ]
+  },
+  {
     "version": "v1.4.3",
     "title": "Better Lights v1.4.3",
     "items": [
