@@ -4,16 +4,16 @@ if CLIENT then
     local CurTime = CurTime
     local IsValid = IsValid
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
-    local cvar_enable = CreateClientConVar("betterlights_toolgun_enable", "1", true, false, "Enable small white dynamic light for the Tool Gun (gmod_tool)")
-    local cvar_size = CreateClientConVar("betterlights_toolgun_size", "28", true, false, "Dynamic light radius for the Tool Gun")
-    local cvar_brightness = CreateClientConVar("betterlights_toolgun_brightness", "0.225", true, false, "Dynamic light brightness for the Tool Gun")
-    local cvar_decay = CreateClientConVar("betterlights_toolgun_decay", "2000", true, false, "Dynamic light decay for the Tool Gun")
-    local cvar_models_elight = CreateClientConVar("betterlights_toolgun_models_elight", "1", true, false, "Also add an entity light (elight) to light the Tool Gun model directly")
-    local cvar_models_elight_size_mult = CreateClientConVar("betterlights_toolgun_models_elight_size_mult", "1.0", true, false, "Multiplier for Tool Gun elight radius")
+    local cvar_enable = BL.CreateClientConVar("betterlights_toolgun_enable", "1", true, false, "Enable small white dynamic light for the Tool Gun (gmod_tool)")
+    local cvar_size = BL.CreateClientConVar("betterlights_toolgun_size", "28", true, false, "Dynamic light radius for the Tool Gun")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_toolgun_brightness", "0.225", true, false, "Dynamic light brightness for the Tool Gun")
+    local cvar_decay = BL.CreateClientConVar("betterlights_toolgun_decay", "2000", true, false, "Dynamic light decay for the Tool Gun")
+    local cvar_models_elight = BL.CreateClientConVar("betterlights_toolgun_models_elight", "1", true, false, "Also add an entity light (elight) to light the Tool Gun model directly")
+    local cvar_models_elight_size_mult = BL.CreateClientConVar("betterlights_toolgun_models_elight_size_mult", "1.0", true, false, "Multiplier for Tool Gun elight radius")
 
-    local cvar_col_r = CreateClientConVar("betterlights_toolgun_color_r", "255", true, false, "Tool Gun color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_toolgun_color_g", "255", true, false, "Tool Gun color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_toolgun_color_b", "255", true, false, "Tool Gun color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_toolgun_color_r", "255", true, false, "Tool Gun color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_toolgun_color_g", "255", true, false, "Tool Gun color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_toolgun_color_b", "255", true, false, "Tool Gun color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "spark", "laser", "muzzle_flash", "tip" }
     local function getToolgunLightPos(ply, wep)

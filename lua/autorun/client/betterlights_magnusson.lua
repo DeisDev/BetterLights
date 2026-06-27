@@ -2,24 +2,24 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
 
-    local cvar_enable = CreateClientConVar("betterlights_magnusson_enable", "1", true, false, "Enable dynamic light for Magnusson devices (Strider Busters)")
-    local cvar_size = CreateClientConVar("betterlights_magnusson_size", "130", true, false, "Dynamic light radius for Magnusson devices")
-    local cvar_brightness = CreateClientConVar("betterlights_magnusson_brightness", "0.48", true, false, "Dynamic light brightness for Magnusson devices")
-    local cvar_decay = CreateClientConVar("betterlights_magnusson_decay", "2000", true, false, "Dynamic light decay for Magnusson devices")
-    local cvar_models_elight = CreateClientConVar("betterlights_magnusson_models_elight", "1", true, false, "Also add an entity light (elight) to light the device model directly")
-    local cvar_models_elight_size_mult = CreateClientConVar("betterlights_magnusson_models_elight_size_mult", "1.0", true, false, "Multiplier for Magnusson device elight radius")
+    local cvar_enable = BL.CreateClientConVar("betterlights_magnusson_enable", "1", true, false, "Enable dynamic light for Magnusson devices (Strider Busters)")
+    local cvar_size = BL.CreateClientConVar("betterlights_magnusson_size", "130", true, false, "Dynamic light radius for Magnusson devices")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_magnusson_brightness", "0.48", true, false, "Dynamic light brightness for Magnusson devices")
+    local cvar_decay = BL.CreateClientConVar("betterlights_magnusson_decay", "2000", true, false, "Dynamic light decay for Magnusson devices")
+    local cvar_models_elight = BL.CreateClientConVar("betterlights_magnusson_models_elight", "1", true, false, "Also add an entity light (elight) to light the device model directly")
+    local cvar_models_elight_size_mult = BL.CreateClientConVar("betterlights_magnusson_models_elight_size_mult", "1.0", true, false, "Multiplier for Magnusson device elight radius")
 
-    local cvar_flash_enable = CreateClientConVar("betterlights_magnusson_flash_enable", "1", true, false, "Add a brief light flash when a Magnusson device explodes")
-    local cvar_flash_size = CreateClientConVar("betterlights_magnusson_flash_size", "360", true, false, "Explosion flash radius for Magnusson devices")
-    local cvar_flash_brightness = CreateClientConVar("betterlights_magnusson_flash_brightness", "2.2", true, false, "Explosion flash brightness for Magnusson devices")
-    local cvar_flash_time = CreateClientConVar("betterlights_magnusson_flash_time", "2.0", true, false, "Duration of the explosion flash (seconds)")
+    local cvar_flash_enable = BL.CreateClientConVar("betterlights_magnusson_flash_enable", "1", true, false, "Add a brief light flash when a Magnusson device explodes")
+    local cvar_flash_size = BL.CreateClientConVar("betterlights_magnusson_flash_size", "360", true, false, "Explosion flash radius for Magnusson devices")
+    local cvar_flash_brightness = BL.CreateClientConVar("betterlights_magnusson_flash_brightness", "2.2", true, false, "Explosion flash brightness for Magnusson devices")
+    local cvar_flash_time = BL.CreateClientConVar("betterlights_magnusson_flash_time", "2.0", true, false, "Duration of the explosion flash (seconds)")
 
-    local cvar_col_r = CreateClientConVar("betterlights_magnusson_color_r", "130", true, false, "Magnusson device glow color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_magnusson_color_g", "180", true, false, "Magnusson device glow color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_magnusson_color_b", "255", true, false, "Magnusson device glow color - blue (0-255)")
-    local cvar_flash_r = CreateClientConVar("betterlights_magnusson_flash_color_r", "180", true, false, "Magnusson flash color - red (0-255)")
-    local cvar_flash_g = CreateClientConVar("betterlights_magnusson_flash_color_g", "220", true, false, "Magnusson flash color - green (0-255)")
-    local cvar_flash_b = CreateClientConVar("betterlights_magnusson_flash_color_b", "255", true, false, "Magnusson flash color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_magnusson_color_r", "130", true, false, "Magnusson device glow color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_magnusson_color_g", "180", true, false, "Magnusson device glow color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_magnusson_color_b", "255", true, false, "Magnusson device glow color - blue (0-255)")
+    local cvar_flash_r = BL.CreateClientConVar("betterlights_magnusson_flash_color_r", "180", true, false, "Magnusson flash color - red (0-255)")
+    local cvar_flash_g = BL.CreateClientConVar("betterlights_magnusson_flash_color_g", "220", true, false, "Magnusson flash color - green (0-255)")
+    local cvar_flash_b = BL.CreateClientConVar("betterlights_magnusson_flash_color_b", "255", true, false, "Magnusson flash color - blue (0-255)")
 
     local TARGET_CLASS = "weapon_striderbuster"
 

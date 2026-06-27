@@ -1,14 +1,14 @@
 if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
-    local cvar_enable = CreateClientConVar("betterlights_rpg_hold_enable", "1", true, false, "Enable subtle red lights on the RPG while held")
-    local cvar_size = CreateClientConVar("betterlights_rpg_hold_size", "24", true, false, "Dynamic light radius for held RPG lights")
-    local cvar_brightness = CreateClientConVar("betterlights_rpg_hold_brightness", "0.22", true, false, "Dynamic light brightness for held RPG lights")
-    local cvar_decay = CreateClientConVar("betterlights_rpg_hold_decay", "2000", true, false, "Dynamic light decay for held RPG lights")
+    local cvar_enable = BL.CreateClientConVar("betterlights_rpg_hold_enable", "1", true, false, "Enable subtle red lights on the RPG while held")
+    local cvar_size = BL.CreateClientConVar("betterlights_rpg_hold_size", "24", true, false, "Dynamic light radius for held RPG lights")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_rpg_hold_brightness", "0.22", true, false, "Dynamic light brightness for held RPG lights")
+    local cvar_decay = BL.CreateClientConVar("betterlights_rpg_hold_decay", "2000", true, false, "Dynamic light decay for held RPG lights")
 
-    local cvar_col_r = CreateClientConVar("betterlights_rpg_hold_color_r", "255", true, false, "RPG (Held) color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_rpg_hold_color_g", "60", true, false, "RPG (Held) color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_rpg_hold_color_b", "60", true, false, "RPG (Held) color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_rpg_hold_color_r", "255", true, false, "RPG (Held) color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_rpg_hold_color_g", "60", true, false, "RPG (Held) color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_rpg_hold_color_b", "60", true, false, "RPG (Held) color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "laser", "muzzle_flash" }
     local function getRPGModelLightPos(ply, wep)

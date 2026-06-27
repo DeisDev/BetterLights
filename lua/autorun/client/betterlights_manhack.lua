@@ -2,16 +2,16 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
-    local cvar_enable = CreateClientConVar("betterlights_manhack_enable", "1", true, false, "Enable dynamic light for Manhacks (npc_manhack)")
-    local cvar_size = CreateClientConVar("betterlights_manhack_size", "70", true, false, "Dynamic light radius for Manhacks")
-    local cvar_brightness = CreateClientConVar("betterlights_manhack_brightness", "0.6", true, false, "Dynamic light brightness for Manhacks")
-    local cvar_decay = CreateClientConVar("betterlights_manhack_decay", "2000", true, false, "Dynamic light decay for Manhacks")
-    local cvar_models_elight = CreateClientConVar("betterlights_manhack_models_elight", "1", true, false, "Also add an entity light (elight) to light the Manhack model directly")
-    local cvar_models_elight_size_mult = CreateClientConVar("betterlights_manhack_models_elight_size_mult", "1.0", true, false, "Multiplier for Manhack elight radius")
+    local cvar_enable = BL.CreateClientConVar("betterlights_manhack_enable", "1", true, false, "Enable dynamic light for Manhacks (npc_manhack)")
+    local cvar_size = BL.CreateClientConVar("betterlights_manhack_size", "70", true, false, "Dynamic light radius for Manhacks")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_manhack_brightness", "0.6", true, false, "Dynamic light brightness for Manhacks")
+    local cvar_decay = BL.CreateClientConVar("betterlights_manhack_decay", "2000", true, false, "Dynamic light decay for Manhacks")
+    local cvar_models_elight = BL.CreateClientConVar("betterlights_manhack_models_elight", "1", true, false, "Also add an entity light (elight) to light the Manhack model directly")
+    local cvar_models_elight_size_mult = BL.CreateClientConVar("betterlights_manhack_models_elight_size_mult", "1.0", true, false, "Multiplier for Manhack elight radius")
 
-    local cvar_col_r = CreateClientConVar("betterlights_manhack_color_r", "255", true, false, "Manhack color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_manhack_color_g", "60", true, false, "Manhack color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_manhack_color_b", "60", true, false, "Manhack color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_manhack_color_r", "255", true, false, "Manhack color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_manhack_color_g", "60", true, false, "Manhack color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_manhack_color_b", "60", true, false, "Manhack color - blue (0-255)")
 
     if BL.TrackClass then BL.TrackClass("npc_manhack") end
 

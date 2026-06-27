@@ -12,6 +12,8 @@ if CLIENT then
     BL._tickers = BL._tickers or {}
     BL._attachCache = BL._attachCache or {}
     BL._networkHandlers = BL._networkHandlers or {}
+    BL._clientConVars = BL._clientConVars or {}
+    BL._clientConVarDefaults = BL._clientConVarDefaults or {}
 
     local NET_MUZZLE_FLASH = 1
     local NET_BULLET_IMPACT = 2
@@ -154,30 +156,45 @@ if CLIENT then
         end
     end
 
+    function BL.GetRegisteredClientConVars()
+        return BL._clientConVars
+    end
+
+    function BL.GetRegisteredClientConVarDefaults()
+        return BL._clientConVarDefaults
+    end
+
+    function BL.CreateClientConVar(name, defaultValue, shouldSave, userData, helpText, min, max)
+        BL._clientConVarDefaults[name] = tostring(defaultValue)
+        local cvar = CreateClientConVar(name, tostring(defaultValue), shouldSave, userData, helpText, min, max)
+        BL._clientConVars[name] = cvar
+        return cvar
+    end
+
     function BL.CreateConVarSet(prefix, defaults)
         defaults = defaults or {}
         local cvars = {}
 
         if defaults.enable ~= nil then
-            cvars.enable = CreateClientConVar(prefix .. "_enable", tostring(defaults.enable), true, false, defaults.enableDesc or "Enable this lighting effect")
+            cvars.enable = BL.CreateClientConVar(prefix .. "_enable", defaults.enable, true, false, defaults.enableDesc or "Enable this lighting effect")
         end
 
         if defaults.size then
-            cvars.size = CreateClientConVar(prefix .. "_size", tostring(defaults.size), true, false, defaults.sizeDesc or "Light radius")
+            cvars.size = BL.CreateClientConVar(prefix .. "_size", defaults.size, true, false, defaults.sizeDesc or "Light radius")
         end
 
         if defaults.brightness then
-            cvars.brightness = CreateClientConVar(prefix .. "_brightness", tostring(defaults.brightness), true, false, defaults.brightnessDesc or "Light brightness")
+            cvars.brightness = BL.CreateClientConVar(prefix .. "_brightness", defaults.brightness, true, false, defaults.brightnessDesc or "Light brightness")
         end
 
         if defaults.decay then
-            cvars.decay = CreateClientConVar(prefix .. "_decay", tostring(defaults.decay), true, false, defaults.decayDesc or "Light decay")
+            cvars.decay = BL.CreateClientConVar(prefix .. "_decay", defaults.decay, true, false, defaults.decayDesc or "Light decay")
         end
 
         if defaults.r and defaults.g and defaults.b then
-            cvars.r = CreateClientConVar(prefix .. "_color_r", tostring(defaults.r), true, false, defaults.rDesc or "Red (0-255)")
-            cvars.g = CreateClientConVar(prefix .. "_color_g", tostring(defaults.g), true, false, defaults.gDesc or "Green (0-255)")
-            cvars.b = CreateClientConVar(prefix .. "_color_b", tostring(defaults.b), true, false, defaults.bDesc or "Blue (0-255)")
+            cvars.r = BL.CreateClientConVar(prefix .. "_color_r", defaults.r, true, false, defaults.rDesc or "Red (0-255)")
+            cvars.g = BL.CreateClientConVar(prefix .. "_color_g", defaults.g, true, false, defaults.gDesc or "Green (0-255)")
+            cvars.b = BL.CreateClientConVar(prefix .. "_color_b", defaults.b, true, false, defaults.bDesc or "Blue (0-255)")
         end
 
         return cvars

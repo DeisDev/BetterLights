@@ -2,14 +2,14 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
-    local cvar_enable = CreateClientConVar("betterlights_antlion_grub_enable", "1", true, false, "Enable green glow on Antlion Grubs")
-    local cvar_size = CreateClientConVar("betterlights_antlion_grub_size", "70", true, false, "Grub light radius")
-    local cvar_brightness = CreateClientConVar("betterlights_antlion_grub_brightness", "0.35", true, false, "Grub light brightness")
-    local cvar_decay = CreateClientConVar("betterlights_antlion_grub_decay", "2000", true, false, "Grub light decay")
+    local cvar_enable = BL.CreateClientConVar("betterlights_antlion_grub_enable", "1", true, false, "Enable green glow on Antlion Grubs")
+    local cvar_size = BL.CreateClientConVar("betterlights_antlion_grub_size", "70", true, false, "Grub light radius")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_antlion_grub_brightness", "0.35", true, false, "Grub light brightness")
+    local cvar_decay = BL.CreateClientConVar("betterlights_antlion_grub_decay", "2000", true, false, "Grub light decay")
 
-    local cvar_col_r = CreateClientConVar("betterlights_antlion_grub_color_r", "120", true, false, "Antlion grub color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_antlion_grub_color_g", "255", true, false, "Antlion grub color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_antlion_grub_color_b", "120", true, false, "Antlion grub color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_antlion_grub_color_r", "120", true, false, "Antlion grub color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_antlion_grub_color_g", "255", true, false, "Antlion grub color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_antlion_grub_color_b", "120", true, false, "Antlion grub color - blue (0-255)")
 
     local ATTACH_NAMES = { "glow", "glow1", "abdomen", "light", "lum" }
 

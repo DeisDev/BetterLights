@@ -3,9 +3,12 @@
     "version": "v1.5.1",
     "title": "Better Lights v1.5.1",
     "items": [
-      "Added more flashlight color, flicker, and motion settings.",
-      "Improved flashlight movement and vehicle behavior.",
-      "Updated the flashlight settings layout."
+      "Added flashlight color and flicker strength settings.",
+      "Added a simple slider for flashlight sway strength.",
+      "Improved flashlight behavior in vehicles.",
+      "Cleaned up the flashlight settings menu, labels, and button styling.",
+      "Fixed reset all settings not restoring every Better Lights option.",
+      "Fixed flashlight texture and recent texture choices not resetting properly."
     ]
   },
   {

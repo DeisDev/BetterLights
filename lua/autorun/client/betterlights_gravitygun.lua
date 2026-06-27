@@ -5,19 +5,19 @@ if CLIENT then
     local IsValid = IsValid
     local GetConVar = GetConVar
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
-    local cvar_enable = CreateClientConVar("betterlights_gravitygun_enable", "1", true, false, "Enable dynamic light for the gravity gun (physcannon)")
-    local cvar_size = CreateClientConVar("betterlights_gravitygun_size", "36", true, false, "Dynamic light radius for the gravity gun")
-    local cvar_brightness = CreateClientConVar("betterlights_gravitygun_brightness", "0.35", true, false, "Dynamic light brightness for the gravity gun")
-    local cvar_decay = CreateClientConVar("betterlights_gravitygun_decay", "2000", true, false, "Dynamic light decay for the gravity gun")
-    local cvar_models_elight = CreateClientConVar("betterlights_gravitygun_models_elight", "1", true, false, "Also add an entity light (elight) to light the gravity gun model directly")
-    local cvar_models_elight_size_mult = CreateClientConVar("betterlights_gravitygun_models_elight_size_mult", "1.0", true, false, "Multiplier for gravity gun elight radius")
+    local cvar_enable = BL.CreateClientConVar("betterlights_gravitygun_enable", "1", true, false, "Enable dynamic light for the gravity gun (physcannon)")
+    local cvar_size = BL.CreateClientConVar("betterlights_gravitygun_size", "36", true, false, "Dynamic light radius for the gravity gun")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_gravitygun_brightness", "0.35", true, false, "Dynamic light brightness for the gravity gun")
+    local cvar_decay = BL.CreateClientConVar("betterlights_gravitygun_decay", "2000", true, false, "Dynamic light decay for the gravity gun")
+    local cvar_models_elight = BL.CreateClientConVar("betterlights_gravitygun_models_elight", "1", true, false, "Also add an entity light (elight) to light the gravity gun model directly")
+    local cvar_models_elight_size_mult = BL.CreateClientConVar("betterlights_gravitygun_models_elight_size_mult", "1.0", true, false, "Multiplier for gravity gun elight radius")
 
-    local cvar_col_r = CreateClientConVar("betterlights_gravitygun_color_r", "255", true, false, "Gravity gun color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_gravitygun_color_g", "140", true, false, "Gravity gun color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_gravitygun_color_b", "40", true, false, "Gravity gun color - blue (0-255)")
-    local cvar_super_col_r = CreateClientConVar("betterlights_gravitygun_super_color_r", "40", true, false, "Supercharged gravity gun color - red (0-255)")
-    local cvar_super_col_g = CreateClientConVar("betterlights_gravitygun_super_color_g", "140", true, false, "Supercharged gravity gun color - green (0-255)")
-    local cvar_super_col_b = CreateClientConVar("betterlights_gravitygun_super_color_b", "255", true, false, "Supercharged gravity gun color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_gravitygun_color_r", "255", true, false, "Gravity gun color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_gravitygun_color_g", "140", true, false, "Gravity gun color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_gravitygun_color_b", "40", true, false, "Gravity gun color - blue (0-255)")
+    local cvar_super_col_r = BL.CreateClientConVar("betterlights_gravitygun_super_color_r", "40", true, false, "Supercharged gravity gun color - red (0-255)")
+    local cvar_super_col_g = BL.CreateClientConVar("betterlights_gravitygun_super_color_g", "140", true, false, "Supercharged gravity gun color - green (0-255)")
+    local cvar_super_col_b = BL.CreateClientConVar("betterlights_gravitygun_super_color_b", "255", true, false, "Supercharged gravity gun color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "core", "fork", "claw", "muzzle_flash" }
     local function getGravgunLightPos(ply, wep)

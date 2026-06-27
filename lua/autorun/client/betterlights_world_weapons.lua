@@ -128,15 +128,15 @@ if CLIENT then
 
     for _, info in ipairs(WEAPONS) do
         local prefix = "betterlights_world_weapon_" .. info.slug
-        info.cvar_enable = CreateClientConVar(prefix .. "_enable", "1", true, false, "Enable world weapon light for " .. info.name)
-        info.cvar_size = CreateClientConVar(prefix .. "_size", tostring(info.size), true, false, "Dynamic light radius for world " .. info.name)
-        info.cvar_brightness = CreateClientConVar(prefix .. "_brightness", tostring(info.brightness), true, false, "Dynamic light brightness for world " .. info.name)
-        info.cvar_decay = CreateClientConVar(prefix .. "_decay", tostring(info.decay), true, false, "Dynamic light decay for world " .. info.name)
-        info.cvar_models_elight = CreateClientConVar(prefix .. "_models_elight", tostring(info.elight), true, false, "Also add an entity light (elight) for world " .. info.name)
-        info.cvar_models_elight_size_mult = CreateClientConVar(prefix .. "_models_elight_size_mult", tostring(info.elightMult), true, false, "Multiplier for world " .. info.name .. " elight radius")
-        info.cvar_r = CreateClientConVar(prefix .. "_color_r", tostring(info.r), true, false, info.name .. " world weapon color - red (0-255)")
-        info.cvar_g = CreateClientConVar(prefix .. "_color_g", tostring(info.g), true, false, info.name .. " world weapon color - green (0-255)")
-        info.cvar_b = CreateClientConVar(prefix .. "_color_b", tostring(info.b), true, false, info.name .. " world weapon color - blue (0-255)")
+        info.cvar_enable = BL.CreateClientConVar(prefix .. "_enable", "1", true, false, "Enable world weapon light for " .. info.name)
+        info.cvar_size = BL.CreateClientConVar(prefix .. "_size", tostring(info.size), true, false, "Dynamic light radius for world " .. info.name)
+        info.cvar_brightness = BL.CreateClientConVar(prefix .. "_brightness", tostring(info.brightness), true, false, "Dynamic light brightness for world " .. info.name)
+        info.cvar_decay = BL.CreateClientConVar(prefix .. "_decay", tostring(info.decay), true, false, "Dynamic light decay for world " .. info.name)
+        info.cvar_models_elight = BL.CreateClientConVar(prefix .. "_models_elight", tostring(info.elight), true, false, "Also add an entity light (elight) for world " .. info.name)
+        info.cvar_models_elight_size_mult = BL.CreateClientConVar(prefix .. "_models_elight_size_mult", tostring(info.elightMult), true, false, "Multiplier for world " .. info.name .. " elight radius")
+        info.cvar_r = BL.CreateClientConVar(prefix .. "_color_r", tostring(info.r), true, false, info.name .. " world weapon color - red (0-255)")
+        info.cvar_g = BL.CreateClientConVar(prefix .. "_color_g", tostring(info.g), true, false, info.name .. " world weapon color - green (0-255)")
+        info.cvar_b = BL.CreateClientConVar(prefix .. "_color_b", tostring(info.b), true, false, info.name .. " world weapon color - blue (0-255)")
 
         if BL.TrackClass then
             BL.TrackClass(info.class)

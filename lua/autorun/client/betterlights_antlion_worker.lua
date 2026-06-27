@@ -2,14 +2,14 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
-    local cvar_enable = CreateClientConVar("betterlights_antlion_worker_enable", "1", true, false, "Enable subtle glow on Antlion Workers")
-    local cvar_size = CreateClientConVar("betterlights_antlion_worker_size", "120", true, false, "Antlion Worker light radius")
-    local cvar_brightness = CreateClientConVar("betterlights_antlion_worker_brightness", "0.55", true, false, "Antlion Worker light brightness")
-    local cvar_decay = CreateClientConVar("betterlights_antlion_worker_decay", "2000", true, false, "Antlion Worker light decay")
+    local cvar_enable = BL.CreateClientConVar("betterlights_antlion_worker_enable", "1", true, false, "Enable subtle glow on Antlion Workers")
+    local cvar_size = BL.CreateClientConVar("betterlights_antlion_worker_size", "120", true, false, "Antlion Worker light radius")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_antlion_worker_brightness", "0.55", true, false, "Antlion Worker light brightness")
+    local cvar_decay = BL.CreateClientConVar("betterlights_antlion_worker_decay", "2000", true, false, "Antlion Worker light decay")
 
-    local cvar_col_r = CreateClientConVar("betterlights_antlion_worker_color_r", "180", true, false, "Antlion Worker color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_antlion_worker_color_g", "240", true, false, "Antlion Worker color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_antlion_worker_color_b", "120", true, false, "Antlion Worker color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_antlion_worker_color_r", "180", true, false, "Antlion Worker color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_antlion_worker_color_g", "240", true, false, "Antlion Worker color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_antlion_worker_color_b", "120", true, false, "Antlion Worker color - blue (0-255)")
 
     local BONE_NAME = "Antlion.Back_Bone"
     local ATTACH_NAMES = { "glow", "light", "abdomen", "body", "spine" }

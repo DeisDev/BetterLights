@@ -2,18 +2,18 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     
-    local cvar_enable = CreateClientConVar("betterlights_explosion_flash_enable", "1", true, false, "Enable generic explosion flashes (env_explosion, explosive barrels, etc.)")
-    local cvar_size = CreateClientConVar("betterlights_explosion_flash_size", "380", true, false, "Generic explosion flash radius")
-    local cvar_brightness = CreateClientConVar("betterlights_explosion_flash_brightness", "4.6", true, false, "Generic explosion flash brightness")
-    local cvar_time = CreateClientConVar("betterlights_explosion_flash_time", "0.18", true, false, "Generic explosion flash duration (seconds)")
-    local cvar_r = CreateClientConVar("betterlights_explosion_flash_color_r", "255", true, false, "Explosion flash color - red component (0-255)")
-    local cvar_g = CreateClientConVar("betterlights_explosion_flash_color_g", "210", true, false, "Explosion flash color - green component (0-255)")
-    local cvar_b = CreateClientConVar("betterlights_explosion_flash_color_b", "120", true, false, "Explosion flash color - blue component (0-255)")
+    local cvar_enable = BL.CreateClientConVar("betterlights_explosion_flash_enable", "1", true, false, "Enable generic explosion flashes (env_explosion, explosive barrels, etc.)")
+    local cvar_size = BL.CreateClientConVar("betterlights_explosion_flash_size", "380", true, false, "Generic explosion flash radius")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_explosion_flash_brightness", "4.6", true, false, "Generic explosion flash brightness")
+    local cvar_time = BL.CreateClientConVar("betterlights_explosion_flash_time", "0.18", true, false, "Generic explosion flash duration (seconds)")
+    local cvar_r = BL.CreateClientConVar("betterlights_explosion_flash_color_r", "255", true, false, "Explosion flash color - red component (0-255)")
+    local cvar_g = BL.CreateClientConVar("betterlights_explosion_flash_color_g", "210", true, false, "Explosion flash color - green component (0-255)")
+    local cvar_b = BL.CreateClientConVar("betterlights_explosion_flash_color_b", "120", true, false, "Explosion flash color - blue component (0-255)")
 
-    local cvar_detect_env = CreateClientConVar("betterlights_explosion_detect_env", "1", true, false, "Detect env_explosion/env_physexplosion/env_ar2explosion entities")
-    local cvar_detect_barrel = CreateClientConVar("betterlights_explosion_detect_barrels", "1", true, false, "Detect explosive barrels by removal (oildrum001_explosive model)")
-    local cvar_detect_scanner = CreateClientConVar("betterlights_explosion_detect_scanners", "1", true, false, "Detect scanner explosions (npc_cscanner, npc_clawscanner)")
-    local cvar_detect_mine = CreateClientConVar("betterlights_explosion_detect_mines", "1", true, false, "Detect combine mine explosions (combine_mine)")
+    local cvar_detect_env = BL.CreateClientConVar("betterlights_explosion_detect_env", "1", true, false, "Detect env_explosion/env_physexplosion/env_ar2explosion entities")
+    local cvar_detect_barrel = BL.CreateClientConVar("betterlights_explosion_detect_barrels", "1", true, false, "Detect explosive barrels by removal (oildrum001_explosive model)")
+    local cvar_detect_scanner = BL.CreateClientConVar("betterlights_explosion_detect_scanners", "1", true, false, "Detect scanner explosions (npc_cscanner, npc_clawscanner)")
+    local cvar_detect_mine = BL.CreateClientConVar("betterlights_explosion_detect_mines", "1", true, false, "Detect combine mine explosions (combine_mine)")
 
     local function spawnFlashAt(pos)
         if not cvar_enable:GetBool() then return end

@@ -4,20 +4,20 @@ if CLIENT then
     local CurTime = CurTime
     local IsValid = IsValid
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
-    local cvar_enable = CreateClientConVar("betterlights_fire_enable", "1", true, false, "Enable dynamic light for entities that are on fire")
-    local cvar_size = CreateClientConVar("betterlights_fire_size", "160", true, false, "Dynamic light radius for burning entities")
-    local cvar_brightness = CreateClientConVar("betterlights_fire_brightness", "5.2", true, false, "Dynamic light brightness for burning entities")
-    local cvar_decay = CreateClientConVar("betterlights_fire_decay", "2000", true, false, "Dynamic light decay for burning entities")
-    local cvar_models_elight = CreateClientConVar("betterlights_fire_models_elight", "1", true, false, "Also add an entity light (elight) to light models directly")
-    local cvar_models_elight_size_mult = CreateClientConVar("betterlights_fire_models_elight_size_mult", "1.0", true, false, "Multiplier for elight radius on burning entities")
-    local cvar_flicker_enable = CreateClientConVar("betterlights_fire_flicker_enable", "1", true, false, "Enable flicker effect for burning entity lights")
-    local cvar_flicker_amount = CreateClientConVar("betterlights_fire_flicker_amount", "0.35", true, false, "Flicker intensity (as a fraction of brightness)")
-    local cvar_flicker_size_amount = CreateClientConVar("betterlights_fire_flicker_size_amount", "0.12", true, false, "Flicker intensity applied to light radius")
-    local cvar_flicker_speed = CreateClientConVar("betterlights_fire_flicker_speed", "11.5", true, false, "Flicker speed (higher = faster flicker)")
+    local cvar_enable = BL.CreateClientConVar("betterlights_fire_enable", "1", true, false, "Enable dynamic light for entities that are on fire")
+    local cvar_size = BL.CreateClientConVar("betterlights_fire_size", "160", true, false, "Dynamic light radius for burning entities")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_fire_brightness", "5.2", true, false, "Dynamic light brightness for burning entities")
+    local cvar_decay = BL.CreateClientConVar("betterlights_fire_decay", "2000", true, false, "Dynamic light decay for burning entities")
+    local cvar_models_elight = BL.CreateClientConVar("betterlights_fire_models_elight", "1", true, false, "Also add an entity light (elight) to light models directly")
+    local cvar_models_elight_size_mult = BL.CreateClientConVar("betterlights_fire_models_elight_size_mult", "1.0", true, false, "Multiplier for elight radius on burning entities")
+    local cvar_flicker_enable = BL.CreateClientConVar("betterlights_fire_flicker_enable", "1", true, false, "Enable flicker effect for burning entity lights")
+    local cvar_flicker_amount = BL.CreateClientConVar("betterlights_fire_flicker_amount", "0.35", true, false, "Flicker intensity (as a fraction of brightness)")
+    local cvar_flicker_size_amount = BL.CreateClientConVar("betterlights_fire_flicker_size_amount", "0.12", true, false, "Flicker intensity applied to light radius")
+    local cvar_flicker_speed = BL.CreateClientConVar("betterlights_fire_flicker_speed", "11.5", true, false, "Flicker speed (higher = faster flicker)")
 
-    local cvar_col_r = CreateClientConVar("betterlights_fire_color_r", "255", true, false, "Burning entities color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_fire_color_g", "170", true, false, "Burning entities color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_fire_color_b", "60", true, false, "Burning entities color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_fire_color_r", "255", true, false, "Burning entities color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_fire_color_g", "170", true, false, "Burning entities color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_fire_color_b", "60", true, false, "Burning entities color - blue (0-255)")
 
     local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
 

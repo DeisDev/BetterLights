@@ -11,7 +11,7 @@
 Better Lights adds extra lighting to weapons, NPCs, items, fires, explosions, projectiles, and more.
 
 [list]
-[*]Better flashlight with dynamic shadows, custom sounds, sway, custom texture options and more
+[*]Better flashlight with shadows, custom sounds, color, flicker, sway, and texture options
 [*]Muzzle flashes, bullet impacts, and projectile lights
 [*]Glowing NPCs, items, Combine eyes, pickups, and effects
 [*]Fire, explosion, physgun, toolgun, and gravity gun lights
@@ -26,7 +26,7 @@ Better Lights adds extra lighting to weapons, NPCs, items, fires, explosions, pr
 
 Open the spawn menu and go to the [b]Better Lights[/b] tab.
 
-Almost everything about this addon is configurable and can be tweaked or turned on/off. 
+You can customize pretty much everything about this addon, and you can also enable or disable anything you want. 
 
 [img]https://files.catbox.moe/okwsv1.gif[/img]
 

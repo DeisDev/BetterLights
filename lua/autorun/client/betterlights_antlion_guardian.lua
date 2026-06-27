@@ -2,16 +2,16 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
-    local cvar_enable = CreateClientConVar("betterlights_antlion_guardian_enable", "1", true, false, "Enable green glow on Antlion Guardian")
-    local cvar_size = CreateClientConVar("betterlights_antlion_guardian_size", "180", true, false, "Guardian light radius")
-    local cvar_brightness = CreateClientConVar("betterlights_antlion_guardian_brightness", "0.6", true, false, "Guardian light brightness")
-    local cvar_decay = CreateClientConVar("betterlights_antlion_guardian_decay", "2000", true, false, "Guardian light decay")
+    local cvar_enable = BL.CreateClientConVar("betterlights_antlion_guardian_enable", "1", true, false, "Enable green glow on Antlion Guardian")
+    local cvar_size = BL.CreateClientConVar("betterlights_antlion_guardian_size", "180", true, false, "Guardian light radius")
+    local cvar_brightness = BL.CreateClientConVar("betterlights_antlion_guardian_brightness", "0.6", true, false, "Guardian light brightness")
+    local cvar_decay = BL.CreateClientConVar("betterlights_antlion_guardian_decay", "2000", true, false, "Guardian light decay")
 
-    local cvar_debug = CreateClientConVar("betterlights_antlion_guardian_debug", "0", false, false, "Debug guardian detection prints")
+    local cvar_debug = BL.CreateClientConVar("betterlights_antlion_guardian_debug", "0", false, false, "Debug guardian detection prints")
 
-    local cvar_col_r = CreateClientConVar("betterlights_antlion_guardian_color_r", "120", true, false, "Antlion Guardian color - red (0-255)")
-    local cvar_col_g = CreateClientConVar("betterlights_antlion_guardian_color_g", "255", true, false, "Antlion Guardian color - green (0-255)")
-    local cvar_col_b = CreateClientConVar("betterlights_antlion_guardian_color_b", "140", true, false, "Antlion Guardian color - blue (0-255)")
+    local cvar_col_r = BL.CreateClientConVar("betterlights_antlion_guardian_color_r", "120", true, false, "Antlion Guardian color - red (0-255)")
+    local cvar_col_g = BL.CreateClientConVar("betterlights_antlion_guardian_color_g", "255", true, false, "Antlion Guardian color - green (0-255)")
+    local cvar_col_b = BL.CreateClientConVar("betterlights_antlion_guardian_color_b", "140", true, false, "Antlion Guardian color - blue (0-255)")
 
     local function looksLikeGuardian(ent)
         return BL.DetectEntityVariant(ent, {

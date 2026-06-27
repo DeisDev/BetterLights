@@ -2,40 +2,40 @@ if CLIENT then
     BetterLights = BetterLights or {}
     local BL = BetterLights
     
-    local cvar_enable = CreateClientConVar("betterlights_combine_mine_enable", "1", true, false, "Enable dynamic light for Combine Mines when the player is nearby")
-    local cvar_range = CreateClientConVar("betterlights_combine_mine_range", "260", true, false, "Distance at which the mine starts glowing (units)")
-    local cvar_size_alert = CreateClientConVar("betterlights_combine_mine_size", "140", true, false, "Dynamic light radius for alert mines")
-    local cvar_brightness_alert = CreateClientConVar("betterlights_combine_mine_brightness", "1.2", true, false, "Dynamic light brightness for alert mines")
-    local cvar_decay = CreateClientConVar("betterlights_combine_mine_decay", "2000", true, false, "Dynamic light decay for Combine Mines")
+    local cvar_enable = BL.CreateClientConVar("betterlights_combine_mine_enable", "1", true, false, "Enable dynamic light for Combine Mines when the player is nearby")
+    local cvar_range = BL.CreateClientConVar("betterlights_combine_mine_range", "260", true, false, "Distance at which the mine starts glowing (units)")
+    local cvar_size_alert = BL.CreateClientConVar("betterlights_combine_mine_size", "140", true, false, "Dynamic light radius for alert mines")
+    local cvar_brightness_alert = BL.CreateClientConVar("betterlights_combine_mine_brightness", "1.2", true, false, "Dynamic light brightness for alert mines")
+    local cvar_decay = BL.CreateClientConVar("betterlights_combine_mine_decay", "2000", true, false, "Dynamic light decay for Combine Mines")
     
-    local cvar_res_enable = CreateClientConVar("betterlights_combine_mine_resistance_enable", "1", true, false, "Enable dynamic light for Resistance Mines")
-    local cvar_res_size = CreateClientConVar("betterlights_combine_mine_resistance_size", "140", true, false, "Dynamic light radius for Resistance Mines")
-    local cvar_res_brightness = CreateClientConVar("betterlights_combine_mine_resistance_brightness", "1.0", true, false, "Dynamic light brightness for Resistance Mines")
-    local cvar_res_decay = CreateClientConVar("betterlights_combine_mine_resistance_decay", "2000", true, false, "Dynamic light decay for Resistance Mines")
+    local cvar_res_enable = BL.CreateClientConVar("betterlights_combine_mine_resistance_enable", "1", true, false, "Enable dynamic light for Resistance Mines")
+    local cvar_res_size = BL.CreateClientConVar("betterlights_combine_mine_resistance_size", "140", true, false, "Dynamic light radius for Resistance Mines")
+    local cvar_res_brightness = BL.CreateClientConVar("betterlights_combine_mine_resistance_brightness", "1.0", true, false, "Dynamic light brightness for Resistance Mines")
+    local cvar_res_decay = BL.CreateClientConVar("betterlights_combine_mine_resistance_decay", "2000", true, false, "Dynamic light decay for Resistance Mines")
 
-    local cvar_idle_enable = CreateClientConVar("betterlights_combine_mine_idle_enable", "1", true, false, "Also emit a very dim idle glow when out of range")
-    local cvar_size_idle = CreateClientConVar("betterlights_combine_mine_idle_size", "80", true, false, "Dynamic light radius for idle mines")
-    local cvar_brightness_idle = CreateClientConVar("betterlights_combine_mine_idle_brightness", "0.25", true, false, "Dynamic light brightness for idle mines")
+    local cvar_idle_enable = BL.CreateClientConVar("betterlights_combine_mine_idle_enable", "1", true, false, "Also emit a very dim idle glow when out of range")
+    local cvar_size_idle = BL.CreateClientConVar("betterlights_combine_mine_idle_size", "80", true, false, "Dynamic light radius for idle mines")
+    local cvar_brightness_idle = BL.CreateClientConVar("betterlights_combine_mine_idle_brightness", "0.25", true, false, "Dynamic light brightness for idle mines")
 
-    local cvar_models_elight = CreateClientConVar("betterlights_combine_mine_models_elight", "1", true, false, "Also add an entity light (elight) to light the mine model directly")
-    local cvar_models_elight_size_mult = CreateClientConVar("betterlights_combine_mine_models_elight_size_mult", "1.0", true, false, "Multiplier for mine elight radius")
+    local cvar_models_elight = BL.CreateClientConVar("betterlights_combine_mine_models_elight", "1", true, false, "Also add an entity light (elight) to light the mine model directly")
+    local cvar_models_elight_size_mult = BL.CreateClientConVar("betterlights_combine_mine_models_elight_size_mult", "1.0", true, false, "Multiplier for mine elight radius")
 
-    local cvar_pulse_enable = CreateClientConVar("betterlights_combine_mine_pulse_enable", "1", true, false, "Enable a subtle pulse on alert mines")
-    local cvar_pulse_amount = CreateClientConVar("betterlights_combine_mine_pulse_amount", "0.15", true, false, "Pulse intensity as a fraction of brightness")
-    local cvar_pulse_speed = CreateClientConVar("betterlights_combine_mine_pulse_speed", "6.0", true, false, "Pulse speed for alert mines")
+    local cvar_pulse_enable = BL.CreateClientConVar("betterlights_combine_mine_pulse_enable", "1", true, false, "Enable a subtle pulse on alert mines")
+    local cvar_pulse_amount = BL.CreateClientConVar("betterlights_combine_mine_pulse_amount", "0.15", true, false, "Pulse intensity as a fraction of brightness")
+    local cvar_pulse_speed = BL.CreateClientConVar("betterlights_combine_mine_pulse_speed", "6.0", true, false, "Pulse speed for alert mines")
 
-    local cvar_idle_r = CreateClientConVar("betterlights_combine_mine_idle_color_r", "90", true, false, "Combine mine idle color - red (0-255)")
-    local cvar_idle_g = CreateClientConVar("betterlights_combine_mine_idle_color_g", "180", true, false, "Combine mine idle color - green (0-255)")
-    local cvar_idle_b = CreateClientConVar("betterlights_combine_mine_idle_color_b", "255", true, false, "Combine mine idle color - blue (0-255)")
-    local cvar_alert_r = CreateClientConVar("betterlights_combine_mine_alert_color_r", "255", true, false, "Combine mine alert color - red (0-255)")
-    local cvar_alert_g = CreateClientConVar("betterlights_combine_mine_alert_color_g", "60", true, false, "Combine mine alert color - green (0-255)")
-    local cvar_alert_b = CreateClientConVar("betterlights_combine_mine_alert_color_b", "60", true, false, "Combine mine alert color - blue (0-255)")
+    local cvar_idle_r = BL.CreateClientConVar("betterlights_combine_mine_idle_color_r", "90", true, false, "Combine mine idle color - red (0-255)")
+    local cvar_idle_g = BL.CreateClientConVar("betterlights_combine_mine_idle_color_g", "180", true, false, "Combine mine idle color - green (0-255)")
+    local cvar_idle_b = BL.CreateClientConVar("betterlights_combine_mine_idle_color_b", "255", true, false, "Combine mine idle color - blue (0-255)")
+    local cvar_alert_r = BL.CreateClientConVar("betterlights_combine_mine_alert_color_r", "255", true, false, "Combine mine alert color - red (0-255)")
+    local cvar_alert_g = BL.CreateClientConVar("betterlights_combine_mine_alert_color_g", "60", true, false, "Combine mine alert color - green (0-255)")
+    local cvar_alert_b = BL.CreateClientConVar("betterlights_combine_mine_alert_color_b", "60", true, false, "Combine mine alert color - blue (0-255)")
 
-    local cvar_res_r = CreateClientConVar("betterlights_combine_mine_resistance_color_r", "60", true, false, "Resistance mine color - red (0-255)")
-    local cvar_res_g = CreateClientConVar("betterlights_combine_mine_resistance_color_g", "255", true, false, "Resistance mine color - green (0-255)")
-    local cvar_res_b = CreateClientConVar("betterlights_combine_mine_resistance_color_b", "100", true, false, "Resistance mine color - blue (0-255)")
+    local cvar_res_r = BL.CreateClientConVar("betterlights_combine_mine_resistance_color_r", "60", true, false, "Resistance mine color - red (0-255)")
+    local cvar_res_g = BL.CreateClientConVar("betterlights_combine_mine_resistance_color_g", "255", true, false, "Resistance mine color - green (0-255)")
+    local cvar_res_b = BL.CreateClientConVar("betterlights_combine_mine_resistance_color_b", "100", true, false, "Resistance mine color - blue (0-255)")
 
-    local cvar_debug = CreateClientConVar("betterlights_combine_mine_debug", "0", true, false, "Debug mine type detection (prints to console)")
+    local cvar_debug = BL.CreateClientConVar("betterlights_combine_mine_debug", "0", true, false, "Debug mine type detection (prints to console)")
 
     local function isFriendlyMine(ent)
         return BL.DetectEntityVariant(ent, {
