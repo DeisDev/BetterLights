@@ -1,8 +1,8 @@
-# BetterLights
+# Better Lights
 
-*A Dynamic lighting mod for Garry's Mod.* 
+*Configurable dynamic lighting for Garry's Mod.*
 
-Everything can be configured in the tool menu tab labeled "Better Lights". 
+Better Lights adds extra dynamic lighting to weapons, NPCs, items, projectiles, fires, explosions, and other effects. Most features can be adjusted or turned off from the **Better Lights** tab in the spawn menu.
 
 ## Steam Workshop
 
@@ -17,11 +17,15 @@ Everything can be configured in the tool menu tab labeled "Better Lights".
 <!-- steam-workshop-stats:end -->
 
 > [!IMPORTANT]
-> I Highly recommend that you use the 64-Bit branch for Garry's Mod. It's more stable. 
+> I strongly recommend using the 64-bit branch of Garry's Mod. The addon is tested there, and the game is usually more stable on it.
 
-## Contributing Translations
+## Translation Help
 
-Better Lights uses Garry's Mod `.properties` localization files in `resource/localization/<language>/betterlights.properties`.
+Better Lights uses Garry's Mod `.properties` localization files. Each supported language has its own file here:
+
+```text
+resource/localization/<language>/betterlights.properties
+```
 
 The English file is the translation template:
 
@@ -29,23 +33,26 @@ The English file is the translation template:
 resource/localization/en/betterlights.properties
 ```
 
-To add or improve a translation:
+To add or improve a translation, copy the English file into the language folder you want to work on, then translate the player-facing text.
 
-1. Copy the English file into the supported language folder you want to update, such as `resource/localization/de/betterlights.properties`.
-2. Translate only the text after `=`.
-3. Keep every key, blank first line, and format placeholder such as `%s` unchanged.
-4. Use a Garry's Mod supported language code, such as `de`, `es-ES`, `fr`, `ja`, `ko`, `pl`, `pt-BR`, `ru`, `tr`, `zh-CN`, or `zh-TW`.
-5. Run the localization validator before opening a pull request:
+Please keep these details unchanged:
+
+1. Every key before `=`
+2. The blank first line
+3. Format placeholders such as `%s`
+4. The existing file name and folder format
+
+Before opening a pull request, run the localization validator:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\validate_localization.ps1
 ```
 
-Current non-English translations were made with the assistance of a large language model. Corrections and native-speaker improvements are welcome as pull requests.
+The current non-English translations were made with help from a large language model, so corrections from native speakers are very welcome.
 
 ## License
 
-BetterLights is licensed under GPL-3.0-or-later. See [LICENSE.md](LICENSE.md).
+Better Lights is licensed under GPL-3.0-or-later. See [LICENSE.md](LICENSE.md).
 
 <br>
 <br>
