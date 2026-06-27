@@ -1,5 +1,14 @@
 [
   {
+    "version": "v1.5.1",
+    "title": "Better Lights v1.5.1",
+    "items": [
+      "Added more flashlight color, flicker, and motion settings.",
+      "Improved flashlight movement and vehicle behavior.",
+      "Updated the flashlight settings layout."
+    ]
+  },
+  {
     "version": "v1.5.0",
     "title": "Better Lights v1.5.0",
     "items": [

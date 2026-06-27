@@ -14,11 +14,7 @@ if CLIENT then
         return string.format(phrase(key), ...)
     end
 
-    local function addResetButton(panel, defaults, label)
-        local btn = vgui.Create("DButton")
-        btn:SetTall(30)
-        btn:SetText(label or phrase("button.reset_defaults"))
-        btn:SetTooltip(phrase("tooltip.reset_defaults"))
+    local function styleButton(btn)
         btn.Paint = function(self, w, h)
             local hovered = self:IsHovered()
             surface.SetDrawColor(hovered and Color(235, 241, 248) or Color(248, 249, 251))
@@ -26,33 +22,92 @@ if CLIENT then
             surface.SetDrawColor(COLOR_BORDER)
             surface.DrawOutlinedRect(0, 0, w, h)
         end
+
+        return btn
+    end
+
+    local function addStyledButton(panel, label, tooltip)
+        local btn = styleButton(vgui.Create("DButton"))
+        btn:SetTall(30)
+        btn:SetText(label)
+
+        if tooltip then
+            btn:SetTooltip(tooltip)
+        end
+
+        panel:AddItem(btn)
+        return btn
+    end
+
+    local function addResetButton(panel, defaults, label)
+        local btn = addStyledButton(panel, label or phrase("button.reset_defaults"), phrase("tooltip.reset_defaults"))
         btn.DoClick = function()
             for cvar, def in pairs(defaults) do
                 RunConsoleCommand(cvar, tostring(def))
             end
         end
-
-        panel:AddItem(btn)
     end
 
     local function addBrightnessResetButton(panel)
-        local resetBrightness = panel:Button(phrase("button.reset_brightness"))
+        local resetBrightness = addStyledButton(panel, phrase("button.reset_brightness"))
         resetBrightness.DoClick = function()
             RunConsoleCommand("betterlights_flashlight_brightness", "1.35")
         end
     end
 
     local function addFovResetButton(panel)
-        local resetFov = panel:Button(phrase("button.reset_fov"))
+        local resetFov = addStyledButton(panel, phrase("button.reset_fov"))
         resetFov.DoClick = function()
             RunConsoleCommand("betterlights_flashlight_fov", "45")
         end
     end
 
     local function addBeamLengthResetButton(panel)
-        local resetBeamLength = panel:Button(phrase("button.reset_beam_length"))
+        local resetBeamLength = addStyledButton(panel, phrase("button.reset_beam_length"))
         resetBeamLength.DoClick = function()
             RunConsoleCommand("betterlights_flashlight_distance", "1200")
+        end
+    end
+
+    local function addFlickerAmountResetButton(panel)
+        local resetFlickerAmount = addStyledButton(panel, phrase("button.reset_flicker_amount"))
+        resetFlickerAmount.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_flicker_amount", "0.05")
+        end
+    end
+
+    local function addMovementSwayResetButton(panel)
+        local resetMovementSway = addStyledButton(panel, phrase("button.reset_movement_sway"))
+        resetMovementSway.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_movement_sway_strength", "1")
+        end
+    end
+
+    local function addSpringStrengthResetButton(panel)
+        local resetSpringStrength = addStyledButton(panel, phrase("button.reset_spring_strength"))
+        resetSpringStrength.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_spring_strength", "40")
+        end
+    end
+
+    local function addSpringDampingResetButton(panel)
+        local resetSpringDamping = addStyledButton(panel, phrase("button.reset_spring_damping"))
+        resetSpringDamping.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_spring_damping", "10")
+        end
+    end
+
+    local function addSprintSwayResetButton(panel)
+        local resetSprintSway = addStyledButton(panel, phrase("button.reset_sprint_sway"))
+        resetSprintSway.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_sprint_sway_strength", "0.45")
+        end
+    end
+
+    local function addIdleSwayResetButton(panel)
+        local resetIdleSway = addStyledButton(panel, phrase("button.reset_idle_sway"))
+        resetIdleSway.DoClick = function()
+            RunConsoleCommand("betterlights_flashlight_idle_sway_strength", "1.50")
         end
     end
 
@@ -208,7 +263,7 @@ if CLIENT then
             mixer.BetterLightsLastColor = { r = r, g = g, b = b }
         end
 
-        local reset = vgui.Create("DButton", container)
+        local reset = styleButton(vgui.Create("DButton", container))
         reset:Dock(BOTTOM)
         reset:DockMargin(8, 0, 8, 8)
         reset:SetTall(26)
@@ -272,7 +327,7 @@ if CLIENT then
         value:SetText(path)
         value:SetTextColor(Color(35, 35, 35))
 
-        local copy = vgui.Create("DButton", details)
+        local copy = styleButton(vgui.Create("DButton", details))
         copy:Dock(BOTTOM)
         copy:SetTall(24)
         copy:SetText(phrase("button.copy_path"))
@@ -330,13 +385,13 @@ if CLIENT then
         buttons:SetTall(28)
         buttons.Paint = nil
 
-        local use = vgui.Create("DButton", buttons)
+        local use = styleButton(vgui.Create("DButton", buttons))
         use:Dock(LEFT)
         use:SetWide(64)
         use:SetText(phrase("button.use"))
         use.DoClick = preview.DoClick
 
-        local copy = vgui.Create("DButton", buttons)
+        local copy = styleButton(vgui.Create("DButton", buttons))
         copy:Dock(RIGHT)
         copy:SetWide(64)
         copy:SetText(phrase("button.copy"))
@@ -417,7 +472,7 @@ if CLIENT then
     end
 
     local function addServerBoolResetButton(panel, defaults)
-        local btn = panel:Button(phrase("button.reset_server_settings"))
+        local btn = addStyledButton(panel, phrase("button.reset_server_settings"))
         btn.DoClick = function()
             if not canChangeServerSettings() then
                 notification.AddLegacy(phrase("notice.admin_reset_server_only"), NOTIFY_ERROR, 4)
@@ -645,7 +700,7 @@ if CLIENT then
         footer:SetTall(32)
         footer.Paint = nil
 
-        local workshopChangelog = vgui.Create("DButton", footer)
+        local workshopChangelog = styleButton(vgui.Create("DButton", footer))
         workshopChangelog:Dock(RIGHT)
         workshopChangelog:SetWide(190)
         workshopChangelog:SetText(phrase("button.workshop_changelog"))
@@ -767,6 +822,45 @@ if CLIENT then
         return defaults
     end
 
+    local function getFlashlightDefaultSettings()
+        local defaults = {}
+
+        for cvarName, defaultValue in pairs(getClientDefaultSettings()) do
+            if string.StartWith(cvarName, "betterlights_flashlight_") then
+                defaults[cvarName] = defaultValue
+            end
+        end
+
+        return defaults
+    end
+
+    local function resetFlashlightSettings()
+        Derma_Query(
+            phrase("dialog.reset_flashlight.message"),
+            phrase("dialog.reset_flashlight.title"),
+            phrase("button.reset_flashlight_settings"),
+            function()
+                for cvarName, defaultValue in pairs(getFlashlightDefaultSettings()) do
+                    RunConsoleCommand(cvarName, defaultValue)
+                end
+
+                if BetterLights then
+                    if BetterLights.ClearFlashlightRecentTextures then
+                        BetterLights.ClearFlashlightRecentTextures()
+                    end
+
+                    if BetterLights.ClearFlashlightKnownTextureCache then
+                        BetterLights.ClearFlashlightKnownTextureCache()
+                    end
+                end
+
+                notification.AddLegacy(phrase("notice.flashlight_settings_reset"), NOTIFY_GENERIC, 4)
+                surface.PlaySound("buttons/button14.wav")
+            end,
+            phrase("button.cancel")
+        )
+    end
+
     local function resetAllSettings()
         if not canChangeServerSettings() then
             notification.AddLegacy(phrase("notice.admin_reset_all_only"), NOTIFY_ERROR, 4)
@@ -814,13 +908,29 @@ if CLIENT then
         local beam = addSection(panel, "section.beam", "section.beam.desc", true)
         beam:CheckBox(phrase("control.cast_shadows"), "betterlights_flashlight_shadows")
         beam:CheckBox(phrase("control.flicker"), "betterlights_flashlight_flicker")
-        beam:CheckBox(phrase("control.flashlight_sway"), "betterlights_flashlight_sway")
+        beam:NumSlider(phrase("control.flicker_amount"), "betterlights_flashlight_flicker_amount", 0, 0.3, 2)
+        addFlickerAmountResetButton(beam)
         beam:NumSlider(phrase("control.brightness"), "betterlights_flashlight_brightness", 0.1, 5, 2)
         addBrightnessResetButton(beam)
         beam:NumSlider(phrase("control.fov"), "betterlights_flashlight_fov", 10, 120, 0)
         addFovResetButton(beam)
         beam:NumSlider(phrase("control.beam_length"), "betterlights_flashlight_distance", 128, 4096, 0)
         addBeamLengthResetButton(beam)
+        addColorMixerControl(beam, "control.flashlight_color", "betterlights_flashlight_color_r", "betterlights_flashlight_color_g", "betterlights_flashlight_color_b", 255, 245, 225)
+
+        local motion = addSection(panel, "section.motion", "section.motion.desc", true)
+        motion:CheckBox(phrase("control.flashlight_sway"), "betterlights_flashlight_sway")
+        motion:NumSlider(phrase("control.spring_strength"), "betterlights_flashlight_spring_strength", 8, 120, 0)
+        addSpringStrengthResetButton(motion)
+        motion:NumSlider(phrase("control.spring_damping"), "betterlights_flashlight_spring_damping", 1, 24, 0)
+        addSpringDampingResetButton(motion)
+        motion:NumSlider(phrase("control.movement_sway_strength"), "betterlights_flashlight_movement_sway_strength", 0, 3, 2)
+        addMovementSwayResetButton(motion)
+        motion:NumSlider(phrase("control.sprint_sway_strength"), "betterlights_flashlight_sprint_sway_strength", 0, 3, 2)
+        addSprintSwayResetButton(motion)
+        motion:CheckBox(phrase("control.idle_sway"), "betterlights_flashlight_idle_sway")
+        motion:NumSlider(phrase("control.idle_sway_strength"), "betterlights_flashlight_idle_sway_strength", 0, 3, 2)
+        addIdleSwayResetButton(motion)
 
         local texture = addSection(panel, "section.texture", "section.texture.desc", true)
 
@@ -840,7 +950,7 @@ if CLIENT then
         manualButtons:SetTall(28)
         manualButtons.Paint = nil
 
-        local useManual = vgui.Create("DButton", manualButtons)
+        local useManual = styleButton(vgui.Create("DButton", manualButtons))
         useManual:Dock(LEFT)
         useManual:SetWide(76)
         useManual:SetText(phrase("button.use"))
@@ -856,7 +966,7 @@ if CLIENT then
             surface.PlaySound("buttons/button10.wav")
         end
 
-        local copyCurrent = vgui.Create("DButton", manualButtons)
+        local copyCurrent = styleButton(vgui.Create("DButton", manualButtons))
         copyCurrent:Dock(LEFT)
         copyCurrent:DockMargin(6, 0, 0, 0)
         copyCurrent:SetWide(76)
@@ -865,7 +975,7 @@ if CLIENT then
             copyText(currentPath)
         end
 
-        local useDefault = vgui.Create("DButton", manualButtons)
+        local useDefault = styleButton(vgui.Create("DButton", manualButtons))
         useDefault:Dock(LEFT)
         useDefault:DockMargin(6, 0, 0, 0)
         useDefault:SetWide(76)
@@ -885,7 +995,7 @@ if CLIENT then
                 populateFlashlightVisualPanel(panel, filterText)
             end)
 
-            local clearRecent = recentSection:Button(phrase("button.clear_recent_textures"))
+            local clearRecent = addStyledButton(recentSection, phrase("button.clear_recent_textures"))
             clearRecent.DoClick = function()
                 if BetterLights.ClearFlashlightRecentTextures then
                     BetterLights.ClearFlashlightRecentTextures()
@@ -897,7 +1007,7 @@ if CLIENT then
 
         local knownSection = addSection(panel, "section.known_textures", "section.known_textures.desc", false)
 
-        local refreshTextures = knownSection:Button(phrase("button.refresh_textures"))
+        local refreshTextures = addStyledButton(knownSection, phrase("button.refresh_textures"))
         refreshTextures.DoClick = function()
             if BetterLights.ClearFlashlightKnownTextureCache then
                 BetterLights.ClearFlashlightKnownTextureCache()
@@ -915,7 +1025,7 @@ if CLIENT then
         filter:SetPlaceholderText(phrase("placeholder.search_texture_paths"))
         filter:SetText(filterText or "")
 
-        local applyFilter = vgui.Create("DButton", filterRow)
+        local applyFilter = styleButton(vgui.Create("DButton", filterRow))
         applyFilter:Dock(RIGHT)
         applyFilter:SetWide(72)
         applyFilter:SetText(phrase("button.search"))
@@ -950,7 +1060,17 @@ if CLIENT then
             betterlights_flashlight_distance = 1200,
             betterlights_flashlight_shadows = 1,
             betterlights_flashlight_flicker = 0,
+            betterlights_flashlight_flicker_amount = 0.05,
             betterlights_flashlight_sway = 1,
+            betterlights_flashlight_spring_strength = 40,
+            betterlights_flashlight_spring_damping = 10,
+            betterlights_flashlight_movement_sway_strength = 1,
+            betterlights_flashlight_sprint_sway_strength = 0.45,
+            betterlights_flashlight_idle_sway = 0,
+            betterlights_flashlight_idle_sway_strength = "1.50",
+            betterlights_flashlight_color_r = 255,
+            betterlights_flashlight_color_g = 245,
+            betterlights_flashlight_color_b = 225,
             betterlights_flashlight_texture = "effects/flashlight001",
         }, phrase("button.reset_visual_settings"))
     end
@@ -1199,7 +1319,7 @@ if CLIENT then
             })
 
             local maintenance = addSection(panel, "section.maintenance", "section.maintenance.desc", true)
-            local resetAllBtn = maintenance:Button(phrase("button.reset_all_settings"))
+            local resetAllBtn = addStyledButton(maintenance, phrase("button.reset_all_settings"))
             resetAllBtn.DoClick = resetAllSettings
             maintenance:Help(phrase("help.optional_bind"))
         end)
@@ -1619,6 +1739,9 @@ if CLIENT then
             behavior:CheckBox(phrase("control.replace_flashlight"), "betterlights_flashlight_player_enable")
             behavior:CheckBox(phrase("control.use_flashlight_sounds"), "betterlights_flashlight_custom_sounds")
             behavior:Help(phrase("help.default_flashlight_sounds"))
+            local maintenance = addSection(panel, "section.maintenance", nil, true)
+            local resetFlashlightBtn = addStyledButton(maintenance, phrase("button.reset_flashlight_settings"))
+            resetFlashlightBtn.DoClick = resetFlashlightSettings
             addResetButton(panel, {
                 betterlights_flashlight_player_enable = 0,
                 betterlights_flashlight_custom_sounds = 1,
@@ -1999,7 +2122,7 @@ if CLIENT then
             byline:SetText(phrase("about.byline"))
             byline:SetTextColor(COLOR_MUTED)
 
-            local profileBtn = vgui.Create("DButton", authorInfo)
+            local profileBtn = styleButton(vgui.Create("DButton", authorInfo))
             profileBtn:Dock(BOTTOM)
             profileBtn:SetTall(26)
             profileBtn:SetText(phrase("button.open_steam_profile"))
@@ -2013,32 +2136,32 @@ if CLIENT then
             panel:Help(phrase("about.license_help"))
 
             local links = addSection(panel, "section.links", nil, true)
-            local issueBtn = links:Button(phrase("button.report_issue"))
+            local issueBtn = addStyledButton(links, phrase("button.report_issue"))
             issueBtn.DoClick = function()
                 gui.OpenURL("https://github.com/DeisDev/BetterLights/issues/new/choose")
             end
 
-            local sourceBtn = links:Button(phrase("button.view_source"))
+            local sourceBtn = addStyledButton(links, phrase("button.view_source"))
             sourceBtn.DoClick = function()
                 gui.OpenURL("https://github.com/DeisDev/BetterLights")
             end
 
-            local licenseBtn = links:Button(phrase("button.view_license"))
+            local licenseBtn = addStyledButton(links, phrase("button.view_license"))
             licenseBtn.DoClick = function()
                 gui.OpenURL("https://github.com/DeisDev/BetterLights/blob/main/LICENSE.md")
             end
 
-            local workshopBtn = links:Button(phrase("button.steam_workshop"))
+            local workshopBtn = addStyledButton(links, phrase("button.steam_workshop"))
             workshopBtn.DoClick = function()
                 gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225")
             end
 
-            local changelogBtn = links:Button(phrase("button.changelog"))
+            local changelogBtn = addStyledButton(links, phrase("button.changelog"))
             changelogBtn.DoClick = function()
                 openChangelogWindow()
             end
 
-            local otherAddonsBtn = links:Button(phrase("button.other_addons"))
+            local otherAddonsBtn = addStyledButton(links, phrase("button.other_addons"))
             otherAddonsBtn.DoClick = function()
                 gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=3551812511")
             end

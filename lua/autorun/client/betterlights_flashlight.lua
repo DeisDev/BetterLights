@@ -63,12 +63,22 @@ if CLIENT then
     local cvar_shadows = CreateClientConVar("betterlights_flashlight_shadows", "1", true, false, "Enable flashlight shadows")
     local cvar_attachment = CreateClientConVar("betterlights_flashlight_weapon_attachment", "1", true, false, "Use weapon or viewmodel muzzle attachments when available")
     local cvar_flicker = CreateClientConVar("betterlights_flashlight_flicker", "0", true, false, "Enable subtle flashlight flicker")
+    local cvar_flicker_amount = CreateClientConVar("betterlights_flashlight_flicker_amount", "0.05", true, false, "Flashlight flicker intensity")
     local cvar_sway = CreateClientConVar("betterlights_flashlight_sway", "1", true, false, "Enable subtle flashlight sway")
+    local cvar_spring_strength = CreateClientConVar("betterlights_flashlight_spring_strength", "40", true, false, "Flashlight sway spring strength")
+    local cvar_spring_damping = CreateClientConVar("betterlights_flashlight_spring_damping", "10", true, false, "Flashlight sway spring damping")
+    local cvar_movement_sway_strength = CreateClientConVar("betterlights_flashlight_movement_sway_strength", "1", true, false, "Extra flashlight sway while moving")
+    local cvar_sprint_sway_strength = CreateClientConVar("betterlights_flashlight_sprint_sway_strength", "0.45", true, false, "Extra flashlight bob while sprinting")
+    local cvar_idle_sway = CreateClientConVar("betterlights_flashlight_idle_sway", "0", true, false, "Enable subtle idle breathing sway")
+    local cvar_idle_sway_strength = CreateClientConVar("betterlights_flashlight_idle_sway_strength", "1.50", true, false, "Subtle idle breathing sway intensity")
     local cvar_distance = CreateClientConVar("betterlights_flashlight_distance", "1200", true, false, "Flashlight beam length")
     local cvar_forward_offset = CreateClientConVar("betterlights_flashlight_forward_offset", "0", true, false, "Extra forward offset for the flashlight beam")
     local cvar_attachment_offset = CreateClientConVar("betterlights_flashlight_attachment_offset", "2", true, false, "Side offset for weapon-attached flashlights")
     local cvar_fallback_offset = CreateClientConVar("betterlights_flashlight_fallback_offset", "8", true, false, "Side offset for eye-position flashlights")
     local cvar_brightness = CreateClientConVar("betterlights_flashlight_brightness", "1.35", true, false, "Flashlight brightness")
+    local cvar_color_r = CreateClientConVar("betterlights_flashlight_color_r", "255", true, false, "Flashlight color - red (0-255)")
+    local cvar_color_g = CreateClientConVar("betterlights_flashlight_color_g", "245", true, false, "Flashlight color - green (0-255)")
+    local cvar_color_b = CreateClientConVar("betterlights_flashlight_color_b", "225", true, false, "Flashlight color - blue (0-255)")
     local cvar_texture = CreateClientConVar("betterlights_flashlight_texture", "effects/flashlight001", true, false, "Flashlight texture material path")
 
     local DEFAULT_TEXTURE = "effects/flashlight001"
@@ -80,7 +90,6 @@ if CLIENT then
         "effects/flashlights/",
         "models/flashlight/"
     }
-    local COLOR = Color(255, 245, 225)
     local MIN_FOV = 10
     local MAX_FOV = 120
     local WALL_FOV_SCALE = 0.95
@@ -93,12 +102,20 @@ if CLIENT then
     local MAX_BRIGHTNESS = 5
     local MIN_FORWARD_OFFSET = -32
     local MAX_FORWARD_OFFSET = 96
-    local FLICKER_AMOUNT = 0.08
-    local AIM_SMOOTHING = 18
+    local MAX_MOVEMENT_SWAY_STRENGTH = 3
+    local MAX_SPRINT_SWAY_STRENGTH = 3
+    local MAX_IDLE_SWAY_STRENGTH = 3
+    local MAX_FLICKER_AMOUNT = 0.3
+    local MIN_SPRING_STRENGTH = 8
+    local MAX_SPRING_STRENGTH = 120
+    local MIN_SPRING_DAMPING = 1
+    local MAX_SPRING_DAMPING = 24
     local ATTACHMENT_OFFSET_FORWARD = 1
     local ATTACHMENT_OFFSET_DOWN = 2
     local EYE_OFFSET_FORWARD = 26
     local EYE_OFFSET_DOWN = 3
+    local VEHICLE_OFFSET_FORWARD = 18
+    local VEHICLE_OFFSET_DOWN = 1
     local ATTACHMENT_NAMES = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
     local EYE_FALLBACK_WEAPONS = {
         weapon_crowbar = true
@@ -304,6 +321,7 @@ if CLIENT then
 
     local function getAttachmentTransform(ply, localPlayer)
         if not cvar_attachment:GetBool() then return end
+        if ply.InVehicle and ply:InVehicle() then return end
         if isFirstPersonZooming(ply, localPlayer) then return end
 
         local activeWeapon = ply:GetActiveWeapon()
@@ -334,13 +352,16 @@ if CLIENT then
         local aim = ply.GetAimVector and ply:GetAimVector() or nil
         local ang = aim and aim:Angle() or ply:EyeAngles()
         local pos = ply:EyePos()
+        local inVehicle = ply.InVehicle and ply:InVehicle()
+        local forwardOffset = inVehicle and VEHICLE_OFFSET_FORWARD or EYE_OFFSET_FORWARD
+        local downOffset = inVehicle and VEHICLE_OFFSET_DOWN or EYE_OFFSET_DOWN
 
         pos = pos
-            + ang:Forward() * (EYE_OFFSET_FORWARD + math.Clamp(cvar_forward_offset:GetFloat(), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
+            + ang:Forward() * (forwardOffset + math.Clamp(cvar_forward_offset:GetFloat(), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
             + ang:Right() * cvar_fallback_offset:GetFloat()
-            - ang:Up() * EYE_OFFSET_DOWN
+            - ang:Up() * downOffset
 
-        if ply.GetViewPunchAngles then
+        if not inVehicle and ply.GetViewPunchAngles then
             ang = ang + ply:GetViewPunchAngles()
         end
 
@@ -356,16 +377,156 @@ if CLIENT then
         return wallTrace.StartPos:Distance(wallTrace.HitPos)
     end
 
-    local function getSmoothedAngle(data, ang)
+    local function getFlashlightColor()
+        return Color(
+            math.Clamp(cvar_color_r:GetInt(), 0, 255),
+            math.Clamp(cvar_color_g:GetInt(), 0, 255),
+            math.Clamp(cvar_color_b:GetInt(), 0, 255)
+        )
+    end
+
+    local function updateSwayState(data, ply)
+        local state = data.swayState or {
+            walkBlend = 0,
+            sprintBlend = 0,
+            breathPhase = 0
+        }
+        data.swayState = state
+
+        local frameTime = math.Clamp(FrameTime(), 0, 0.05)
+        local velocity = ply:GetVelocity()
+        local speed = math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y)
+        local sprinting = ply.KeyDown and ply:KeyDown(IN_SPEED) and speed > 120
+        local crouching = ply.Crouching and ply:Crouching()
+
+        state.walkBlend = Lerp(math.Clamp(frameTime * 4, 0, 1), state.walkBlend or 0, math.Clamp(speed / 200, 0, 1))
+        state.breathPhase = state.breathPhase + frameTime * 1.45
+        state.sprintBlend = Lerp(math.Clamp(frameTime * 3, 0, 1), state.sprintBlend or 0, sprinting and 1 or 0)
+        state.speed = speed
+        state.sprinting = sprinting
+        state.crouching = crouching
+
+        return state
+    end
+
+    local function getMovementSwayAmount(data, ply, localPlayer)
+        if ply ~= localPlayer then return 0 end
+        if not (IsValid(ply) and ply.GetVelocity) then return 0 end
+
+        local strength = math.Clamp(cvar_movement_sway_strength:GetFloat(), 0, MAX_MOVEMENT_SWAY_STRENGTH)
+        if strength <= 0 then return 0 end
+
+        local state = data.swayState or updateSwayState(data, ply)
+        local amount = math.Clamp(state.walkBlend or 0, 0, 1)
+
+        if state.crouching then
+            amount = amount * 0.55
+        end
+
+        return math.Clamp(amount, 0, 1.35) * strength
+    end
+
+    local function getSprintSwayAmount(data, ply, localPlayer)
+        if ply ~= localPlayer then return 0 end
+        if not (IsValid(ply) and ply.GetVelocity) then return 0 end
+
+        local strength = math.Clamp(cvar_sprint_sway_strength:GetFloat(), 0, MAX_SPRINT_SWAY_STRENGTH)
+        if strength <= 0 then return 0 end
+
+        local state = data.swayState or updateSwayState(data, ply)
+        local speedAmount = math.Clamp(state.speed / 280, 0, 1)
+        return strength * speedAmount * math.Clamp(state.sprintBlend or 0, 0, 1)
+    end
+
+    local function getIdleSwayAmount(data, ply, localPlayer)
+        if ply ~= localPlayer then return 0 end
+        if not cvar_idle_sway:GetBool() then return 0 end
+        if not (IsValid(ply) and ply.GetVelocity) then return 0 end
+        if ply.InVehicle and ply:InVehicle() then return 0 end
+
+        local strength = math.Clamp(cvar_idle_sway_strength:GetFloat(), 0, MAX_IDLE_SWAY_STRENGTH)
+        if strength <= 0 then return 0 end
+
+        local state = data.swayState or updateSwayState(data, ply)
+        local scale = 1 - math.Clamp((state.walkBlend or 0) * 1.2, 0, 1)
+
+        return strength * scale
+    end
+
+    local function applySwayOffset(data, pos, ang, ply, localPlayer)
+        if not cvar_sway:GetBool() or ply ~= localPlayer then return pos end
+
+        local state = updateSwayState(data, ply)
+        local movementSway = getMovementSwayAmount(data, ply, localPlayer)
+        local sprintSway = getSprintSwayAmount(data, ply, localPlayer)
+        local idleSway = getIdleSwayAmount(data, ply, localPlayer)
+        if movementSway <= 0 and sprintSway <= 0 and idleSway <= 0 then return pos end
+
+        local runCycle = CurTime() * 11 * math.Clamp(state.speed / 300, 0.8, 1.5)
+        local sprintBob = math.abs(math.sin(runCycle)) * 0.35 * sprintSway
+        local sideBob = math.sin(runCycle * 0.5) * 0.16 * sprintSway
+
+        return pos
+            + ang:Right() * sideBob
+            + ang:Up() * sprintBob
+    end
+
+    local function springAxis(pos, vel, target, dt)
+        local strength = math.Clamp(cvar_spring_strength:GetFloat(), MIN_SPRING_STRENGTH, MAX_SPRING_STRENGTH)
+        local damping = math.Clamp(cvar_spring_damping:GetFloat(), MIN_SPRING_DAMPING, MAX_SPRING_DAMPING)
+        local force = (target - pos) * strength
+        vel = (vel + force * dt) * math.exp(-damping * dt)
+        pos = pos + vel * dt
+        return pos, vel
+    end
+
+    local function getSpringAngle(data, ang)
+        local spring = data.swaySpring or {
+            pitch = ang.p,
+            yaw = ang.y,
+            pitchVel = 0,
+            yawVel = 0
+        }
+        data.swaySpring = spring
+
+        local dt = math.Clamp(FrameTime(), 0, 0.05)
+        local pitchTarget = spring.pitch + math.AngleDifference(ang.p, spring.pitch)
+        local yawTarget = spring.yaw + math.AngleDifference(ang.y, spring.yaw)
+
+        spring.pitch, spring.pitchVel = springAxis(spring.pitch, spring.pitchVel, pitchTarget, dt)
+        spring.yaw, spring.yawVel = springAxis(spring.yaw, spring.yawVel, yawTarget, dt)
+        spring.pitch = math.NormalizeAngle(spring.pitch)
+        spring.yaw = math.NormalizeAngle(spring.yaw)
+
+        return Angle(spring.pitch, spring.yaw, ang.r)
+    end
+
+    local function getSmoothedAngle(data, ang, ply, localPlayer)
         if not cvar_sway:GetBool() then
-            data.smoothAng = nil
+            data.swaySpring = nil
             return ang
         end
 
-        data.smoothAng = data.smoothAng or Angle(ang.p, ang.y, ang.r)
-        data.smoothAng = LerpAngle(math.Clamp(FrameTime() * AIM_SMOOTHING, 0, 1), data.smoothAng, ang)
+        local state = data.swayState or updateSwayState(data, ply)
+        local movementSway = getMovementSwayAmount(data, ply, localPlayer)
+        local sprintSway = getSprintSwayAmount(data, ply, localPlayer)
+        local idleSway = getIdleSwayAmount(data, ply, localPlayer)
 
-        return data.smoothAng
+        local swayed = getSpringAngle(data, ang)
+
+        if movementSway <= 0 and sprintSway <= 0 and idleSway <= 0 then return swayed end
+
+        local now = CurTime()
+        local breath = state.breathPhase
+        local speedScale = math.Clamp(state.speed / 300, 0.8, 1.5)
+        local runCycle = now * 11 * speedScale
+        swayed.p = swayed.p + math.sin(now * 8) * 0.8 * movementSway
+        swayed.p = swayed.p + math.sin(runCycle) * 0.85 * sprintSway
+        swayed.p = swayed.p + math.sin(breath) * 0.48 * idleSway
+        swayed.y = swayed.y + math.cos(now * 6) * 0.65 * movementSway
+        swayed.y = swayed.y + math.sin(runCycle * 0.5) * 0.3 * sprintSway
+        swayed.y = swayed.y + math.sin(breath * 0.72 + 0.8) * 0.24 * idleSway
+        return swayed
     end
 
     local function getFOV(wallDist)
@@ -384,7 +545,8 @@ if CLIENT then
 
         local phase = ply:EntIndex() * 0.731
         local wave = math.sin(CurTime() * 22 + phase) * 0.65 + math.sin(CurTime() * 47 + phase * 1.7) * 0.35
-        return math.max(0, brightness * (1 + wave * FLICKER_AMOUNT))
+        local amount = math.Clamp(cvar_flicker_amount:GetFloat(), 0, MAX_FLICKER_AMOUNT)
+        return math.max(0, brightness * (1 + wave * amount))
     end
 
     local function updateProjector(ply, localPlayer)
@@ -403,7 +565,8 @@ if CLIENT then
             pos, ang = getEyeTransform(ply)
         end
 
-        ang = getSmoothedAngle(data, ang)
+        pos = applySwayOffset(data, pos, ang, ply, localPlayer)
+        ang = getSmoothedAngle(data, ang, ply, localPlayer)
         local wallDist = getWallDistance(ply, pos, ang)
         local distance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, MAX_DISTANCE)
 
@@ -414,7 +577,7 @@ if CLIENT then
         lamp:SetFarZ(distance)
         lamp:SetFOV(getFOV(wallDist))
         lamp:SetBrightness(getBrightness(ply, wallDist))
-        lamp:SetColor(COLOR)
+        lamp:SetColor(getFlashlightColor())
         lamp:SetEnableShadows(cvar_shadows:GetBool())
         lamp:Update()
     end
@@ -430,7 +593,7 @@ if CLIENT then
         local localPlayer = LocalPlayer()
 
         for _, ply in ipairs(player.GetAll()) do
-            if IsValid(ply) and ply:Alive() and ply:GetNWBool("BetterLights_Flashlight", false) then
+            if IsValid(ply) and ply:GetNWBool("BetterLights_Flashlight", false) then
                 seen[ply] = true
                 updateProjector(ply, localPlayer)
             end
