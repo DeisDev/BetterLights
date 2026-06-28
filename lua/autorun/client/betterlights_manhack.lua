@@ -12,6 +12,7 @@ if CLIENT then
     local cvar_col_r = BL.CreateClientConVar("betterlights_manhack_color_r", "255", true, false, "Manhack color - red (0-255)")
     local cvar_col_g = BL.CreateClientConVar("betterlights_manhack_color_g", "60", true, false, "Manhack color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_manhack_color_b", "60", true, false, "Manhack color - blue (0-255)")
+    local ATTACH_NAMES = { "Eye", "Light" }
 
     if BL.TrackClass then BL.TrackClass("npc_manhack") end
 
@@ -30,13 +31,16 @@ if CLIENT then
             if not IsValid(ent) then return end
 
             local idx = ent:EntIndex()
-            local pos = BL.GetEntityCenter(ent)
-            if not pos then return end
+            for i, attachmentName in ipairs(ATTACH_NAMES) do
+                local pos = BL.GetAttachmentPos(ent, { attachmentName })
+                if pos then
+                    local lightId = idx + (i * 10000)
+                    BL.CreateDLight(lightId, pos, r, g, b, brightness, decay, size, false)
 
-            BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
-
-            if doElight then
-                BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * elMult, true)
+                    if doElight then
+                        BL.CreateDLight(lightId, pos, r, g, b, brightness, decay, size * elMult, true)
+                    end
+                end
             end
         end
 

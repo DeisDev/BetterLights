@@ -15,14 +15,6 @@ if CLIENT then
     end
 
     local function styleButton(btn)
-        btn.Paint = function(self, w, h)
-            local hovered = self:IsHovered()
-            surface.SetDrawColor(hovered and Color(235, 241, 248) or Color(248, 249, 251))
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_BORDER)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
-
         return btn
     end
 
@@ -1240,6 +1232,93 @@ if CLIENT then
         addResetButton(panel, resetDefaults)
     end
 
+    local function addAntlionPanel(panel)
+        setupPage(panel, "page.antlions.title", "page.antlions.desc")
+
+        local grub = addSection(panel, "page.antlion_grub.title", "page.antlion_grub.desc", true)
+        grub:CheckBox(phrase("control.enable"), "betterlights_antlion_grub_enable")
+        grub:NumSlider(phrase("control.radius"), "betterlights_antlion_grub_size", 0, 400, 0)
+        grub:NumSlider(phrase("control.brightness"), "betterlights_antlion_grub_brightness", 0, 5, 2)
+        grub:NumSlider(phrase("control.decay"), "betterlights_antlion_grub_decay", 0, 5000, 0)
+        addColorMixerControl(grub, "control.color", "betterlights_antlion_grub_color_r", "betterlights_antlion_grub_color_g", "betterlights_antlion_grub_color_b")
+
+        local squashedGrub = addSection(panel, "section.squashed_body_glow", nil, false)
+        squashedGrub:CheckBox(phrase("control.enable"), "betterlights_antlion_grub_squashed_enable")
+        squashedGrub:NumSlider(phrase("control.radius"), "betterlights_antlion_grub_squashed_size", 0, 200, 0)
+        squashedGrub:NumSlider(phrase("control.brightness"), "betterlights_antlion_grub_squashed_brightness", 0, 1, 2)
+        squashedGrub:NumSlider(phrase("control.decay"), "betterlights_antlion_grub_squashed_decay", 0, 5000, 0)
+
+        local guardian = addSection(panel, "page.antlion_guardian.title", "page.antlion_guardian.desc", true)
+        guardian:CheckBox(phrase("control.enable"), "betterlights_antlion_guardian_enable")
+        guardian:NumSlider(phrase("control.radius"), "betterlights_antlion_guardian_size", 0, 800, 0)
+        guardian:NumSlider(phrase("control.brightness"), "betterlights_antlion_guardian_brightness", 0, 5, 2)
+        guardian:NumSlider(phrase("control.decay"), "betterlights_antlion_guardian_decay", 0, 5000, 0)
+        addColorMixerControl(guardian, "control.color", "betterlights_antlion_guardian_color_r", "betterlights_antlion_guardian_color_g", "betterlights_antlion_guardian_color_b")
+
+        local worker = addSection(panel, "page.antlion_worker.title", "page.antlion_worker.desc", true)
+        worker:CheckBox(phrase("control.enable"), "betterlights_antlion_worker_enable")
+        worker:NumSlider(phrase("control.radius"), "betterlights_antlion_worker_size", 0, 800, 0)
+        worker:NumSlider(phrase("control.brightness"), "betterlights_antlion_worker_brightness", 0, 5, 2)
+        worker:NumSlider(phrase("control.decay"), "betterlights_antlion_worker_decay", 0, 5000, 0)
+        addColorMixerControl(worker, "control.color", "betterlights_antlion_worker_color_r", "betterlights_antlion_worker_color_g", "betterlights_antlion_worker_color_b")
+
+        local spitGlow = addSection(panel, "category.projectiles", nil, true)
+        spitGlow:CheckBox(phrase("control.enable_glow"), "betterlights_antlion_spit_enable")
+        spitGlow:NumSlider(phrase("control.radius"), "betterlights_antlion_spit_size", 0, 400, 0)
+        spitGlow:NumSlider(phrase("control.brightness"), "betterlights_antlion_spit_brightness", 0, 5, 2)
+        spitGlow:NumSlider(phrase("control.decay"), "betterlights_antlion_spit_decay", 0, 5000, 0)
+        addColorMixerControl(spitGlow, "control.glow_color", "betterlights_antlion_spit_color_r", "betterlights_antlion_spit_color_g", "betterlights_antlion_spit_color_b")
+
+        local spitFlash = addSection(panel, "section.impact_flash", nil, true)
+        spitFlash:CheckBox(phrase("control.flash_on_impact"), "betterlights_antlion_spit_flash_enable")
+        spitFlash:NumSlider(phrase("control.radius"), "betterlights_antlion_spit_flash_size", 0, 800, 0)
+        spitFlash:NumSlider(phrase("control.brightness"), "betterlights_antlion_spit_flash_brightness", 0, 10, 2)
+        spitFlash:NumSlider(phrase("control.duration"), "betterlights_antlion_spit_flash_time", 0, 1, 2)
+        addColorMixerControl(spitFlash, "control.flash_color", "betterlights_antlion_spit_flash_color_r", "betterlights_antlion_spit_flash_color_g", "betterlights_antlion_spit_flash_color_b")
+
+        addResetButton(panel, {
+            betterlights_antlion_grub_enable = 1,
+            betterlights_antlion_grub_size = 70,
+            betterlights_antlion_grub_brightness = 0.35,
+            betterlights_antlion_grub_decay = 2000,
+            betterlights_antlion_grub_color_r = 120,
+            betterlights_antlion_grub_color_g = 255,
+            betterlights_antlion_grub_color_b = 120,
+            betterlights_antlion_grub_squashed_enable = 1,
+            betterlights_antlion_grub_squashed_size = 42,
+            betterlights_antlion_grub_squashed_brightness = 0.08,
+            betterlights_antlion_grub_squashed_decay = 2000,
+            betterlights_antlion_guardian_enable = 1,
+            betterlights_antlion_guardian_size = 180,
+            betterlights_antlion_guardian_brightness = 0.6,
+            betterlights_antlion_guardian_decay = 2000,
+            betterlights_antlion_guardian_color_r = 120,
+            betterlights_antlion_guardian_color_g = 255,
+            betterlights_antlion_guardian_color_b = 140,
+            betterlights_antlion_worker_enable = 1,
+            betterlights_antlion_worker_size = 120,
+            betterlights_antlion_worker_brightness = 0.55,
+            betterlights_antlion_worker_decay = 2000,
+            betterlights_antlion_worker_color_r = 180,
+            betterlights_antlion_worker_color_g = 240,
+            betterlights_antlion_worker_color_b = 120,
+            betterlights_antlion_spit_enable = 1,
+            betterlights_antlion_spit_size = 100,
+            betterlights_antlion_spit_brightness = 1.0,
+            betterlights_antlion_spit_decay = 1800,
+            betterlights_antlion_spit_color_r = 120,
+            betterlights_antlion_spit_color_g = 255,
+            betterlights_antlion_spit_color_b = 140,
+            betterlights_antlion_spit_flash_enable = 1,
+            betterlights_antlion_spit_flash_size = 160,
+            betterlights_antlion_spit_flash_brightness = 1.5,
+            betterlights_antlion_spit_flash_time = 1.0,
+            betterlights_antlion_spit_flash_color_r = 180,
+            betterlights_antlion_spit_flash_color_g = 255,
+            betterlights_antlion_spit_flash_color_b = 120,
+        })
+    end
+
     local function addClientPanels()
         spawnmenu.AddToolMenuOption("Better Lights", "General", "BL_Admin", phrase("menu.admin"), "", "", function(panel)
             setupPage(panel, "page.admin.title", "page.admin.desc")
@@ -1406,36 +1485,157 @@ if CLIENT then
             })
         end)
 
-        spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_AntlionSpit", phrase("menu.antlion_spit"), "", "", function(panel)
-            setupPage(panel, "page.antlion_spit.title", "page.antlion_spit.desc")
-            local glow = addSection(panel, "section.in_flight_glow", "section.in_flight_glow.desc", true)
-            glow:CheckBox(phrase("control.enable_glow"), "betterlights_antlion_spit_enable")
-            glow:NumSlider(phrase("control.radius"), "betterlights_antlion_spit_size", 0, 400, 0)
-            glow:NumSlider(phrase("control.brightness"), "betterlights_antlion_spit_brightness", 0, 5, 2)
-            glow:NumSlider(phrase("control.decay"), "betterlights_antlion_spit_decay", 0, 5000, 0)
-            addColorMixerControl(glow, "control.glow_color", "betterlights_antlion_spit_color_r", "betterlights_antlion_spit_color_g", "betterlights_antlion_spit_color_b")
+    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Strider", phrase("menu.strider"), "", "", function(panel)
+            setupPage(panel, "page.strider.title", "page.strider.desc")
 
-            local flash = addSection(panel, "section.impact_flash", nil, true)
-            flash:CheckBox(phrase("control.flash_on_impact"), "betterlights_antlion_spit_flash_enable")
-            flash:NumSlider(phrase("control.radius"), "betterlights_antlion_spit_flash_size", 0, 800, 0)
-            flash:NumSlider(phrase("control.brightness"), "betterlights_antlion_spit_flash_brightness", 0, 10, 2)
-            flash:NumSlider(phrase("control.duration"), "betterlights_antlion_spit_flash_time", 0, 1, 2)
-            addColorMixerControl(flash, "control.flash_color", "betterlights_antlion_spit_flash_color_r", "betterlights_antlion_spit_flash_color_g", "betterlights_antlion_spit_flash_color_b")
+            local muzzle = addSection(panel, "section.muzzle_flash", nil, true)
+            muzzle:CheckBox(phrase("control.flash_on_fire"), "betterlights_strider_muzzle_flash_enable")
+            muzzle:NumSlider(phrase("control.radius"), "betterlights_strider_muzzle_flash_size", 0, 1000, 0)
+            muzzle:NumSlider(phrase("control.brightness"), "betterlights_strider_muzzle_flash_brightness", 0, 10, 2)
+            muzzle:NumSlider(phrase("control.duration"), "betterlights_strider_muzzle_flash_time", 0, 1, 2)
+            addColorMixerControl(muzzle, "control.flash_color", "betterlights_strider_muzzle_flash_color_r", "betterlights_strider_muzzle_flash_color_g", "betterlights_strider_muzzle_flash_color_b")
+
+            local impact = addSection(panel, "section.impact_flash", nil, true)
+            impact:CheckBox(phrase("control.flash_on_impact"), "betterlights_strider_bullet_impact_enable")
+            impact:NumSlider(phrase("control.radius"), "betterlights_strider_bullet_impact_size", 0, 400, 0)
+            impact:NumSlider(phrase("control.brightness"), "betterlights_strider_bullet_impact_brightness", 0, 5, 2)
+            impact:NumSlider(phrase("control.duration"), "betterlights_strider_bullet_impact_time", 0, 1, 2)
+            addColorMixerControl(impact, "control.flash_color", "betterlights_strider_bullet_impact_color_r", "betterlights_strider_bullet_impact_color_g", "betterlights_strider_bullet_impact_color_b")
+
             addResetButton(panel, {
-                betterlights_antlion_spit_enable = 1,
-                betterlights_antlion_spit_size = 100,
-                betterlights_antlion_spit_brightness = 1.0,
-                betterlights_antlion_spit_decay = 1800,
-                betterlights_antlion_spit_color_r = 120,
-                betterlights_antlion_spit_color_g = 255,
-                betterlights_antlion_spit_color_b = 140,
-                betterlights_antlion_spit_flash_enable = 1,
-                betterlights_antlion_spit_flash_size = 160,
-                betterlights_antlion_spit_flash_brightness = 1.5,
-                betterlights_antlion_spit_flash_time = 1.0,
-                betterlights_antlion_spit_flash_color_r = 180,
-                betterlights_antlion_spit_flash_color_g = 255,
-                betterlights_antlion_spit_flash_color_b = 120,
+                betterlights_strider_muzzle_flash_enable = 1,
+                betterlights_strider_muzzle_flash_size = 320,
+                betterlights_strider_muzzle_flash_brightness = 2.4,
+                betterlights_strider_muzzle_flash_time = 0.08,
+                betterlights_strider_muzzle_flash_color_r = 80,
+                betterlights_strider_muzzle_flash_color_g = 210,
+                betterlights_strider_muzzle_flash_color_b = 255,
+                betterlights_strider_bullet_impact_enable = 1,
+                betterlights_strider_bullet_impact_size = 90,
+                betterlights_strider_bullet_impact_brightness = 0.45,
+                betterlights_strider_bullet_impact_time = 0.14,
+                betterlights_strider_bullet_impact_color_r = 80,
+                betterlights_strider_bullet_impact_color_g = 210,
+                betterlights_strider_bullet_impact_color_b = 255,
+            })
+        end)
+
+    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Hunter", phrase("menu.hunter"), "", "", function(panel)
+            setupPage(panel, "page.hunter.title", "page.hunter.desc")
+
+            local body = addSection(panel, "section.body_glow", nil, true)
+            addLightControls(body, "betterlights_hunter", {
+                radiusMax = 400,
+                modelElight = true,
+                modelElightLabel = "control.add_model_elight"
+            })
+            addColorMixerControl(body, "control.glow_color", "betterlights_hunter_color_r", "betterlights_hunter_color_g", "betterlights_hunter_color_b")
+
+            local projectile = addSection(panel, "section.flechette_glow", "section.flechette_glow.desc", true)
+            projectile:CheckBox(phrase("control.enable_glow"), "betterlights_hunter_flechette_enable")
+            projectile:NumSlider(phrase("control.radius"), "betterlights_hunter_flechette_size", 0, 400, 0)
+            projectile:NumSlider(phrase("control.brightness"), "betterlights_hunter_flechette_brightness", 0, 5, 2)
+            projectile:NumSlider(phrase("control.decay"), "betterlights_hunter_flechette_decay", 0, 5000, 0)
+            addColorMixerControl(projectile, "control.glow_color", "betterlights_hunter_flechette_color_r", "betterlights_hunter_flechette_color_g", "betterlights_hunter_flechette_color_b")
+
+            local muzzle = addSection(panel, "section.muzzle_flash", nil, true)
+            muzzle:CheckBox(phrase("control.flash_on_fire"), "betterlights_hunter_muzzle_flash_enable")
+            muzzle:NumSlider(phrase("control.radius"), "betterlights_hunter_muzzle_flash_size", 0, 800, 0)
+            muzzle:NumSlider(phrase("control.brightness"), "betterlights_hunter_muzzle_flash_brightness", 0, 10, 2)
+            muzzle:NumSlider(phrase("control.duration"), "betterlights_hunter_muzzle_flash_time", 0, 1, 2)
+            addColorMixerControl(muzzle, "control.flash_color", "betterlights_hunter_muzzle_flash_color_r", "betterlights_hunter_muzzle_flash_color_g", "betterlights_hunter_muzzle_flash_color_b")
+
+            local blast = addSection(panel, "section.blast_flash", nil, true)
+            blast:CheckBox(phrase("control.flash_on_explosion"), "betterlights_hunter_flechette_blast_enable")
+            blast:NumSlider(phrase("control.radius"), "betterlights_hunter_flechette_blast_size", 0, 800, 0)
+            blast:NumSlider(phrase("control.brightness"), "betterlights_hunter_flechette_blast_brightness", 0, 10, 2)
+            blast:NumSlider(phrase("control.duration"), "betterlights_hunter_flechette_blast_time", 0, 1, 2)
+            addColorMixerControl(blast, "control.flash_color", "betterlights_hunter_flechette_blast_color_r", "betterlights_hunter_flechette_blast_color_g", "betterlights_hunter_flechette_blast_color_b")
+
+            addResetButton(panel, {
+                betterlights_hunter_enable = 1,
+                betterlights_hunter_size = 55,
+                betterlights_hunter_brightness = 0.45,
+                betterlights_hunter_decay = 2000,
+                betterlights_hunter_models_elight = 1,
+                betterlights_hunter_models_elight_size_mult = 1.0,
+                betterlights_hunter_color_r = 30,
+                betterlights_hunter_color_g = 230,
+                betterlights_hunter_color_b = 255,
+                betterlights_hunter_flechette_enable = 1,
+                betterlights_hunter_flechette_size = 90,
+                betterlights_hunter_flechette_brightness = 1.25,
+                betterlights_hunter_flechette_decay = 1800,
+                betterlights_hunter_flechette_color_r = 0,
+                betterlights_hunter_flechette_color_g = 235,
+                betterlights_hunter_flechette_color_b = 255,
+                betterlights_hunter_muzzle_flash_enable = 1,
+                betterlights_hunter_muzzle_flash_size = 220,
+                betterlights_hunter_muzzle_flash_brightness = 2.0,
+                betterlights_hunter_muzzle_flash_time = 0.08,
+                betterlights_hunter_muzzle_flash_color_r = 70,
+                betterlights_hunter_muzzle_flash_color_g = 220,
+                betterlights_hunter_muzzle_flash_color_b = 255,
+                betterlights_hunter_flechette_blast_enable = 1,
+                betterlights_hunter_flechette_blast_size = 260,
+                betterlights_hunter_flechette_blast_brightness = 2.4,
+                betterlights_hunter_flechette_blast_time = 0.35,
+                betterlights_hunter_flechette_blast_color_r = 80,
+                betterlights_hunter_flechette_blast_color_g = 230,
+                betterlights_hunter_flechette_blast_color_b = 255,
+            })
+        end)
+
+    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_HunterChopper", phrase("menu.hunter_chopper"), "", "", function(panel)
+            setupPage(panel, "page.hunter_chopper.title", "page.hunter_chopper.desc")
+
+            local muzzle = addSection(panel, "section.muzzle_flash", nil, true)
+            muzzle:CheckBox(phrase("control.flash_on_fire"), "betterlights_hunter_chopper_muzzle_flash_enable")
+            muzzle:NumSlider(phrase("control.radius"), "betterlights_hunter_chopper_muzzle_flash_size", 0, 1000, 0)
+            muzzle:NumSlider(phrase("control.brightness"), "betterlights_hunter_chopper_muzzle_flash_brightness", 0, 10, 2)
+            muzzle:NumSlider(phrase("control.duration"), "betterlights_hunter_chopper_muzzle_flash_time", 0, 1, 2)
+            addColorMixerControl(muzzle, "control.flash_color", "betterlights_hunter_chopper_muzzle_flash_color_r", "betterlights_hunter_chopper_muzzle_flash_color_g", "betterlights_hunter_chopper_muzzle_flash_color_b")
+
+            local impact = addSection(panel, "section.impact_flash", nil, true)
+            impact:CheckBox(phrase("control.flash_on_impact"), "betterlights_hunter_chopper_bullet_impact_enable")
+            impact:NumSlider(phrase("control.radius"), "betterlights_hunter_chopper_bullet_impact_size", 0, 400, 0)
+            impact:NumSlider(phrase("control.brightness"), "betterlights_hunter_chopper_bullet_impact_brightness", 0, 5, 2)
+            impact:NumSlider(phrase("control.duration"), "betterlights_hunter_chopper_bullet_impact_time", 0, 1, 2)
+            addColorMixerControl(impact, "control.flash_color", "betterlights_hunter_chopper_bullet_impact_color_r", "betterlights_hunter_chopper_bullet_impact_color_g", "betterlights_hunter_chopper_bullet_impact_color_b")
+
+            local spotlight = addSection(panel, "section.spotlight", "section.spotlight.desc", true)
+            spotlight:CheckBox(phrase("control.enable_spotlight"), "betterlights_hunter_chopper_spotlight_enable")
+            spotlight:CheckBox(phrase("control.cast_shadows"), "betterlights_hunter_chopper_spotlight_shadows")
+            spotlight:NumSlider(phrase("control.fov"), "betterlights_hunter_chopper_spotlight_fov", 1, 175, 0)
+            spotlight:NumSlider(phrase("control.distance"), "betterlights_hunter_chopper_spotlight_distance", 0, 3000, 0)
+            spotlight:NumSlider(phrase("control.near_z"), "betterlights_hunter_chopper_spotlight_near", 0, 128, 0)
+            spotlight:NumSlider(phrase("control.brightness"), "betterlights_hunter_chopper_spotlight_brightness", 0, 2, 2)
+            addColorMixerControl(spotlight, "control.spotlight_color", "betterlights_hunter_chopper_spotlight_color_r", "betterlights_hunter_chopper_spotlight_color_g", "betterlights_hunter_chopper_spotlight_color_b")
+
+            addResetButton(panel, {
+                betterlights_hunter_chopper_muzzle_flash_enable = 1,
+                betterlights_hunter_chopper_muzzle_flash_size = 260,
+                betterlights_hunter_chopper_muzzle_flash_brightness = 2.2,
+                betterlights_hunter_chopper_muzzle_flash_time = 0.08,
+                betterlights_hunter_chopper_muzzle_flash_color_r = 80,
+                betterlights_hunter_chopper_muzzle_flash_color_g = 210,
+                betterlights_hunter_chopper_muzzle_flash_color_b = 255,
+                betterlights_hunter_chopper_bullet_impact_enable = 1,
+                betterlights_hunter_chopper_bullet_impact_size = 80,
+                betterlights_hunter_chopper_bullet_impact_brightness = 0.4,
+                betterlights_hunter_chopper_bullet_impact_time = 0.12,
+                betterlights_hunter_chopper_bullet_impact_color_r = 80,
+                betterlights_hunter_chopper_bullet_impact_color_g = 210,
+                betterlights_hunter_chopper_bullet_impact_color_b = 255,
+                betterlights_hunter_chopper_spotlight_enable = 1,
+                betterlights_hunter_chopper_spotlight_shadows = 1,
+                betterlights_hunter_chopper_spotlight_fov = 34,
+                betterlights_hunter_chopper_spotlight_distance = 1400,
+                betterlights_hunter_chopper_spotlight_near = 8,
+                betterlights_hunter_chopper_spotlight_brightness = 0.85,
+                betterlights_hunter_chopper_spotlight_color_r = 210,
+                betterlights_hunter_chopper_spotlight_color_g = 235,
+                betterlights_hunter_chopper_spotlight_color_b = 255,
             })
         end)
 
@@ -1809,58 +2009,8 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionGrub", phrase("menu.antlion_grub"), "", "", function(panel)
-            setupPage(panel, "page.antlion_grub.title", "page.antlion_grub.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_antlion_grub_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_antlion_grub_size", 0, 400, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_antlion_grub_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_antlion_grub_decay", 0, 5000, 0)
-            addColorMixerControl(panel, "control.color", "betterlights_antlion_grub_color_r", "betterlights_antlion_grub_color_g", "betterlights_antlion_grub_color_b")
-            addResetButton(panel, {
-                betterlights_antlion_grub_enable = 1,
-                betterlights_antlion_grub_size = 70,
-                betterlights_antlion_grub_brightness = 0.35,
-                betterlights_antlion_grub_decay = 2000,
-                betterlights_antlion_grub_color_r = 120,
-                betterlights_antlion_grub_color_g = 255,
-                betterlights_antlion_grub_color_b = 120,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionGuardian", phrase("menu.antlion_guardian"), "", "", function(panel)
-            setupPage(panel, "page.antlion_guardian.title", "page.antlion_guardian.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_antlion_guardian_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_antlion_guardian_size", 0, 800, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_antlion_guardian_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_antlion_guardian_decay", 0, 5000, 0)
-            addColorMixerControl(panel, "control.color", "betterlights_antlion_guardian_color_r", "betterlights_antlion_guardian_color_g", "betterlights_antlion_guardian_color_b")
-            addResetButton(panel, {
-                betterlights_antlion_guardian_enable = 1,
-                betterlights_antlion_guardian_size = 180,
-                betterlights_antlion_guardian_brightness = 0.6,
-                betterlights_antlion_guardian_decay = 2000,
-                betterlights_antlion_guardian_color_r = 120,
-                betterlights_antlion_guardian_color_g = 255,
-                betterlights_antlion_guardian_color_b = 140,
-            })
-        end)
-
-        spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_AntlionWorker", phrase("menu.antlion_worker"), "", "", function(panel)
-            setupPage(panel, "page.antlion_worker.title", "page.antlion_worker.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_antlion_worker_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_antlion_worker_size", 0, 800, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_antlion_worker_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_antlion_worker_decay", 0, 5000, 0)
-            addColorMixerControl(panel, "control.color", "betterlights_antlion_worker_color_r", "betterlights_antlion_worker_color_g", "betterlights_antlion_worker_color_b")
-            addResetButton(panel, {
-                betterlights_antlion_worker_enable = 1,
-                betterlights_antlion_worker_size = 120,
-                betterlights_antlion_worker_brightness = 0.55,
-                betterlights_antlion_worker_decay = 2000,
-                betterlights_antlion_worker_color_r = 180,
-                betterlights_antlion_worker_color_g = 240,
-                betterlights_antlion_worker_color_b = 120,
-            })
+    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Antlions", phrase("menu.antlions"), "", "", function(panel)
+            addAntlionPanel(panel)
         end)
 
     spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Rollermines", phrase("menu.rollermines"), "", "", function(panel)

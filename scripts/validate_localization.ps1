@@ -90,6 +90,14 @@ function Get-LuaLocalizationKeys {
         $keys.Add("$addonName." + $match.Groups[1].Value) | Out-Null
     }
 
+    foreach ($match in [regex]::Matches($source, 'language\.GetPhrase\("(' + [regex]::Escape($addonName) + '\.[^"]+)"')) {
+        $keys.Add($match.Groups[1].Value) | Out-Null
+    }
+
+    foreach ($match in [regex]::Matches($source, '"(' + [regex]::Escape($addonName) + '\.[^"]+)"')) {
+        $keys.Add($match.Groups[1].Value) | Out-Null
+    }
+
     foreach ($call in [regex]::Matches($source, 'phrase(?:Format)?\(([^)]*)\)')) {
         foreach ($match in [regex]::Matches($call.Groups[1].Value, '"([^"]+\.[^"]*)"')) {
             $keys.Add("$addonName." + $match.Groups[1].Value) | Out-Null
@@ -126,6 +134,60 @@ function Get-FormatTokens {
 
     return @([regex]::Matches($Value, '%(?:\d+\$)?[-+#0 ]*(?:\d+|\*)?(?:\.(?:\d+|\*))?[cdiouxXeEfgGaAqs]') |
         ForEach-Object { $_.Value })
+}
+
+function Test-HasAsciiLetter {
+    param([string]$Value)
+
+    return $Value -match "[A-Za-z]"
+}
+
+function Add-UnchangedEnglishValueWarnings {
+    param(
+        [string]$LanguageName,
+        [string]$Path,
+        $EnglishProperties,
+        $LocalizedProperties,
+        [string[]]$Keys
+    )
+
+    $unchangedByEnglishValue = @{}
+
+    foreach ($key in $Keys) {
+        if (-not $LocalizedProperties.Keys.Contains($key)) {
+            continue
+        }
+
+        $englishValue = $EnglishProperties.Keys[$key].Value.Trim()
+        $localizedValue = $LocalizedProperties.Keys[$key].Value.Trim()
+
+        if ($englishValue -eq "") {
+            continue
+        }
+
+        if (-not (Test-HasAsciiLetter -Value $englishValue)) {
+            continue
+        }
+
+        if ($localizedValue -cne $englishValue) {
+            continue
+        }
+
+        if (-not $unchangedByEnglishValue.ContainsKey($englishValue)) {
+            $unchangedByEnglishValue[$englishValue] = New-Object System.Collections.Generic.List[string]
+        }
+
+        $unchangedByEnglishValue[$englishValue].Add($key) | Out-Null
+    }
+
+    foreach ($englishValue in @($unchangedByEnglishValue.Keys | Sort-Object)) {
+        $keysWithSameValue = @($unchangedByEnglishValue[$englishValue] | Sort-Object)
+        if ($keysWithSameValue.Count -lt 2) {
+            continue
+        }
+
+        Add-Warning "$path language '$LanguageName' keeps the English value '$englishValue' for multiple keys: $($keysWithSameValue -join ', '). Check whether these should be translated."
+    }
 }
 
 if (-not (Test-Path -LiteralPath $localizationRoot)) {
@@ -183,6 +245,8 @@ if (Test-Path -LiteralPath $localizationRoot) {
                 Add-Error "$path key '$key' has format placeholders '$($localizedTokens -join ", ")' but English has '$($englishTokens -join ", ")'."
             }
         }
+
+        Add-UnchangedEnglishValueWarnings -LanguageName $languageDir.Name -Path $path -EnglishProperties $english -LocalizedProperties $localized -Keys $englishKeys
 
         foreach ($key in @($localized.Keys.Keys | Sort-Object)) {
             if (-not $english.Keys.Contains($key)) {

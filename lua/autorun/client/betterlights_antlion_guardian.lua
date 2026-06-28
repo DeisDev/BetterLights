@@ -12,6 +12,7 @@ if CLIENT then
     local cvar_col_r = BL.CreateClientConVar("betterlights_antlion_guardian_color_r", "120", true, false, "Antlion Guardian color - red (0-255)")
     local cvar_col_g = BL.CreateClientConVar("betterlights_antlion_guardian_color_g", "255", true, false, "Antlion Guardian color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_antlion_guardian_color_b", "140", true, false, "Antlion Guardian color - blue (0-255)")
+    local ATTACH_NAMES = { "attach_glow1", "attach_glow2" }
 
     local function looksLikeGuardian(ent)
         return BL.DetectEntityVariant(ent, {
@@ -23,12 +24,6 @@ if CLIENT then
             skin = function(s) return s > 0 end,  -- Guardian typically uses non-default skin
             targetname = "guardian"
         })
-    end
-
-    local function getCorePos(ent)
-        local pos = BL.GetAttachmentPos(ent, { "chest", "body", "abdomen", "glow" })
-        if pos then return pos end
-        return BL.GetEntityCenter(ent)
     end
 
     if BL.TrackClass then BL.TrackClass("npc_antlionguard") end
@@ -47,8 +42,12 @@ if CLIENT then
             if ent.GetNoDraw and ent:GetNoDraw() then return end
             if not looksLikeGuardian(ent) then return end
 
-            local pos = getCorePos(ent)
-            BL.CreateDLight(ent:EntIndex() + 23100, pos, r, g, b, brightness, decay, size, false)
+            for i, attachmentName in ipairs(ATTACH_NAMES) do
+                local pos = BL.GetAttachmentPos(ent, { attachmentName })
+                if pos then
+                    BL.CreateDLight(ent:EntIndex() + 23100 + (i * 100), pos, r, g, b, brightness, decay, size, false)
+                end
+            end
         end
 
         if BL.ForEach then

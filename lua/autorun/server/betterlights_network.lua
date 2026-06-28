@@ -3,6 +3,14 @@ if SERVER then
 
     local MSG_MUZZLE_FLASH = 1
     local MSG_BULLET_IMPACT = 2
+    local MSG_STRIDER_MUZZLE_FLASH = 3
+    local MSG_STRIDER_BULLET_IMPACT = 4
+    local MSG_HUNTER_CHOPPER_MUZZLE_FLASH = 5
+    local MSG_HUNTER_CHOPPER_BULLET_IMPACT = 6
+    local STRIDER_CLASS = "npc_strider"
+    local STRIDER_MUZZLE_ATTACHMENT = "MiniGun"
+    local HUNTER_CHOPPER_CLASS = "npc_helicopter"
+    local HUNTER_CHOPPER_MUZZLE_ATTACHMENT = "Muzzle"
 
     local function isBetterLightsEnabled()
         local cvar = GetConVar("betterlights_enable")
@@ -35,18 +43,59 @@ if SERVER then
         return false
     end
 
+    local function getMuzzleFlashPos(ent, bullet)
+        if IsValid(ent) and ent.GetClass and ent.LookupAttachment and ent.GetAttachment then
+            local cls = ent:GetClass()
+            local attachmentName
+            if cls == STRIDER_CLASS then
+                attachmentName = STRIDER_MUZZLE_ATTACHMENT
+            elseif cls == HUNTER_CHOPPER_CLASS then
+                attachmentName = HUNTER_CHOPPER_MUZZLE_ATTACHMENT
+            end
+
+            local attachmentId = attachmentName and ent:LookupAttachment(attachmentName)
+            if attachmentId and attachmentId > 0 then
+                local attachment = ent:GetAttachment(attachmentId)
+                if attachment and attachment.Pos then return attachment.Pos end
+            end
+        end
+
+        return bullet.Src or (IsValid(ent) and ent.GetShootPos and ent:GetShootPos()) or ent:GetPos()
+    end
+
+    local function getSpecialMuzzleMessage(ent)
+        if not (IsValid(ent) and ent.GetClass) then return nil end
+
+        local cls = ent:GetClass()
+        if cls == STRIDER_CLASS then return MSG_STRIDER_MUZZLE_FLASH end
+        if cls == HUNTER_CHOPPER_CLASS then return MSG_HUNTER_CHOPPER_MUZZLE_FLASH end
+        return nil
+    end
+
+    local function getSpecialImpactMessage(ent)
+        if not (IsValid(ent) and ent.GetClass) then return nil end
+
+        local cls = ent:GetClass()
+        if cls == STRIDER_CLASS then return MSG_STRIDER_BULLET_IMPACT end
+        if cls == HUNTER_CHOPPER_CLASS then return MSG_HUNTER_CHOPPER_BULLET_IMPACT end
+        return nil
+    end
+
     hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", function(ent, bullet)
         if not isBetterLightsEnabled() then return end
         if not IsValid(ent) then return end
         if not bullet then return end
 
-        local src = bullet.Src or (IsValid(ent) and ent.GetShootPos and ent:GetShootPos()) or ent:GetPos()
+        local src = getMuzzleFlashPos(ent, bullet)
         if not src then return end
+        local specialMessage = getSpecialMuzzleMessage(ent)
 
         net.Start("BetterLights_Event")
-            net.WriteUInt(MSG_MUZZLE_FLASH, 4)
+            net.WriteUInt(specialMessage or MSG_MUZZLE_FLASH, 4)
             net.WriteVector(src)
-            net.WriteBool(isAR2Shot(ent, bullet))
+            if not specialMessage then
+                net.WriteBool(isAR2Shot(ent, bullet))
+            end
         net.SendPVS(src)
     end)
 
@@ -68,9 +117,12 @@ if SERVER then
             end
 
             net.Start("BetterLights_Event")
-                net.WriteUInt(MSG_BULLET_IMPACT, 4)
+                local specialMessage = getSpecialImpactMessage(ent)
+                net.WriteUInt(specialMessage or MSG_BULLET_IMPACT, 4)
                 net.WriteVector(pos)
-                net.WriteBool(isAR2Shot(att, bullet))
+                if not specialMessage then
+                    net.WriteBool(isAR2Shot(att, bullet))
+                end
             net.SendPVS(pos)
 
             return ret
