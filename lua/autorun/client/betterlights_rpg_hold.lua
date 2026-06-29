@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local cvar_enable = BL.CreateClientConVar("betterlights_rpg_hold_enable", "1", true, false, "Enable subtle red lights on the RPG while held")
     local cvar_size = BL.CreateClientConVar("betterlights_rpg_hold_size", "24", true, false, "Dynamic light radius for held RPG lights")
@@ -11,63 +10,22 @@ if CLIENT then
     local cvar_col_b = BL.CreateClientConVar("betterlights_rpg_hold_color_b", "60", true, false, "RPG (Held) color - blue (0-255)")
 
     local ATTACH_NAMES = { "muzzle", "laser", "muzzle_flash" }
-    local function getRPGModelLightPos(ply, wep)
-        if IsValid(ply) and ply == LocalPlayer() then
-            local vm = ply:GetViewModel()
-            if IsValid(vm) then
-                local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(vm, ATTACH_NAMES)
-                if pos then return pos end
-            end
-        end
-
-        if IsValid(wep) then
-            local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(wep, ATTACH_NAMES)
-            if pos then return pos end
-            if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end
-        end
-
-        if IsValid(ply) and ply.EyePos then
-            return ply:EyePos() + (ply.EyeAngles and ply:EyeAngles():Forward() * 16 or Vector(16, 0, 0))
-        end
-
-        return IsValid(wep) and wep:GetPos() or Vector(0, 0, 0)
-    end
 
     local function getLeftHandPos(ply, wep)
-        if IsValid(ply) and ply == LocalPlayer() then
+        if not IsValid(ply) then return nil end
+
+        if ply == LocalPlayer() then
             local vm = ply:GetViewModel()
-            if IsValid(vm) then
-                local bone = vm:LookupBone("ValveBiped.Bip01_L_Hand")
-                if bone and bone >= 0 then
-                    local m = vm:GetBoneMatrix(bone)
-                    if m then
-                        local pos = m:GetTranslation()
-                        if pos and pos ~= vector_origin then return pos end
-                    end
-                    local pos = vm:GetBonePosition(bone)
-                    if pos and pos ~= vector_origin then return pos end
-                end
-            end
+            local pos = BL.GetBonePosition(vm, "ValveBiped.Bip01_L_Hand")
+            if pos then return pos end
         end
 
-        if IsValid(ply) then
-            local bone = ply:LookupBone("ValveBiped.Bip01_L_Hand")
-            if bone and bone >= 0 then
-                local m = ply:GetBoneMatrix(bone)
-                if m then
-                    local pos = m:GetTranslation()
-                    if pos and pos ~= vector_origin then return pos end
-                end
-                local pos = ply:GetBonePosition(bone)
-                if pos and pos ~= vector_origin then return pos end
-            end
-        end
+        local pos = BL.GetBonePosition(ply, "ValveBiped.Bip01_L_Hand")
+        if pos then return pos end
 
-        return getRPGModelLightPos(ply, wep)
+        return BL.GetHeldWeaponModelLightPos(ply, wep, ATTACH_NAMES, 16)
     end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_RPG_Held_DLight", function()
+    BL.AddThink("BetterLights_RPG_Held_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local ply = LocalPlayer()
@@ -81,53 +39,14 @@ if CLIENT then
 
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
-        local startPos = ply.EyePos and ply:EyePos() or (ply.GetShootPos and ply:GetShootPos()) or wep:GetPos()
-        local dir = ply.GetAimVector and ply:GetAimVector() or (ply.EyeAngles and ply:EyeAngles():Forward()) or Vector(1,0,0)
-        local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("rpg_hold", {
-            start = startPos,
-            endpos = startPos + dir * 8192,
-            filter = { ply, wep }
-        })) or util.TraceLine({ start = startPos, endpos = startPos + dir * 8192, filter = { ply, wep } })
-        local pos_world
-        if tr.Hit then
-            pos_world = tr.HitPos + tr.HitNormal * 6
-        else
-            pos_world = startPos + dir * 1024
-        end
-
+        local pos_world = BL.GetHeldWeaponTraceLightPos(ply, wep, "rpg_hold", 8192, 1024)
         local idx = ply:EntIndex() + 1520
 
-        local d = DynamicLight(idx)
-        if d then
-            d.pos = pos_world
-            d.r = r
-            d.g = g
-            d.b = b
-            d.brightness = brightness
-            d.decay = decay
-            d.size = size
-            d.minlight = 0
-            d.noworld = false
-            d.nomodel = false
-            d.dietime = CurTime() + 0.1
-        end
+        BL.CreateDLight(idx, pos_world, r, g, b, brightness, decay, size, false)
 
         local pos_hand = getLeftHandPos(ply, wep)
         if pos_hand then
-            local d2 = DynamicLight(idx + 1)
-            if d2 then
-                d2.pos = pos_hand
-                d2.r = r
-                d2.g = g
-                d2.b = b
-                d2.brightness = brightness
-                d2.decay = decay
-                d2.size = size
-                d2.minlight = 0
-                d2.noworld = false
-                d2.nomodel = false
-                d2.dietime = CurTime() + 0.1
-            end
+            BL.CreateDLight(idx + 1, pos_hand, r, g, b, brightness, decay, size, false)
         end
     end)
 end

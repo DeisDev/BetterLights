@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local cvar_enable = BL.CreateClientConVar("betterlights_combineball_enable", "1", true, false, "Enable dynamic light for Combine AR2 orb")
     local cvar_size = BL.CreateClientConVar("betterlights_combineball_size", "320", true, false, "Dynamic light radius for Combine AR2 orb")
@@ -15,10 +14,8 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_combineball_color_g", "180", true, false, "Combine ball color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_combineball_color_b", "255", true, false, "Combine ball color - blue (0-255)")
 
-    if BL.TrackClass then BL.TrackClass("prop_combine_ball") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_CombineBall_DLight", function()
+    BL.TrackClass("prop_combine_ball")
+    BL.AddThink("BetterLights_CombineBall_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local size = math.max(0, cvar_size:GetFloat())
@@ -35,59 +32,22 @@ if CLIENT then
             local pos = ent:WorldSpaceCenter()
 
             if wantWorld then
-                local dl = DynamicLight(ent:EntIndex())
-                if dl then
-                    dl.pos = pos
-                    dl.r = r
-                    dl.g = g
-                    dl.b = b
-                    dl.brightness = brightness
-                    dl.decay = decay
-                    dl.size = size
-                    dl.minlight = 0
-                    dl.noworld = false
-                    dl.nomodel = not wantModels
-                    dl.dietime = CurTime() + 0.1
-                end
+                BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false, {
+                    nomodel = not wantModels
+                })
             end
 
             if wantModels and (not wantWorld) then
                 if wantElight then
-                    local el = DynamicLight(ent:EntIndex(), true)
-                    if el then
-                        el.pos = pos
-                        el.r = r
-                        el.g = g
-                        el.b = b
-                        el.brightness = brightness
-                        el.decay = decay
-                        el.size = size * elMult
-                        el.minlight = 0
-                        el.dietime = CurTime() + 0.1
-                    end
+                    BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size * elMult, true)
                 else
-                    local dlm = DynamicLight(ent:EntIndex())
-                    if dlm then
-                        dlm.pos = pos
-                        dlm.r = r
-                        dlm.g = g
-                        dlm.b = b
-                        dlm.brightness = brightness
-                        dlm.decay = decay
-                        dlm.size = size
-                        dlm.minlight = 0
-                        dlm.noworld = true
-                        dlm.nomodel = false
-                        dlm.dietime = CurTime() + 0.1
-                    end
+                    BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false, {
+                        noworld = true
+                    })
                 end
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("prop_combine_ball", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("prop_combine_ball")) do update(ent) end
-        end
+        BL.ForEach("prop_combine_ball", update)
     end)
 end

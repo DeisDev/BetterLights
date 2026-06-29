@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local CurTime = CurTime
     local IsValid = IsValid
@@ -19,10 +18,8 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_fire_color_g", "170", true, false, "Burning entities color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_fire_color_b", "60", true, false, "Burning entities color - blue (0-255)")
 
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-
-    if BL.TrackClass then BL.TrackClass("entityflame") end
-    AddThink("BetterLights_Fire_DLight", function()
+    BL.TrackClass("entityflame")
+    BL.AddThink("BetterLights_Fire_DLight", function()
         if not cvar_enable:GetBool() then return end
 
 
@@ -53,7 +50,7 @@ if CLIENT then
                     local obbCenter = target.OBBCenter and target:OBBCenter() or Vector(0, 0, 0)
                     pos = target.LocalToWorld and target:LocalToWorld(obbCenter) or (target.WorldSpaceCenter and target:WorldSpaceCenter()) or target:GetPos()
                     lightIndex = target:EntIndex()
-                    if seenTargets[lightIndex] then goto continue_flame end
+                    if seenTargets[lightIndex] then return end
                     seenTargets[lightIndex] = true
                 else
                     pos = flame:GetPos()
@@ -68,46 +65,14 @@ if CLIENT then
                     s_eff = BL.CreateFlickerEffect(size, t, flickerSpeed, flickerSizeAmt, phase)
                 end
 
-                local dlight = DynamicLight(lightIndex)
-                if dlight then
-                    dlight.pos = pos
-                    dlight.r = cr
-                    dlight.g = cg
-                    dlight.b = cb
-                    dlight.brightness = b_eff
-                    dlight.decay = decay
-                    dlight.size = s_eff
-                    dlight.minlight = 0
-                    dlight.noworld = false
-                    dlight.nomodel = false
-                    dlight.dietime = CurTime() + 0.16
-                end
+                BL.CreateDLight(lightIndex, pos, cr, cg, cb, b_eff, decay, s_eff, false, { dietime = 0.16 })
 
                 if doElight then
-                    local el = DynamicLight(lightIndex, true)
-                    if el then
-                        el.pos = pos
-                        el.r = cr
-                        el.g = cg
-                        el.b = cb
-                        el.brightness = b_eff
-                        el.decay = decay
-                        el.size = s_eff * elMult
-                        el.minlight = 0
-                        el.dietime = CurTime() + 0.16
-                    end
+                    BL.CreateDLight(lightIndex, pos, cr, cg, cb, b_eff, decay, s_eff * elMult, true, { dietime = 0.16 })
                 end
-
-                ::continue_flame::
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("entityflame", handleFlame)
-        else
-            local flames = ents.FindByClass("entityflame")
-            if not flames or #flames == 0 then return end
-            for _, flame in ipairs(flames) do handleFlame(flame) end
-        end
+        BL.ForEach("entityflame", handleFlame)
     end)
 end

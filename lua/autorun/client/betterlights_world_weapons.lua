@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local WEAPONS = {
@@ -138,9 +137,7 @@ if CLIENT then
         info.cvar_g = BL.CreateClientConVar(prefix .. "_color_g", tostring(info.g), true, false, info.name .. " world weapon color - green (0-255)")
         info.cvar_b = BL.CreateClientConVar(prefix .. "_color_b", tostring(info.b), true, false, info.name .. " world weapon color - blue (0-255)")
 
-        if BL.TrackClass then
-            BL.TrackClass(info.class)
-        end
+        BL.TrackClass(info.class)
     end
 
     function BL.GetWorldWeaponLightDefinitions()
@@ -159,7 +156,7 @@ if CLIENT then
     local function getLightPosition(ent, info)
         local attachments = info.attachments
         local bones = info.bones
-        local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(ent, attachments)
+        local pos = BL.GetAttachmentPos(ent, attachments)
         if pos then
             if info.offset then
                 pos = pos + ent:LocalToWorld(info.offset) - ent:GetPos()
@@ -168,7 +165,7 @@ if CLIENT then
             return pos
         end
 
-        if BL.GetBonePosition and bones then
+        if bones then
             for _, boneName in ipairs(bones) do
                 pos = BL.GetBonePosition(ent, boneName)
                 if pos then return pos end
@@ -202,17 +199,9 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach(info.class, update)
-        else
-            for _, ent in ipairs(ents.FindByClass(info.class)) do
-                update(ent)
-            end
-        end
+        BL.ForEach(info.class, update)
     end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_WorldWeapons_DLight", function()
+    BL.AddThink("BetterLights_WorldWeapons_DLight", function()
         for _, info in ipairs(WEAPONS) do
             updateWeapon(info)
         end

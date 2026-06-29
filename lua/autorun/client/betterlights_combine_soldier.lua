@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local colorCvars = {
@@ -49,9 +48,9 @@ if CLIENT then
             b = 48
         })
     }
-    
+
     BL.TrackClass("npc_combine_s")
-    
+
     local variants = {
         { model = "combine_super_soldier", default = "elite" },
         { model = "prisonguard", skinMap = {[0] = "prisonYellow", [1] = "prisonRed"}, default = "prisonYellow" },
@@ -66,14 +65,14 @@ if CLIENT then
             math.max(0, selected.decay:GetFloat()),
             BL.GetColorFromCvars(selected.r, selected.g, selected.b)
     end
-    
+
     BL.AddThink("BetterLights_CombineSoldier", function()
         BL.ForEach("npc_combine_s", function(ent)
             local colorKey = BL.DetectModelVariant(ent, variants) or "standardBlue"
             local settings, size, brightness, decay, red, green, blue = getSettings(colorKey)
             if not settings.enable:GetBool() then return end
-            
-            BL.CreateLightFromAttachment(ent, {"eyes"}, 
+
+            BL.CreateLightFromAttachment(ent, {"eyes"},
                 red, green, blue, brightness, decay, size, false)
         end)
     end)

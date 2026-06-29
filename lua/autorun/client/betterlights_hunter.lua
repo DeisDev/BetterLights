@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local HUNTER_CLASS = "npc_hunter"
@@ -46,10 +45,8 @@ if CLIENT then
     local flechetteSpawnTimes = {}
     local flechetteLastPositions = {}
 
-    if BL.TrackClass then
-        BL.TrackClass(HUNTER_CLASS)
-        BL.TrackClass(FLECHETTE_CLASS)
-    end
+    BL.TrackClass(HUNTER_CLASS)
+    BL.TrackClass(FLECHETTE_CLASS)
 
     local function getHunterMuzzlePos(projectilePos)
         local bestPos
@@ -68,13 +65,7 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach(HUNTER_CLASS, checkHunter)
-        else
-            for _, ent in ipairs(ents.FindByClass(HUNTER_CLASS)) do
-                checkHunter(ent)
-            end
-        end
+        BL.ForEach(HUNTER_CLASS, checkHunter)
 
         return bestPos
     end
@@ -125,9 +116,7 @@ if CLIENT then
         local brightness = math.max(0, cvar_blast_brightness:GetFloat())
         BL.CreateFlash(pos, r, g, b, size, brightness, dur, 59400)
     end)
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Hunter", function()
+    BL.AddThink("BetterLights_Hunter", function()
         if cvar_hunter_enable:GetBool() then
             local size = math.max(0, cvar_hunter_size:GetFloat())
             local brightness = math.max(0, cvar_hunter_brightness:GetFloat())
@@ -164,13 +153,7 @@ if CLIENT then
                 end
             end
 
-            if BL.ForEach then
-                BL.ForEach(HUNTER_CLASS, updateHunter)
-            else
-                for _, ent in ipairs(ents.FindByClass(HUNTER_CLASS)) do
-                    updateHunter(ent)
-                end
-            end
+            BL.ForEach(HUNTER_CLASS, updateHunter)
         end
 
         if not cvar_projectile_enable:GetBool() then return end
@@ -191,12 +174,6 @@ if CLIENT then
             BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
         end
 
-        if BL.ForEach then
-            BL.ForEach(FLECHETTE_CLASS, updateFlechette)
-        else
-            for _, ent in ipairs(ents.FindByClass(FLECHETTE_CLASS)) do
-                updateFlechette(ent)
-            end
-        end
+        BL.ForEach(FLECHETTE_CLASS, updateFlechette)
     end)
 end

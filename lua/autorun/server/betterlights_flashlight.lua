@@ -1,13 +1,15 @@
 if SERVER then
-    util.AddNetworkString("BetterLights_FlashlightClientEnable")
-    util.AddNetworkString("BetterLights_FlashlightSound")
+    local BL = BetterLights
+
+    util.AddNetworkString(BL.NET_FLASHLIGHT_CLIENT_ENABLE)
+    util.AddNetworkString(BL.NET_FLASHLIGHT_SOUND)
 
     local INPUT_DEBOUNCE = 0.05
 
     local PLAYER = FindMetaTable("Player")
 
     local function emitFlashlightSound(ply, state)
-        net.Start("BetterLights_FlashlightSound")
+        net.Start(BL.NET_FLASHLIGHT_SOUND)
             net.WriteEntity(ply)
             net.WriteBool(state)
         net.SendPVS(ply:GetPos())
@@ -99,7 +101,7 @@ if SERVER then
         return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false))
     end
 
-    net.Receive("BetterLights_FlashlightClientEnable", function(_, ply)
+    net.Receive(BL.NET_FLASHLIGHT_CLIENT_ENABLE, function(_, ply)
         if not IsValid(ply) then return end
 
         ply.BetterLights_FlashlightEnabled = net.ReadBool()

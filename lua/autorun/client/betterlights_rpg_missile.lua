@@ -1,7 +1,5 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
-    local CurTime = CurTime
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_rpg_enable", "1", true, false, "Enable dynamic light for fired RPG rockets")
     local cvar_size = BL.CreateClientConVar("betterlights_rpg_size", "280", true, false, "Dynamic light radius for RPG rockets")
@@ -27,10 +25,10 @@ if CLIENT then
 
         local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
         if BL.ShouldSuppressFlash("rpg", pos) then return end
-        
+
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
-        
+
         local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
         local flashSize = math.max(0, cvar_flash_size:GetFloat())
         local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
@@ -38,10 +36,8 @@ if CLIENT then
         BL.RecordFlashPosition("rpg", pos)
     end)
 
-    if BL.TrackClass then BL.TrackClass("rpg_missile") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_RPGMissile_DLight", function()
+    BL.TrackClass("rpg_missile")
+    BL.AddThink("BetterLights_RPGMissile_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
@@ -55,10 +51,6 @@ if CLIENT then
             BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
         end
 
-        if BL.ForEach then
-            BL.ForEach("rpg_missile", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("rpg_missile")) do update(ent) end
-        end
+        BL.ForEach("rpg_missile", update)
     end)
 end

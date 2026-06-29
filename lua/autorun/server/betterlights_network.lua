@@ -1,12 +1,8 @@
 if SERVER then
-    util.AddNetworkString("BetterLights_Event")
+    local BL = BetterLights
 
-    local MSG_MUZZLE_FLASH = 1
-    local MSG_BULLET_IMPACT = 2
-    local MSG_STRIDER_MUZZLE_FLASH = 3
-    local MSG_STRIDER_BULLET_IMPACT = 4
-    local MSG_HUNTER_CHOPPER_MUZZLE_FLASH = 5
-    local MSG_HUNTER_CHOPPER_BULLET_IMPACT = 6
+    util.AddNetworkString(BL.NET_EVENT_MESSAGE)
+
     local STRIDER_CLASS = "npc_strider"
     local STRIDER_MUZZLE_ATTACHMENT = "MiniGun"
     local HUNTER_CHOPPER_CLASS = "npc_helicopter"
@@ -67,8 +63,8 @@ if SERVER then
         if not (IsValid(ent) and ent.GetClass) then return nil end
 
         local cls = ent:GetClass()
-        if cls == STRIDER_CLASS then return MSG_STRIDER_MUZZLE_FLASH end
-        if cls == HUNTER_CHOPPER_CLASS then return MSG_HUNTER_CHOPPER_MUZZLE_FLASH end
+        if cls == STRIDER_CLASS then return BL.NET_STRIDER_MUZZLE_FLASH end
+        if cls == HUNTER_CHOPPER_CLASS then return BL.NET_HUNTER_CHOPPER_MUZZLE_FLASH end
         return nil
     end
 
@@ -76,8 +72,8 @@ if SERVER then
         if not (IsValid(ent) and ent.GetClass) then return nil end
 
         local cls = ent:GetClass()
-        if cls == STRIDER_CLASS then return MSG_STRIDER_BULLET_IMPACT end
-        if cls == HUNTER_CHOPPER_CLASS then return MSG_HUNTER_CHOPPER_BULLET_IMPACT end
+        if cls == STRIDER_CLASS then return BL.NET_STRIDER_BULLET_IMPACT end
+        if cls == HUNTER_CHOPPER_CLASS then return BL.NET_HUNTER_CHOPPER_BULLET_IMPACT end
         return nil
     end
 
@@ -90,8 +86,8 @@ if SERVER then
         if not src then return end
         local specialMessage = getSpecialMuzzleMessage(ent)
 
-        net.Start("BetterLights_Event")
-            net.WriteUInt(specialMessage or MSG_MUZZLE_FLASH, 4)
+        net.Start(BL.NET_EVENT_MESSAGE)
+            net.WriteUInt(specialMessage or BL.NET_MUZZLE_FLASH, 4)
             net.WriteVector(src)
             if not specialMessage then
                 net.WriteBool(isAR2Shot(ent, bullet))
@@ -116,9 +112,9 @@ if SERVER then
                 pos = pos + tr.HitNormal * 2
             end
 
-            net.Start("BetterLights_Event")
+            net.Start(BL.NET_EVENT_MESSAGE)
                 local specialMessage = getSpecialImpactMessage(ent)
-                net.WriteUInt(specialMessage or MSG_BULLET_IMPACT, 4)
+                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
                 net.WriteVector(pos)
                 if not specialMessage then
                     net.WriteBool(isAR2Shot(att, bullet))

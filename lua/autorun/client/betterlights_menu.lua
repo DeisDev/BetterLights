@@ -1,10 +1,26 @@
 if CLIENT then
-    local SERVER_BOOL_MESSAGE = "BetterLights_SetServerBool"
-    local COLOR_BG = Color(245, 247, 250)
-    local COLOR_BORDER = Color(175, 185, 196)
-    local COLOR_TEXT = Color(32, 36, 40)
-    local COLOR_MUTED = Color(84, 92, 102)
-    local COLOR_ACCENT = Color(80, 150, 230)
+    local TAB_ID = "Better Lights"
+    BetterLights.Menu = BetterLights.Menu or {}
+    local MENU = BetterLights.Menu
+
+    local function isDeveloperMode()
+        local developer = GetConVar("developer")
+        return developer and developer:GetInt() >= 1
+    end
+
+    local CATEGORY_DEFS = {
+        { "General", "category.general" },
+        { "Flashlight", "category.flashlight" },
+        { "Weapons", "category.weapons" },
+        { "Projectiles", "category.projectiles" },
+        { "NPCs", "category.npcs" },
+        { "Eye Glow", "category.eye_glow" },
+        { "Gunfire", "category.gunfire" },
+        { "Environment", "category.environment" },
+        { "Pickups", "category.pickups" },
+        { "Developer", "category.developer", developer = true },
+        { "About", "category.about" }
+    }
 
     local function phrase(key)
         return language.GetPhrase("betterlights." .. key)
@@ -12,6 +28,10 @@ if CLIENT then
 
     local function phraseFormat(key, ...)
         return string.format(phrase(key), ...)
+    end
+
+    local function getClientDefault(cvarName, fallback)
+        return BetterLights.GetClientConVarDefault(cvarName, fallback)
     end
 
     local function styleButton(btn)
@@ -31,8 +51,58 @@ if CLIENT then
         return btn
     end
 
+    MENU.Phrase = phrase
+    MENU.PhraseFormat = phraseFormat
+    MENU.StyleButton = styleButton
+    MENU.AddStyledButton = addStyledButton
+    MENU.IsDeveloperMode = isDeveloperMode
+
+    function MENU.RegisterPage(category, id, titleKey, buildPanel)
+        spawnmenu.AddToolMenuOption(TAB_ID, category, id, phrase(titleKey), "", "", buildPanel)
+    end
+
+    local function registerPage(category, id, titleKey, buildPanel)
+        MENU.RegisterPage(category, id, titleKey, buildPanel)
+    end
+
+    local function registerCategories()
+        for _, category in ipairs(CATEGORY_DEFS) do
+            if not category.developer or isDeveloperMode() then
+                spawnmenu.AddToolCategory(TAB_ID, category[1], phrase(category[2]))
+            end
+        end
+    end
+
+    local function spaceHelpText(label, leftMargin, rightMargin)
+        if not IsValid(label) then return nil end
+
+        label:DockMargin(leftMargin or 8, 4, rightMargin or 8, 12)
+        return label
+    end
+
+    local function addHelpText(panel, text)
+        if panel.ControlHelp then
+            return spaceHelpText(panel:ControlHelp(text), 32, 32)
+        end
+
+        if panel.Help then
+            return spaceHelpText(panel:Help(text), 8, 8)
+        end
+
+        local label = vgui.Create("DLabel")
+        label:SetText(text)
+        label:SetWrap(true)
+        label:SetAutoStretchVertical(true)
+        label:SetDark(true)
+        label:DockMargin(8, 4, 8, 12)
+        panel:AddItem(label)
+        return label
+    end
+
+    MENU.AddHelpText = addHelpText
+
     local function resetClientSetting(cvarName, defaultValue)
-        if cvarName == "betterlights_flashlight_texture" and BetterLights and BetterLights.SetFlashlightTexturePath then
+        if cvarName == "betterlights_flashlight_texture" then
             BetterLights.SetFlashlightTexturePath(defaultValue)
             return
         end
@@ -41,11 +111,9 @@ if CLIENT then
     end
 
     local function resetRegisteredClientSettings()
-        if not BetterLights or not BetterLights.GetRegisteredClientConVars then return end
-
-        local defaults = BetterLights.GetRegisteredClientConVarDefaults and BetterLights.GetRegisteredClientConVarDefaults() or {}
+        local defaults = BetterLights.GetRegisteredClientConVarDefaults()
         for cvarName, cvar in pairs(BetterLights.GetRegisteredClientConVars()) do
-            if cvarName == "betterlights_flashlight_texture" and BetterLights.SetFlashlightTexturePath then
+            if cvarName == "betterlights_flashlight_texture" then
                 BetterLights.SetFlashlightTexturePath(defaults[cvarName] or "effects/flashlight001")
             elseif cvar and cvar.Revert then
                 cvar:Revert()
@@ -56,94 +124,73 @@ if CLIENT then
     end
 
     local function resetFlashlightTextureLists()
-        if not BetterLights then return end
-
-        if BetterLights.ClearFlashlightRecentTextures then
-            BetterLights.ClearFlashlightRecentTextures()
-        end
-
-        if BetterLights.ClearFlashlightKnownTextureCache then
-            BetterLights.ClearFlashlightKnownTextureCache()
-        end
+        BetterLights.ClearFlashlightRecentTextures()
+        BetterLights.ClearFlashlightKnownTextureCache()
     end
 
     local function addResetButton(panel, defaults, label)
         local btn = addStyledButton(panel, label or phrase("button.reset_defaults"), phrase("tooltip.reset_defaults"))
         btn.DoClick = function()
-            for cvar, def in pairs(defaults) do
+            local resetDefaults = BetterLights.ResolveClientResetDefaults(defaults)
+            for cvar, def in pairs(resetDefaults) do
                 resetClientSetting(cvar, def)
             end
         end
     end
 
+    MENU.AddResetButton = addResetButton
+
     local function addBrightnessResetButton(panel)
         local resetBrightness = addStyledButton(panel, phrase("button.reset_brightness"))
         resetBrightness.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_brightness", "1.35")
+            RunConsoleCommand("betterlights_flashlight_brightness", tostring(getClientDefault("betterlights_flashlight_brightness", "1.35")))
         end
     end
 
     local function addFovResetButton(panel)
         local resetFov = addStyledButton(panel, phrase("button.reset_fov"))
         resetFov.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_fov", "45")
+            RunConsoleCommand("betterlights_flashlight_fov", tostring(getClientDefault("betterlights_flashlight_fov", "45")))
         end
     end
 
     local function addBeamLengthResetButton(panel)
         local resetBeamLength = addStyledButton(panel, phrase("button.reset_beam_length"))
         resetBeamLength.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_distance", "1200")
+            RunConsoleCommand("betterlights_flashlight_distance", tostring(getClientDefault("betterlights_flashlight_distance", "1200")))
         end
     end
 
     local function addFlickerAmountResetButton(panel)
         local resetFlickerAmount = addStyledButton(panel, phrase("button.reset_flicker_amount"))
         resetFlickerAmount.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_flicker_amount", "0.05")
+            RunConsoleCommand("betterlights_flashlight_flicker_amount", tostring(getClientDefault("betterlights_flashlight_flicker_amount", "0.05")))
         end
     end
 
     local function addSwayIntensityResetButton(panel)
         local resetSwayIntensity = addStyledButton(panel, phrase("button.reset_sway_intensity"))
         resetSwayIntensity.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_sway_intensity", "1")
+            RunConsoleCommand("betterlights_flashlight_sway_intensity", tostring(getClientDefault("betterlights_flashlight_sway_intensity", "1")))
         end
     end
 
     local function setupPage(panel, titleKey, subtitleKey)
         panel:ClearControls()
 
-        local header = vgui.Create("DPanel")
-        header:SetTall(subtitleKey and subtitleKey ~= "" and 62 or 42)
-        header.Paint = function(_, w, h)
-            surface.SetDrawColor(COLOR_BG)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_ACCENT)
-            surface.DrawRect(0, 0, 4, h)
-            surface.SetDrawColor(COLOR_BORDER)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
-
-        local titleLabel = vgui.Create("DLabel", header)
-        titleLabel:Dock(TOP)
-        titleLabel:DockMargin(12, 8, 12, 0)
+        local titleLabel = vgui.Create("DLabel")
         titleLabel:SetTall(20)
         titleLabel:SetText(phrase(titleKey))
         titleLabel:SetFont("DermaDefaultBold")
-        titleLabel:SetTextColor(COLOR_TEXT)
+        titleLabel:SetDark(true)
+        panel:AddItem(titleLabel)
 
         if subtitleKey and subtitleKey ~= "" then
-            local body = vgui.Create("DLabel", header)
-            body:Dock(FILL)
-            body:DockMargin(12, 0, 12, 8)
-            body:SetWrap(true)
-            body:SetText(phrase(subtitleKey))
-            body:SetTextColor(COLOR_MUTED)
+            addHelpText(panel, phrase(subtitleKey))
         end
-
-        panel:AddItem(header)
     end
+
+    MENU.SetupPage = setupPage
 
     local function addSection(panel, titleKey, subtitleKey, expanded)
         local form = vgui.Create("DForm")
@@ -151,12 +198,14 @@ if CLIENT then
         form:SetExpanded(expanded ~= false)
 
         if subtitleKey and subtitleKey ~= "" then
-            form:Help(phrase(subtitleKey))
+            addHelpText(form, phrase(subtitleKey))
         end
 
         panel:AddItem(form)
         return form
     end
+
+    MENU.AddSection = addSection
 
     local function addRawSection(panel, title, subtitle, expanded)
         local form = vgui.Create("DForm")
@@ -164,7 +213,7 @@ if CLIENT then
         form:SetExpanded(expanded ~= false)
 
         if subtitle and subtitle ~= "" then
-            form:Help(subtitle)
+            addHelpText(form, subtitle)
         end
 
         panel:AddItem(form)
@@ -200,84 +249,45 @@ if CLIENT then
         end
     end
 
+    MENU.AddLightControls = addLightControls
+
     local function addColorMixerControl(panel, labelKey, rCvar, gCvar, bCvar, defaultR, defaultG, defaultB)
-        local container = vgui.Create("DPanel")
-        container:SetTall(254)
-        container.Paint = function(_, w, h)
-            surface.SetDrawColor(250, 251, 253)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_BORDER)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
-
-        if labelKey and labelKey ~= "" then
-            local text = vgui.Create("DLabel", container)
-            text:Dock(TOP)
-            text:DockMargin(8, 5, 8, 0)
-            text:SetTall(18)
-            text:SetText(phrase(labelKey))
-            text:SetFont("DermaDefaultBold")
-            text:SetTextColor(COLOR_TEXT)
-        end
-
-        local mixer = vgui.Create("DColorMixer", container)
-        mixer:Dock(FILL)
-        mixer:DockMargin(8, labelKey and labelKey ~= "" and 3 or 8, 8, 8)
-        mixer:SetTall(190)
+        local mixer = vgui.Create("DColorMixer")
+        mixer:SetTall(220)
+        mixer:SetLabel(labelKey and labelKey ~= "" and phrase(labelKey) or nil)
         mixer:SetPalette(true)
         mixer:SetAlphaBar(false)
         mixer:SetWangs(true)
+        mixer:SetConVarR(rCvar)
+        mixer:SetConVarG(gCvar)
+        mixer:SetConVarB(bCvar)
 
         local currentR = GetConVar(rCvar)
         local currentG = GetConVar(gCvar)
         local currentB = GetConVar(bCvar)
         mixer:SetColor(Color(
-            currentR and currentR:GetInt() or defaultR or 255,
-            currentG and currentG:GetInt() or defaultG or 255,
-            currentB and currentB:GetInt() or defaultB or 255
+            currentR and currentR:GetInt() or getClientDefault(rCvar, defaultR or 255),
+            currentG and currentG:GetInt() or getClientDefault(gCvar, defaultG or 255),
+            currentB and currentB:GetInt() or getClientDefault(bCvar, defaultB or 255)
         ))
 
-        mixer.ValueChanged = function(_, color)
-            if mixer.BetterLightsUpdating then return end
+        panel:AddItem(mixer)
 
-            RunConsoleCommand(rCvar, tostring(color.r))
-            RunConsoleCommand(gCvar, tostring(color.g))
-            RunConsoleCommand(bCvar, tostring(color.b))
-        end
-
-        mixer.Think = function()
-            local cr = GetConVar(rCvar)
-            local cg = GetConVar(gCvar)
-            local cb = GetConVar(bCvar)
-            if not (cr and cg and cb) then return end
-
-            local r = cr:GetInt()
-            local g = cg:GetInt()
-            local b = cb:GetInt()
-            local last = mixer.BetterLightsLastColor
-            if last and last.r == r and last.g == g and last.b == b then return end
-
-            mixer.BetterLightsUpdating = true
-            mixer:SetColor(Color(r, g, b))
-            mixer.BetterLightsUpdating = false
-            mixer.BetterLightsLastColor = { r = r, g = g, b = b }
-        end
-
-        local reset = styleButton(vgui.Create("DButton", container))
-        reset:Dock(BOTTOM)
-        reset:DockMargin(8, 0, 8, 8)
+        local reset = styleButton(vgui.Create("DButton"))
         reset:SetTall(26)
         reset:SetText(phrase("button.reset_color"))
         reset:SetTooltip(phrase("tooltip.reset_color"))
         reset.DoClick = function()
-            RunConsoleCommand(rCvar, tostring(defaultR or 255))
-            RunConsoleCommand(gCvar, tostring(defaultG or 255))
-            RunConsoleCommand(bCvar, tostring(defaultB or 255))
+            RunConsoleCommand(rCvar, tostring(getClientDefault(rCvar, defaultR or 255)))
+            RunConsoleCommand(gCvar, tostring(getClientDefault(gCvar, defaultG or 255)))
+            RunConsoleCommand(bCvar, tostring(getClientDefault(bCvar, defaultB or 255)))
         end
 
-        panel:AddItem(container)
+        panel:AddItem(reset)
         return mixer
     end
+
+    MENU.AddColorMixerControl = addColorMixerControl
 
     local function copyText(text)
         if not SetClipboardText then return end
@@ -290,12 +300,7 @@ if CLIENT then
     local function addCurrentTexturePreview(panel, path)
         local preview = vgui.Create("DPanel")
         preview:SetTall(118)
-        preview.Paint = function(_, w, h)
-            surface.SetDrawColor(238, 238, 238, 255)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(170, 170, 170, 255)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
+        preview.Paint = nil
 
         local image = vgui.Create("DPanel", preview)
         image:Dock(LEFT)
@@ -319,13 +324,13 @@ if CLIENT then
         title:Dock(TOP)
         title:SetTall(20)
         title:SetText(phrase("label.current_texture"))
-        title:SetTextColor(Color(35, 35, 35))
+        title:SetDark(true)
 
         local value = vgui.Create("DLabel", details)
         value:Dock(FILL)
         value:SetWrap(true)
         value:SetText(path)
-        value:SetTextColor(Color(35, 35, 35))
+        value:SetDark(true)
 
         local copy = styleButton(vgui.Create("DButton", details))
         copy:Dock(BOTTOM)
@@ -341,12 +346,7 @@ if CLIENT then
     local function addTextureTile(layout, path, refresh)
         local tile = vgui.Create("DPanel")
         tile:SetSize(132, 164)
-        tile.Paint = function(_, w, h)
-            surface.SetDrawColor(238, 238, 238, 255)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(170, 170, 170, 255)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
+        tile.Paint = nil
 
         local preview = vgui.Create("DButton", tile)
         preview:SetText("")
@@ -363,7 +363,7 @@ if CLIENT then
         end
 
         preview.DoClick = function()
-            if BetterLights.SetFlashlightTexturePath and BetterLights.SetFlashlightTexturePath(path) then
+            if BetterLights.SetFlashlightTexturePath(path) then
                 notification.AddLegacy(phrase("notice.flashlight_texture_changed"), NOTIFY_GENERIC, 3)
                 surface.PlaySound("buttons/button15.wav")
             end
@@ -378,7 +378,7 @@ if CLIENT then
         label:SetTall(36)
         label:SetWrap(true)
         label:SetText(path)
-        label:SetTextColor(Color(35, 35, 35))
+        label:SetDark(true)
 
         local buttons = vgui.Create("DPanel", tile)
         buttons:Dock(BOTTOM)
@@ -420,7 +420,7 @@ if CLIENT then
     local activeFlashlightVisualFilter
 
     local function requestServerBool(cvarName, value)
-        net.Start(SERVER_BOOL_MESSAGE)
+        net.Start(BetterLights.NET_SET_SERVER_BOOL)
             net.WriteString(cvarName)
             net.WriteBool(value)
         net.SendToServer()
@@ -428,11 +428,6 @@ if CLIENT then
 
     local function canChangeServerSettings()
         return game.SinglePlayer() or (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin())
-    end
-
-    local function isDeveloperMode()
-        local developer = GetConVar("developer")
-        return developer and developer:GetInt() >= 1
     end
 
     concommand.Add("betterlights_toggle", function()
@@ -450,10 +445,6 @@ if CLIENT then
         local row = vgui.Create("DCheckBoxLabel")
         local cvar = GetConVar(cvarName)
         row:SetText(label)
-        row:SetTextColor(Color(0, 0, 0))
-        if row.Label then
-            row.Label:SetTextColor(Color(0, 0, 0))
-        end
         row:SetValue((not cvar or cvar:GetBool()) and 1 or 0)
         row:SizeToContents()
 
@@ -491,326 +482,6 @@ if CLIENT then
         end
     end
 
-    local function normalizeVersion(version)
-        if not version then return "" end
-
-        local normalized = string.match(version, "v%d+%.%d+%.%d+")
-        if normalized then return normalized end
-
-        normalized = string.match(version, "%d+%.%d+%.%d+")
-        if normalized then return "v" .. normalized end
-
-        return string.Trim(tostring(version))
-    end
-
-    local function readChangelogJson()
-        if not file or not file.Read then return nil end
-
-        return file.Read("data_static/betterlights_changelog.json", "GAME")
-    end
-
-    local function createChangelogEntry(version)
-        return {
-            title = phraseFormat("changelog.entry_title", version),
-            version = version,
-            items = {},
-            placeholder = true
-        }
-    end
-
-    local function parseChangelogJsonEntries(source)
-        if not source or source == "" or not util or not util.JSONToTable then return {} end
-
-        local decoded = util.JSONToTable(source)
-        if not istable(decoded) then return {} end
-
-        local entries = {}
-        for _, entry in ipairs(decoded) do
-            if istable(entry) then
-                local version = normalizeVersion(entry.version or entry.title)
-                local title = tostring(entry.title or phraseFormat("changelog.entry_title", version))
-                local items = {}
-
-                if istable(entry.items) then
-                    for _, item in ipairs(entry.items) do
-                        table.insert(items, tostring(item))
-                    end
-                end
-
-                table.insert(entries, {
-                    title = title,
-                    version = version,
-                    items = items
-                })
-            end
-        end
-
-        return entries
-    end
-
-    local function getChangelogEntries()
-        local currentVersion = normalizeVersion(BetterLights and BetterLights.VERSION)
-        local entries = parseChangelogJsonEntries(readChangelogJson())
-
-        local currentIndex
-
-        for index, entry in ipairs(entries) do
-            if entry.version == currentVersion then
-                currentIndex = index
-                break
-            end
-        end
-
-        if currentVersion ~= "" and not currentIndex then
-            table.insert(entries, 1, createChangelogEntry(currentVersion))
-        elseif currentIndex and currentIndex > 1 then
-            local currentEntry = table.remove(entries, currentIndex)
-            table.insert(entries, 1, currentEntry)
-        end
-
-        return entries, currentVersion
-    end
-
-    local function styleScrollBar(scrollPanel)
-        local bar = scrollPanel:GetVBar()
-        if not IsValid(bar) then return end
-
-        bar:SetWide(10)
-        bar.Paint = function(_, w, h)
-            surface.SetDrawColor(235, 239, 244)
-            surface.DrawRect(0, 0, w, h)
-        end
-        bar.btnGrip.Paint = function(_, w, h)
-            surface.SetDrawColor(150, 164, 178)
-            surface.DrawRect(2, 0, w - 4, h)
-        end
-        bar.btnUp.Paint = function(_, w, h)
-            surface.SetDrawColor(235, 239, 244)
-            surface.DrawRect(0, 0, w, h)
-        end
-        bar.btnDown.Paint = bar.btnUp.Paint
-    end
-
-    local function addChangelogText(parent, text, font, color, marginBottom)
-        local label = vgui.Create("DLabel", parent)
-        label:Dock(TOP)
-        label:DockMargin(0, 0, 8, marginBottom or 8)
-        label:SetText(text)
-        label:SetFont(font or "DermaDefault")
-        label:SetTextColor(color or COLOR_TEXT)
-        label:SetWrap(true)
-        label:SetAutoStretchVertical(true)
-        return label
-    end
-
-    local function addChangelogItem(parent, text)
-        local row = vgui.Create("DPanel", parent)
-        row:Dock(TOP)
-        row:DockMargin(0, 0, 8, 10)
-        row:SetTall(math.max(48, 36 + (math.ceil(string.len(text) / 72) - 1) * 18))
-        row.Paint = function(_, w, h)
-            surface.SetDrawColor(248, 250, 252)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(215, 223, 232)
-            surface.DrawOutlinedRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_ACCENT)
-            surface.DrawRect(0, 0, 4, h)
-        end
-
-        local label = vgui.Create("DLabel", row)
-        label:Dock(FILL)
-        label:DockMargin(18, 9, 12, 9)
-        label:SetText(text)
-        label:SetTextColor(COLOR_TEXT)
-        label:SetWrap(true)
-        label:SetAutoStretchVertical(true)
-
-        return row
-    end
-
-    local function populateChangelogDetail(panel, entry)
-        panel:Clear()
-        if not entry then return end
-
-        local canvas = panel:GetCanvas()
-        if IsValid(canvas) then
-            canvas:DockPadding(12, 12, 12, 12)
-        end
-
-        local header = vgui.Create("DPanel", panel)
-        header:Dock(TOP)
-        header:DockMargin(0, 0, 8, 12)
-        header:SetTall(98)
-        header.Paint = function(_, w, h)
-            surface.SetDrawColor(COLOR_BG)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_ACCENT)
-            surface.DrawRect(0, 0, 5, h)
-            surface.SetDrawColor(COLOR_BORDER)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
-
-        local title = vgui.Create("DLabel", header)
-        title:Dock(TOP)
-        title:DockMargin(16, 12, 16, 0)
-        title:SetTall(34)
-        title:SetText(entry.title)
-        title:SetFont("DermaLarge")
-        title:SetTextColor(COLOR_TEXT)
-
-        local subtitle = vgui.Create("DLabel", header)
-        subtitle:Dock(TOP)
-        subtitle:DockMargin(16, 4, 16, 0)
-        subtitle:SetTall(24)
-        subtitle:SetText(entry.version ~= "" and phraseFormat("changelog.release_notes_for", entry.version) or phrase("changelog.release_notes"))
-        subtitle:SetTextColor(COLOR_MUTED)
-
-        if entry.placeholder then
-            addChangelogText(panel, phrase("changelog.none_written"), "DermaDefaultBold", COLOR_MUTED)
-            return
-        end
-
-        if #entry.items == 0 then
-            addChangelogText(panel, phrase("changelog.none_found"), "DermaDefaultBold", COLOR_MUTED)
-            return
-        end
-
-        for _, item in ipairs(entry.items) do
-            addChangelogItem(panel, item)
-        end
-    end
-
-    local function openChangelogWindow()
-        local entries, currentVersion = getChangelogEntries()
-
-        local frame = vgui.Create("DFrame")
-        frame:SetTitle(phrase("window.changelog_title"))
-        frame:SetSize(math.min(ScrW() - 80, 780), math.min(ScrH() - 80, 560))
-        frame:Center()
-        frame:MakePopup()
-
-        local body = vgui.Create("DPanel", frame)
-        body:Dock(FILL)
-        body:DockMargin(10, 10, 10, 10)
-        body.Paint = function(_, w, h)
-            surface.SetDrawColor(242, 245, 248)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_BORDER)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
-
-        local footer = vgui.Create("DPanel", frame)
-        footer:Dock(BOTTOM)
-        footer:DockMargin(10, 0, 10, 10)
-        footer:SetTall(32)
-        footer.Paint = nil
-
-        local workshopChangelog = styleButton(vgui.Create("DButton", footer))
-        workshopChangelog:Dock(RIGHT)
-        workshopChangelog:SetWide(190)
-        workshopChangelog:SetText(phrase("button.workshop_changelog"))
-        workshopChangelog:SetTooltip(phrase("tooltip.workshop_changelog"))
-        workshopChangelog.DoClick = function()
-            gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/changelog/3597784225")
-        end
-
-        local versions = vgui.Create("DScrollPanel", body)
-        versions:Dock(LEFT)
-        versions:DockMargin(10, 10, 0, 10)
-        versions:SetWide(196)
-        versions.Paint = function(_, w, h)
-            surface.SetDrawColor(250, 251, 253)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_BORDER)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
-        versions:GetCanvas():DockPadding(8, 8, 8, 8)
-        styleScrollBar(versions)
-
-        local versionTitle = vgui.Create("DLabel", versions)
-        versionTitle:Dock(TOP)
-        versionTitle:DockMargin(0, 0, 0, 8)
-        versionTitle:SetTall(20)
-        versionTitle:SetText(phrase("label.versions"))
-        versionTitle:SetFont("DermaDefaultBold")
-        versionTitle:SetTextColor(COLOR_TEXT)
-
-        local detail = vgui.Create("DScrollPanel", body)
-        detail:Dock(FILL)
-        detail:DockMargin(10, 10, 10, 10)
-        detail.Paint = function(_, w, h)
-            surface.SetDrawColor(255, 255, 255)
-            surface.DrawRect(0, 0, w, h)
-            surface.SetDrawColor(COLOR_BORDER)
-            surface.DrawOutlinedRect(0, 0, w, h)
-        end
-        detail:GetCanvas():DockPadding(12, 12, 12, 12)
-        styleScrollBar(detail)
-
-        if #entries == 0 then
-            populateChangelogDetail(detail, {
-                title = phrase("addon.name"),
-                items = { phrase("changelog.none_found") }
-            })
-            return
-        end
-
-        local selectedButton
-        local function selectEntry(entry, button)
-            if IsValid(selectedButton) then
-                selectedButton.BetterLightsSelected = false
-            end
-
-            selectedButton = button
-            if IsValid(selectedButton) then
-                selectedButton.BetterLightsSelected = true
-            end
-
-            populateChangelogDetail(detail, entry)
-        end
-
-        local firstButton
-        local currentButton
-        local currentEntry
-
-        for _, entry in ipairs(entries) do
-            local button = vgui.Create("DButton", versions)
-            button:Dock(TOP)
-            button:DockMargin(0, 0, 0, 6)
-            button:SetTall(42)
-            button:SetText("")
-            button:SetTooltip(entry.title)
-            button.Paint = function(self, w, h)
-                local selected = self.BetterLightsSelected
-                local hovered = self:IsHovered()
-                surface.SetDrawColor(selected and Color(225, 237, 250) or hovered and Color(243, 247, 252) or Color(248, 249, 251))
-                surface.DrawRect(0, 0, w, h)
-                surface.SetDrawColor(selected and COLOR_ACCENT or COLOR_BORDER)
-                surface.DrawOutlinedRect(0, 0, w, h)
-                if selected then
-                    surface.SetDrawColor(COLOR_ACCENT)
-                    surface.DrawRect(0, 0, 4, h)
-                end
-
-                draw.SimpleText(entry.version ~= "" and entry.version or entry.title, "DermaDefaultBold", 12, 9, COLOR_TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-                if entry.version == currentVersion then
-                    draw.SimpleText(phrase("label.current"), "DermaDefault", 12, 24, COLOR_MUTED, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-                end
-            end
-            button.DoClick = function()
-                selectEntry(entry, button)
-            end
-
-            firstButton = firstButton or button
-            if entry.version == currentVersion then
-                currentButton = button
-                currentEntry = entry
-            end
-        end
-
-        selectEntry(currentEntry or entries[1], currentButton or firstButton)
-    end
-
     local function resetAllSettings()
         if not canChangeServerSettings() then
             notification.AddLegacy(phrase("notice.admin_reset_all_only"), NOTIFY_ERROR, 4)
@@ -833,15 +504,14 @@ if CLIENT then
         )
     end
 
+    MENU.AddServerBoolCheckbox = addServerBoolCheckbox
+    MENU.AddServerBoolResetButton = addServerBoolResetButton
+    MENU.ResetAllSettings = resetAllSettings
+
     populateFlashlightVisualPanel = function(panel, filterText)
         setupPage(panel, "page.flashlight_visuals.title", "page.flashlight_visuals.desc")
         activeFlashlightVisualPanel = panel
         activeFlashlightVisualFilter = filterText
-
-        if not BetterLights or not BetterLights.SetFlashlightTexturePath then
-            panel:Help(phrase("help.flashlight_visuals_unavailable"))
-            return
-        end
 
         local beam = addSection(panel, "section.beam", "section.beam.desc", true)
         beam:CheckBox(phrase("control.cast_shadows"), "betterlights_flashlight_shadows")
@@ -865,9 +535,9 @@ if CLIENT then
 
         local currentCvar = GetConVar("betterlights_flashlight_texture")
         local typedPath = currentCvar and currentCvar:GetString() or "effects/flashlight001"
-        local currentPath = BetterLights.GetFlashlightTexturePath and BetterLights.GetFlashlightTexturePath() or typedPath
+        local currentPath = BetterLights.GetFlashlightTexturePath()
 
-        texture:Help(phraseFormat("help.current_texture", currentPath))
+        addHelpText(texture, phraseFormat("help.current_texture", currentPath))
         addCurrentTexturePreview(texture, currentPath)
 
         local manualEntry = vgui.Create("DTextEntry")
@@ -910,14 +580,12 @@ if CLIENT then
         useDefault:SetWide(76)
         useDefault:SetText(phrase("button.default"))
         useDefault.DoClick = function()
-            if BetterLights.SetFlashlightTexturePath then
-                BetterLights.SetFlashlightTexturePath("effects/flashlight001")
-            end
+            BetterLights.SetFlashlightTexturePath("effects/flashlight001")
         end
 
         texture:AddItem(manualButtons)
 
-        local recent = BetterLights.GetFlashlightRecentTextures and BetterLights.GetFlashlightRecentTextures() or {}
+        local recent = BetterLights.GetFlashlightRecentTextures()
         if #recent > 0 then
             local recentSection = addSection(panel, "section.recent_textures", nil, false)
             addTextureGrid(recentSection, recent, function()
@@ -926,9 +594,7 @@ if CLIENT then
 
             local clearRecent = addStyledButton(recentSection, phrase("button.clear_recent_textures"))
             clearRecent.DoClick = function()
-                if BetterLights.ClearFlashlightRecentTextures then
-                    BetterLights.ClearFlashlightRecentTextures()
-                end
+                BetterLights.ClearFlashlightRecentTextures()
 
                 populateFlashlightVisualPanel(panel, filterText)
             end
@@ -938,9 +604,7 @@ if CLIENT then
 
         local refreshTextures = addStyledButton(knownSection, phrase("button.refresh_textures"))
         refreshTextures.DoClick = function()
-            if BetterLights.ClearFlashlightKnownTextureCache then
-                BetterLights.ClearFlashlightKnownTextureCache()
-            end
+            BetterLights.ClearFlashlightKnownTextureCache()
 
             populateFlashlightVisualPanel(panel, filterText)
         end
@@ -965,7 +629,7 @@ if CLIENT then
         filter.OnEnter = applyFilter.DoClick
         knownSection:AddItem(filterRow)
 
-        local known = BetterLights.GetFlashlightKnownTextures and BetterLights.GetFlashlightKnownTextures() or {}
+        local known = BetterLights.GetFlashlightKnownTextures()
         local filtered = {}
         local needle = string.lower(string.Trim(filterText or ""))
 
@@ -980,7 +644,7 @@ if CLIENT then
             populateFlashlightVisualPanel(panel, filterText)
         end)
         else
-            panel:Help(phrase("help.no_matching_textures"))
+            addHelpText(panel, phrase("help.no_matching_textures"))
         end
 
         addResetButton(panel, {
@@ -1006,22 +670,11 @@ if CLIENT then
         end)
     end, "BetterLights_FlashlightVisualRefresh")
 
-    local WORLD_WEAPON_DEFAULTS = {
-        { slug = "crossbow", nameKey = "weapon.crossbow", size = 34, brightness = 0.12, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 110, b = 25 },
-        { slug = "toolgun", nameKey = "weapon.toolgun", size = 42, brightness = 0.22, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 255, b = 255 },
-        { slug = "gravitygun", nameKey = "weapon.gravitygun", size = 48, brightness = 0.25, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 140, b = 40 },
-        { slug = "physgun", nameKey = "weapon.physgun", size = 48, brightness = 0.25, decay = 0, elight = 1, elightMult = 1.0, r = 70, g = 130, b = 255 },
-        { slug = "medkit", nameKey = "weapon.medkit", size = 42, brightness = 0.22, decay = 0, elight = 1, elightMult = 1.0, r = 150, g = 255, b = 150 },
-        { slug = "bugbait", nameKey = "weapon.bugbait", size = 34, brightness = 0.12, decay = 0, elight = 1, elightMult = 1.0, r = 90, g = 170, b = 255 },
-        { slug = "ar2", nameKey = "weapon.pulse_rifle", size = 38, brightness = 0.14, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 70, b = 55 },
-        { slug = "frag", nameKey = "weapon.frag_grenade", size = 36, brightness = 0.2, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 40, b = 40 },
-    }
-
     local function addWorldWeaponPanel(panel)
         setupPage(panel, "page.world_weapons.title", "page.world_weapons.desc")
         local resetDefaults = {}
 
-        local defs = BetterLights and BetterLights.GetWorldWeaponLightDefinitions and BetterLights.GetWorldWeaponLightDefinitions() or WORLD_WEAPON_DEFAULTS
+        local defs = BetterLights.GetWorldWeaponLightDefinitions()
 
         for _, info in ipairs(defs) do
             local prefix = "betterlights_world_weapon_" .. info.slug
@@ -1049,27 +702,11 @@ if CLIENT then
         addResetButton(panel, resetDefaults)
     end
 
-    local AMMO_PICKUP_DEFAULTS = {
-        { slug = "ar2", nameKey = "ammo.ar2", enable = 1, size = 40, brightness = 0.14, decay = 0, elight = 1, elightMult = 1.0, r = 90, g = 170, b = 255 },
-        { slug = "ar2_large", nameKey = "ammo.ar2_large", enable = 1, size = 48, brightness = 0.16, decay = 0, elight = 1, elightMult = 1.0, r = 90, g = 170, b = 255 },
-        { slug = "ar2_alt", nameKey = "ammo.ar2_alt", enable = 1, size = 60, brightness = 0.25, decay = 0, elight = 1, elightMult = 1.0, r = 255, g = 220, b = 60 },
-        { slug = "smg1", nameKey = "ammo.smg1", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "smg1_large", nameKey = "ammo.smg1_large", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "smg1_grenade", nameKey = "ammo.smg1_grenade", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "357", nameKey = "ammo.357", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "357_large", nameKey = "ammo.357_large", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "crossbow", nameKey = "ammo.crossbow", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "pistol", nameKey = "ammo.pistol", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "pistol_large", nameKey = "ammo.pistol_large", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "rpg_round", nameKey = "ammo.rpg_round", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-        { slug = "buckshot", nameKey = "ammo.buckshot", enable = 0, size = 32, brightness = 0.08, decay = 0, elight = 1, elightMult = 1.0, r = 235, g = 235, b = 235 },
-    }
-
     local function addAmmoPickupPanel(panel)
         setupPage(panel, "page.ammo_pickups.title", "page.ammo_pickups.desc")
 
         local resetDefaults = {}
-        local defs = BetterLights and BetterLights.GetAmmoPickupLightDefinitions and BetterLights.GetAmmoPickupLightDefinitions() or AMMO_PICKUP_DEFAULTS
+        local defs = BetterLights.GetAmmoPickupLightDefinitions()
 
         for _, info in ipairs(defs) do
             local prefix = "betterlights_ammo_" .. info.slug
@@ -1320,22 +957,7 @@ if CLIENT then
     end
 
     local function addClientPanels()
-        spawnmenu.AddToolMenuOption("Better Lights", "General", "BL_Admin", phrase("menu.admin"), "", "", function(panel)
-            setupPage(panel, "page.admin.title", "page.admin.desc")
-
-            local server = addSection(panel, "section.server", "section.server.desc", true)
-            addServerBoolCheckbox(server, phrase("control.enable_better_lights"), "betterlights_enable")
-            addServerBoolResetButton(server, {
-                betterlights_enable = 1,
-            })
-
-            local maintenance = addSection(panel, "section.maintenance", "section.maintenance.desc", true)
-            local resetAllBtn = addStyledButton(maintenance, phrase("button.reset_all_settings"))
-            resetAllBtn.DoClick = resetAllSettings
-            maintenance:Help(phrase("help.optional_bind"))
-        end)
-
-        spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_CombineBall", phrase("menu.combine_ball"), "", "", function(panel)
+        registerPage("Projectiles", "BL_CombineBall", "menu.combine_ball", function(panel)
             setupPage(panel, "page.combine_ball.title", "page.combine_ball.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_combineball_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_combineball_size", 0, 800, 0)
@@ -1353,77 +975,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Gunfire", "BL_BulletImpacts", phrase("menu.bullet_impacts"), "", "", function(panel)
-            setupPage(panel, "page.bullet_impacts.title", "page.bullet_impacts.desc")
-            local generic = addSection(panel, "section.generic_impacts", "section.generic_impacts.desc", true)
-            addLightControls(generic, "betterlights_bullet_impact", {
-                radiusMax = 300,
-                brightnessMax = 2,
-                decayLabel = false
-            })
-            addColorMixerControl(generic, "control.color", "betterlights_bullet_impact_color_r", "betterlights_bullet_impact_color_g", "betterlights_bullet_impact_color_b")
-
-            local ar2 = addSection(panel, "section.ar2_impacts", "section.ar2_impacts.desc", true)
-            addLightControls(ar2, "betterlights_bullet_impact_ar2", {
-                enableLabel = "control.enable_ar2_tint",
-                radiusLabel = "control.radius",
-                radiusMax = 300,
-                brightnessLabel = "control.brightness",
-                brightnessMax = 2,
-                decayLabel = false
-            })
-            addColorMixerControl(ar2, "control.color", "betterlights_bullet_impact_ar2_color_r", "betterlights_bullet_impact_ar2_color_g", "betterlights_bullet_impact_ar2_color_b")
-            addResetButton(panel, {
-                betterlights_bullet_impact_enable = 1,
-                betterlights_bullet_impact_size = 60,
-                betterlights_bullet_impact_brightness = 0.25,
-                betterlights_bullet_impact_ar2_enable = 1,
-                betterlights_bullet_impact_ar2_size = 70,
-                betterlights_bullet_impact_ar2_brightness = 0.3,
-                betterlights_bullet_impact_color_r = 255,
-                betterlights_bullet_impact_color_g = 160,
-                betterlights_bullet_impact_color_b = 60,
-                betterlights_bullet_impact_ar2_color_r = 110,
-                betterlights_bullet_impact_ar2_color_g = 190,
-                betterlights_bullet_impact_ar2_color_b = 255,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Gunfire", "BL_MuzzleFlash", phrase("menu.muzzle_flash"), "", "", function(panel)
-            setupPage(panel, "page.muzzle_flash.title", "page.muzzle_flash.desc")
-            local generic = addSection(panel, "section.generic_muzzle_flash", nil, true)
-            addLightControls(generic, "betterlights_muzzle", {
-                radiusMax = 300,
-                brightnessMax = 2,
-                decayLabel = false
-            })
-            addColorMixerControl(generic, "control.color", "betterlights_muzzle_color_r", "betterlights_muzzle_color_g", "betterlights_muzzle_color_b")
-
-            local ar2 = addSection(panel, "section.ar2_muzzle_flash", "section.ar2_muzzle_flash.desc", true)
-            addLightControls(ar2, "betterlights_muzzle_ar2", {
-                enableLabel = "control.enable_ar2_tint",
-                radiusMax = 300,
-                brightnessMax = 2,
-                decayLabel = false
-            })
-            addColorMixerControl(ar2, "control.color", "betterlights_muzzle_ar2_color_r", "betterlights_muzzle_ar2_color_g", "betterlights_muzzle_ar2_color_b")
-            addResetButton(panel, {
-                betterlights_muzzle_enable = 1,
-                betterlights_muzzle_size = 250,
-                betterlights_muzzle_brightness = 2.0,
-                betterlights_muzzle_ar2_enable = 1,
-                betterlights_muzzle_ar2_size = 250,
-                betterlights_muzzle_ar2_brightness = 2.0,
-                betterlights_muzzle_color_r = 255,
-                betterlights_muzzle_color_g = 170,
-                betterlights_muzzle_color_b = 90,
-                betterlights_muzzle_ar2_color_r = 110,
-                betterlights_muzzle_ar2_color_g = 190,
-                betterlights_muzzle_ar2_color_b = 255,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Bolt", phrase("menu.crossbow_bolt"), "", "", function(panel)
+    registerPage("Projectiles", "BL_Bolt", "menu.crossbow_bolt", function(panel)
             setupPage(panel, "page.crossbow_bolt.title", "page.crossbow_bolt.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_bolt_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_bolt_size", 0, 800, 0)
@@ -1441,33 +993,15 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_CrossbowHeld", phrase("menu.crossbow_held"), "", "", function(panel)
-            setupPage(panel, "page.crossbow_held.title", "page.crossbow_held.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_crossbow_hold_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_crossbow_hold_size", 0, 300, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_crossbow_hold_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_crossbow_hold_decay", 0, 5000, 0)
-            addColorMixerControl(panel, "control.color", "betterlights_crossbow_hold_color_r", "betterlights_crossbow_hold_color_g", "betterlights_crossbow_hold_color_b")
-            addResetButton(panel, {
-                betterlights_crossbow_hold_enable = 1,
-                betterlights_crossbow_hold_size = 30,
-                betterlights_crossbow_hold_brightness = 0.32,
-                betterlights_crossbow_hold_decay = 2000,
-                betterlights_crossbow_hold_color_r = 255,
-                betterlights_crossbow_hold_color_g = 140,
-                betterlights_crossbow_hold_color_b = 40,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_WorldWeapons", phrase("menu.world_weapons"), "", "", function(panel)
+    registerPage("Pickups", "BL_WorldWeapons", "menu.world_weapons", function(panel)
             addWorldWeaponPanel(panel)
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_AmmoPickups", phrase("menu.ammo_pickups"), "", "", function(panel)
+    registerPage("Pickups", "BL_AmmoPickups", "menu.ammo_pickups", function(panel)
             addAmmoPickupPanel(panel)
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_RPG", phrase("menu.rpg_rocket"), "", "", function(panel)
+    registerPage("Projectiles", "BL_RPG", "menu.rpg_rocket", function(panel)
             setupPage(panel, "page.rpg_rocket.title", "page.rpg_rocket.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_rpg_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_rpg_size", 0, 800, 0)
@@ -1485,7 +1019,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Strider", phrase("menu.strider"), "", "", function(panel)
+    registerPage("NPCs", "BL_Strider", "menu.strider", function(panel)
             setupPage(panel, "page.strider.title", "page.strider.desc")
 
             local muzzle = addSection(panel, "section.muzzle_flash", nil, true)
@@ -1520,7 +1054,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Hunter", phrase("menu.hunter"), "", "", function(panel)
+    registerPage("NPCs", "BL_Hunter", "menu.hunter", function(panel)
             setupPage(panel, "page.hunter.title", "page.hunter.desc")
 
             local body = addSection(panel, "section.body_glow", nil, true)
@@ -1586,7 +1120,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_HunterChopper", phrase("menu.hunter_chopper"), "", "", function(panel)
+    registerPage("NPCs", "BL_HunterChopper", "menu.hunter_chopper", function(panel)
             setupPage(panel, "page.hunter_chopper.title", "page.hunter_chopper.desc")
 
             local muzzle = addSection(panel, "section.muzzle_flash", nil, true)
@@ -1639,7 +1173,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Fire", phrase("menu.fire"), "", "", function(panel)
+    registerPage("Environment", "BL_Fire", "menu.fire", function(panel)
             setupPage(panel, "page.fire.title", "page.fire.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_fire_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_fire_size", 0, 800, 0)
@@ -1669,29 +1203,30 @@ if CLIENT then
             })
         end)
 
-        spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Explosions", phrase("menu.explosion_flash"), "", "", function(panel)
-                setupPage(panel, "page.explosion_flash.title", "page.explosion_flash.desc")
-                panel:CheckBox(phrase("control.enable"), "betterlights_explosion_flash_enable")
-                panel:NumSlider(phrase("control.radius"), "betterlights_explosion_flash_size", 0, 800, 0)
-                panel:NumSlider(phrase("control.brightness"), "betterlights_explosion_flash_brightness", 0, 10, 2)
-                panel:NumSlider(phrase("control.duration_seconds"), "betterlights_explosion_flash_time", 0, 1, 2)
-                panel:Help(phrase("section.detection"))
-                panel:CheckBox(phrase("control.detect_env_explosions"), "betterlights_explosion_detect_env")
-                panel:CheckBox(phrase("control.detect_barrels"), "betterlights_explosion_detect_barrels")
-                addColorMixerControl(panel, "control.color", "betterlights_explosion_flash_color_r", "betterlights_explosion_flash_color_g", "betterlights_explosion_flash_color_b")
-                addResetButton(panel, {
-                    betterlights_explosion_flash_enable = 1,
-                    betterlights_explosion_flash_size = 380,
-                    betterlights_explosion_flash_brightness = 4.6,
-                    betterlights_explosion_flash_time = 0.18,
-                    betterlights_explosion_detect_env = 1,
-                    betterlights_explosion_detect_barrels = 1,
-                    betterlights_explosion_flash_color_r = 255,
-                    betterlights_explosion_flash_color_g = 210,
-                    betterlights_explosion_flash_color_b = 120,
-                })
-            end)
-    spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Grenade", phrase("menu.frag_grenade"), "", "", function(panel)
+    registerPage("Environment", "BL_Explosions", "menu.explosion_flash", function(panel)
+        setupPage(panel, "page.explosion_flash.title", "page.explosion_flash.desc")
+        panel:CheckBox(phrase("control.enable"), "betterlights_explosion_flash_enable")
+        panel:NumSlider(phrase("control.radius"), "betterlights_explosion_flash_size", 0, 800, 0)
+        panel:NumSlider(phrase("control.brightness"), "betterlights_explosion_flash_brightness", 0, 10, 2)
+        panel:NumSlider(phrase("control.duration_seconds"), "betterlights_explosion_flash_time", 0, 1, 2)
+        local detection = addSection(panel, "section.detection", nil, true)
+        detection:CheckBox(phrase("control.detect_env_explosions"), "betterlights_explosion_detect_env")
+        detection:CheckBox(phrase("control.detect_barrels"), "betterlights_explosion_detect_barrels")
+        addColorMixerControl(panel, "control.color", "betterlights_explosion_flash_color_r", "betterlights_explosion_flash_color_g", "betterlights_explosion_flash_color_b")
+        addResetButton(panel, {
+            betterlights_explosion_flash_enable = 1,
+            betterlights_explosion_flash_size = 380,
+            betterlights_explosion_flash_brightness = 4.6,
+            betterlights_explosion_flash_time = 0.18,
+            betterlights_explosion_detect_env = 1,
+            betterlights_explosion_detect_barrels = 1,
+            betterlights_explosion_flash_color_r = 255,
+            betterlights_explosion_flash_color_g = 210,
+            betterlights_explosion_flash_color_b = 120,
+        })
+    end)
+
+    registerPage("Projectiles", "BL_Grenade", "menu.frag_grenade", function(panel)
             setupPage(panel, "page.frag_grenade.title", "page.frag_grenade.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_grenade_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_grenade_size", 0, 400, 0)
@@ -1713,7 +1248,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CombineMine", phrase("menu.combine_mine"), "", "", function(panel)
+    registerPage("NPCs", "BL_CombineMine", "menu.combine_mine", function(panel)
             setupPage(panel, "page.combine_mine.title", "page.combine_mine.desc")
             local alert = addSection(panel, "section.alert_glow", "section.alert_glow.desc", true)
             alert:CheckBox(phrase("control.enable"), "betterlights_combine_mine_enable")
@@ -1757,7 +1292,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CombineMineResistance", phrase("menu.resistance_mine"), "", "", function(panel)
+    registerPage("NPCs", "BL_CombineMineResistance", "menu.resistance_mine", function(panel)
             setupPage(panel, "page.resistance_mine.title", "page.resistance_mine.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_combine_mine_resistance_enable")
             panel:NumSlider(phrase("control.alert_radius"), "betterlights_combine_mine_resistance_size", 0, 400, 0)
@@ -1775,112 +1310,12 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_Physgun", phrase("menu.physgun"), "", "", function(panel)
-            setupPage(panel, "page.physgun.title", "page.physgun.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_physgun_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_physgun_size", 0, 300, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_physgun_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_physgun_decay", 0, 5000, 0)
-            panel:CheckBox(phrase("control.add_model_elight"), "betterlights_physgun_models_elight")
-            panel:NumSlider(phrase("control.model_elight_radius"), "betterlights_physgun_models_elight_size_mult", 0, 3, 2)
-            panel:CheckBox(phrase("control.override_weapon_color"), "betterlights_physgun_color_override")
-            addColorMixerControl(panel, "control.override_color", "betterlights_physgun_color_r", "betterlights_physgun_color_g", "betterlights_physgun_color_b")
-            addResetButton(panel, {
-                betterlights_physgun_enable = 1,
-                betterlights_physgun_size = 33,
-                betterlights_physgun_brightness = 0.3,
-                betterlights_physgun_decay = 2000,
-                betterlights_physgun_models_elight = 1,
-                betterlights_physgun_models_elight_size_mult = 1.0,
-                betterlights_physgun_color_override = 0,
-                betterlights_physgun_color_r = 70,
-                betterlights_physgun_color_g = 130,
-                betterlights_physgun_color_b = 255,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_GravityGun", phrase("menu.gravitygun"), "", "", function(panel)
-            setupPage(panel, "page.gravitygun.title", "page.gravitygun.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_gravitygun_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_gravitygun_size", 0, 300, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_gravitygun_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_gravitygun_decay", 0, 5000, 0)
-            panel:CheckBox(phrase("control.add_model_elight"), "betterlights_gravitygun_models_elight")
-            panel:NumSlider(phrase("control.model_elight_radius"), "betterlights_gravitygun_models_elight_size_mult", 0, 3, 2)
-            addColorMixerControl(panel, "control.color", "betterlights_gravitygun_color_r", "betterlights_gravitygun_color_g", "betterlights_gravitygun_color_b")
-            addColorMixerControl(panel, "control.supercharged_color", "betterlights_gravitygun_super_color_r", "betterlights_gravitygun_super_color_g", "betterlights_gravitygun_super_color_b")
-            addResetButton(panel, {
-                betterlights_gravitygun_enable = 1,
-                betterlights_gravitygun_size = 36,
-                betterlights_gravitygun_brightness = 0.35,
-                betterlights_gravitygun_decay = 2000,
-                betterlights_gravitygun_models_elight = 1,
-                betterlights_gravitygun_models_elight_size_mult = 1.0,
-                betterlights_gravitygun_color_r = 255,
-                betterlights_gravitygun_color_g = 140,
-                betterlights_gravitygun_color_b = 40,
-                betterlights_gravitygun_super_color_r = 40,
-                betterlights_gravitygun_super_color_g = 140,
-                betterlights_gravitygun_super_color_b = 255,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_RPG_Held", phrase("menu.rpg_held"), "", "", function(panel)
-            setupPage(panel, "page.rpg_held.title", "page.rpg_held.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_rpg_hold_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_rpg_hold_size", 0, 300, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_rpg_hold_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_rpg_hold_decay", 0, 5000, 0)
-            addColorMixerControl(panel, "control.color", "betterlights_rpg_hold_color_r", "betterlights_rpg_hold_color_g", "betterlights_rpg_hold_color_b")
-            addResetButton(panel, {
-                betterlights_rpg_hold_enable = 1,
-                betterlights_rpg_hold_size = 24,
-                betterlights_rpg_hold_brightness = 0.22,
-                betterlights_rpg_hold_decay = 2000,
-                betterlights_rpg_hold_color_r = 255,
-                betterlights_rpg_hold_color_g = 60,
-                betterlights_rpg_hold_color_b = 60,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Weapons", "BL_ToolGun", phrase("menu.toolgun"), "", "", function(panel)
-            setupPage(panel, "page.toolgun.title", "page.toolgun.desc")
-            panel:CheckBox(phrase("control.enable"), "betterlights_toolgun_enable")
-            panel:NumSlider(phrase("control.radius"), "betterlights_toolgun_size", 0, 300, 0)
-            panel:NumSlider(phrase("control.brightness"), "betterlights_toolgun_brightness", 0, 5, 2)
-            panel:NumSlider(phrase("control.decay"), "betterlights_toolgun_decay", 0, 5000, 0)
-            panel:CheckBox(phrase("control.add_model_elight"), "betterlights_toolgun_models_elight")
-            panel:NumSlider(phrase("control.model_elight_radius"), "betterlights_toolgun_models_elight_size_mult", 0, 3, 2)
-            addColorMixerControl(panel, "control.color", "betterlights_toolgun_color_r", "betterlights_toolgun_color_g", "betterlights_toolgun_color_b")
-            addResetButton(panel, {
-                betterlights_toolgun_enable = 1,
-                betterlights_toolgun_size = 28,
-                betterlights_toolgun_brightness = 0.225,
-                betterlights_toolgun_decay = 2000,
-                betterlights_toolgun_models_elight = 1,
-                betterlights_toolgun_models_elight_size_mult = 1.0,
-                betterlights_toolgun_color_r = 255,
-                betterlights_toolgun_color_g = 255,
-                betterlights_toolgun_color_b = 255,
-            })
-        end)
-
-    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightGeneral", phrase("menu.general"), "", "", function(panel)
+    registerPage("Flashlight", "BL_FlashlightGeneral", "menu.general", function(panel)
             setupPage(panel, "page.player_flashlight.title", "page.player_flashlight.desc")
             local behavior = addSection(panel, "section.behavior", nil, true)
             behavior:CheckBox(phrase("control.replace_flashlight"), "betterlights_flashlight_player_enable")
             behavior:CheckBox(phrase("control.use_flashlight_sounds"), "betterlights_flashlight_custom_sounds")
-            behavior:Help(phrase("help.default_flashlight_sounds"))
-
-            if isDeveloperMode() then
-                local dev = addSection(panel, "section.developer_tools", "section.developer_tools.desc", false)
-                local testTip = addStyledButton(dev, phrase("button.test_flashlight_tip"))
-                testTip.DoClick = function()
-                    if BetterLights and BetterLights.ShowFlashlightOnboardingTip then
-                        BetterLights.ShowFlashlightOnboardingTip(true)
-                    end
-                end
-            end
+            addHelpText(behavior, phrase("help.default_flashlight_sounds"))
 
             addResetButton(panel, {
                 betterlights_flashlight_player_enable = 0,
@@ -1888,17 +1323,17 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightPosition", phrase("menu.position"), "", "", function(panel)
+    registerPage("Flashlight", "BL_FlashlightPosition", "menu.position", function(panel)
             setupPage(panel, "page.flashlight_position.title", "page.flashlight_position.desc")
             local origin = addSection(panel, "section.origin", nil, true)
             origin:CheckBox(phrase("control.attach_beam_to_weapon"), "betterlights_flashlight_weapon_attachment")
-            origin:Help(phrase("help.attach_beam_to_weapon"))
+            addHelpText(origin, phrase("help.attach_beam_to_weapon"))
             origin:NumSlider(phrase("control.forward_offset"), "betterlights_flashlight_forward_offset", -32, 96, 1)
-            origin:Help(phrase("help.forward_offset"))
+            addHelpText(origin, phrase("help.forward_offset"))
             origin:NumSlider(phrase("control.attached_side_offset"), "betterlights_flashlight_attachment_offset", -24, 24, 1)
-            origin:Help(phrase("help.attached_side_offset"))
+            addHelpText(origin, phrase("help.attached_side_offset"))
             origin:NumSlider(phrase("control.fallback_side_offset"), "betterlights_flashlight_fallback_offset", -24, 24, 1)
-            origin:Help(phrase("help.fallback_side_offset"))
+            addHelpText(origin, phrase("help.fallback_side_offset"))
             addResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
                 betterlights_flashlight_forward_offset = 0,
@@ -1907,15 +1342,13 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Flashlight", "BL_FlashlightVisual", phrase("menu.visual"), "", "", function(panel)
-            if BetterLights and BetterLights.ClearFlashlightKnownTextureCache then
-                BetterLights.ClearFlashlightKnownTextureCache()
-            end
+    registerPage("Flashlight", "BL_FlashlightVisual", "menu.visual", function(panel)
+            BetterLights.ClearFlashlightKnownTextureCache()
 
             populateFlashlightVisualPanel(panel)
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_HeliBomb", phrase("menu.heli_bomb"), "", "", function(panel)
+    registerPage("Projectiles", "BL_HeliBomb", "menu.heli_bomb", function(panel)
             setupPage(panel, "page.heli_bomb.title", "page.heli_bomb.desc")
             local glow = addSection(panel, "section.bomb_glow", nil, true)
             addLightControls(glow, "betterlights_heli_bomb", {
@@ -1951,7 +1384,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Projectiles", "BL_Magnusson", phrase("menu.magnusson"), "", "", function(panel)
+    registerPage("Projectiles", "BL_Magnusson", "menu.magnusson", function(panel)
             setupPage(panel, "page.magnusson.title", "page.magnusson.desc")
             local glow = addSection(panel, "section.device_glow", nil, true)
             addLightControls(glow, "betterlights_magnusson", {
@@ -1987,7 +1420,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Manhack", phrase("menu.manhack"), "", "", function(panel)
+    registerPage("NPCs", "BL_Manhack", "menu.manhack", function(panel)
             setupPage(panel, "page.manhack.title", "page.manhack.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_manhack_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_manhack_size", 0, 400, 0)
@@ -2009,15 +1442,15 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Antlions", phrase("menu.antlions"), "", "", function(panel)
+    registerPage("NPCs", "BL_Antlions", "menu.antlions", function(panel)
             addAntlionPanel(panel)
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_Rollermines", phrase("menu.rollermines"), "", "", function(panel)
+    registerPage("NPCs", "BL_Rollermines", "menu.rollermines", function(panel)
             addRollerminePanel(panel)
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "NPCs", "BL_CScanner", phrase("menu.cscanner"), "", "", function(panel)
+    registerPage("NPCs", "BL_CScanner", "menu.cscanner", function(panel)
             setupPage(panel, "page.cscanner.title", "page.cscanner.desc")
             local glow = addSection(panel, "section.body_glow", nil, true)
             addLightControls(glow, "betterlights_cscanner", {
@@ -2059,11 +1492,11 @@ if CLIENT then
             })
         end)
 
-        spawnmenu.AddToolMenuOption("Better Lights", "Eye Glow", "BL_CombineSoldiers", phrase("menu.combine_soldiers"), "", "", function(panel)
+        registerPage("Eye Glow", "BL_CombineSoldiers", "menu.combine_soldiers", function(panel)
             addCombineEyeGlowPanel(panel)
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Battery", phrase("menu.battery"), "", "", function(panel)
+    registerPage("Pickups", "BL_Pickup_Battery", "menu.battery", function(panel)
             setupPage(panel, "page.battery.title", "page.battery.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_item_battery_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_item_battery_size", 0, 300, 0)
@@ -2085,7 +1518,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_Vial", phrase("menu.health_vial"), "", "", function(panel)
+    registerPage("Pickups", "BL_Pickup_Vial", "menu.health_vial", function(panel)
             setupPage(panel, "page.health_vial.title", "page.health_vial.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_item_healthvial_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_item_healthvial_size", 0, 300, 0)
@@ -2107,7 +1540,7 @@ if CLIENT then
             })
         end)
 
-    spawnmenu.AddToolMenuOption("Better Lights", "Pickups", "BL_Pickup_HealthKit", phrase("menu.health_kit"), "", "", function(panel)
+    registerPage("Pickups", "BL_Pickup_HealthKit", "menu.health_kit", function(panel)
             setupPage(panel, "page.health_kit.title", "page.health_kit.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_item_healthkit_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_item_healthkit_size", 0, 300, 0)
@@ -2129,7 +1562,7 @@ if CLIENT then
             })
         end)
 
-        spawnmenu.AddToolMenuOption("Better Lights", "Environment", "BL_Chargers", phrase("menu.chargers"), "", "", function(panel)
+        registerPage("Environment", "BL_Chargers", "menu.chargers", function(panel)
                 setupPage(panel, "page.chargers.title", "page.chargers.desc")
                 local suit = addSection(panel, "section.suit_charger", nil, true)
                 addLightControls(suit, "betterlights_suitcharger", {
@@ -2174,109 +1607,20 @@ if CLIENT then
 
     end
 
-    local function addAboutPanel()
-        spawnmenu.AddToolMenuOption("Better Lights", "About", "BL_About", phrase("menu.about"), "", "", function(panel)
-            setupPage(panel, "page.about.title", "page.about.desc")
-            local version = BetterLights.VERSION
-
-            local author = vgui.Create("DPanel")
-            author:SetTall(96)
-            author.Paint = function(_, w, h)
-                surface.SetDrawColor(250, 251, 253)
-                surface.DrawRect(0, 0, w, h)
-                surface.SetDrawColor(COLOR_BORDER)
-                surface.DrawOutlinedRect(0, 0, w, h)
-                surface.SetDrawColor(COLOR_ACCENT)
-                surface.DrawRect(0, 0, 4, h)
-            end
-
-            local avatar = vgui.Create("AvatarImage", author)
-            avatar:Dock(LEFT)
-            avatar:DockMargin(14, 14, 14, 14)
-            avatar:SetWide(64)
-            avatar:SetSteamID("76561199216202475", 64)
-
-            local authorInfo = vgui.Create("DPanel", author)
-            authorInfo:Dock(FILL)
-            authorInfo:DockMargin(0, 12, 12, 12)
-            authorInfo.Paint = nil
-
-            local title = vgui.Create("DLabel", authorInfo)
-            title:Dock(TOP)
-            title:SetTall(22)
-            title:SetText(phraseFormat("about.version", version))
-            title:SetFont("DermaDefaultBold")
-            title:SetTextColor(COLOR_TEXT)
-
-            local byline = vgui.Create("DLabel", authorInfo)
-            byline:Dock(TOP)
-            byline:SetTall(20)
-            byline:SetText(phrase("about.byline"))
-            byline:SetTextColor(COLOR_MUTED)
-
-            local profileBtn = styleButton(vgui.Create("DButton", authorInfo))
-            profileBtn:Dock(BOTTOM)
-            profileBtn:SetTall(26)
-            profileBtn:SetText(phrase("button.open_steam_profile"))
-            profileBtn.DoClick = function()
-                gui.OpenURL("https://steamcommunity.com/id/catsniffermeow/")
-            end
-
-            panel:AddItem(author)
-            panel:Help(phrase("about.report_help"))
-            panel:Help(phrase("about.support_help"))
-            panel:Help(phrase("about.license_help"))
-
-            local links = addSection(panel, "section.links", nil, true)
-            local issueBtn = addStyledButton(links, phrase("button.report_issue"))
-            issueBtn.DoClick = function()
-                gui.OpenURL("https://github.com/DeisDev/BetterLights/issues/new/choose")
-            end
-
-            local sourceBtn = addStyledButton(links, phrase("button.view_source"))
-            sourceBtn.DoClick = function()
-                gui.OpenURL("https://github.com/DeisDev/BetterLights")
-            end
-
-            local licenseBtn = addStyledButton(links, phrase("button.view_license"))
-            licenseBtn.DoClick = function()
-                gui.OpenURL("https://github.com/DeisDev/BetterLights/blob/main/LICENSE.md")
-            end
-
-            local workshopBtn = addStyledButton(links, phrase("button.steam_workshop"))
-            workshopBtn.DoClick = function()
-                gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225")
-            end
-
-            local changelogBtn = addStyledButton(links, phrase("button.changelog"))
-            changelogBtn.DoClick = function()
-                openChangelogWindow()
-            end
-
-            local otherAddonsBtn = addStyledButton(links, phrase("button.other_addons"))
-            otherAddonsBtn.DoClick = function()
-                gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=3551812511")
-            end
-        end)
-    end
-
-
     hook.Add("AddToolMenuTabs", "BetterLights_AddTab", function()
-        spawnmenu.AddToolTab("Better Lights", phrase("addon.name"), "icon16/lightbulb.png")
+        spawnmenu.AddToolTab(TAB_ID, phrase("addon.name"), "icon16/lightbulb.png")
+    end)
+
+    hook.Add("AddToolMenuCategories", "BetterLights_AddCategories", function()
+        registerCategories()
     end)
 
     hook.Add("PopulateToolMenu", "BetterLights_Populate", function()
-        spawnmenu.AddToolCategory("Better Lights", "General", phrase("category.general"))
-        spawnmenu.AddToolCategory("Better Lights", "Flashlight", phrase("category.flashlight"))
-        spawnmenu.AddToolCategory("Better Lights", "Weapons", phrase("category.weapons"))
-        spawnmenu.AddToolCategory("Better Lights", "Projectiles", phrase("category.projectiles"))
-        spawnmenu.AddToolCategory("Better Lights", "NPCs", phrase("category.npcs"))
-        spawnmenu.AddToolCategory("Better Lights", "Eye Glow", phrase("category.eye_glow"))
-        spawnmenu.AddToolCategory("Better Lights", "Gunfire", phrase("category.gunfire"))
-        spawnmenu.AddToolCategory("Better Lights", "Environment", phrase("category.environment"))
-        spawnmenu.AddToolCategory("Better Lights", "Pickups", phrase("category.pickups"))
-        spawnmenu.AddToolCategory("Better Lights", "About", phrase("category.about"))
+        BetterLights.Menu.RegisterGeneralPanel()
+        BetterLights.Menu.RegisterGunfirePanels()
+        BetterLights.Menu.RegisterWeaponPanels()
         addClientPanels()
-        addAboutPanel()
+        BetterLights.Menu.RegisterDeveloperPanel()
+        BetterLights.Menu.RegisterAboutPanel()
     end)
 end

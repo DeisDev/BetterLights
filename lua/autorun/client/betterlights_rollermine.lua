@@ -1,7 +1,6 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
-    BL_ROLLERMINE_UNIFIED = true
+    BL._rollermineUnified = true
     local cvar_enable = BL.CreateClientConVar("betterlights_rollermine_enable", "1", true, false, "Enable dynamic light for Rollermines (npc_rollermine)")
     local cvar_size = BL.CreateClientConVar("betterlights_rollermine_size", "110", true, false, "Dynamic light radius for Rollermines")
     local cvar_brightness = BL.CreateClientConVar("betterlights_rollermine_brightness", "0.6", true, false, "Dynamic light brightness for Rollermines")
@@ -48,10 +47,8 @@ if CLIENT then
         })
     end
 
-    if BL.TrackClass then BL.TrackClass("npc_rollermine") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Rollermine_DLight", function()
+    BL.TrackClass("npc_rollermine")
+    BL.AddThink("BetterLights_Rollermine_DLight", function()
         if not cvar_enable:GetBool() and not cvar_h_enable:GetBool() then return end
         local function update(ent)
             if not IsValid(ent) then return end
@@ -103,10 +100,6 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("npc_rollermine", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("npc_rollermine")) do update(ent) end
-        end
+        BL.ForEach("npc_rollermine", update)
     end)
 end

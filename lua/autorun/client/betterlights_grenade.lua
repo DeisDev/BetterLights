@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_grenade_enable", "1", true, false, "Enable dim red light on frag grenades (npc_grenade_frag)")
@@ -13,10 +12,8 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_grenade_color_g", "40", true, false, "Frag grenade color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_grenade_color_b", "40", true, false, "Frag grenade color - blue (0-255)")
 
-    if BL.TrackClass then BL.TrackClass("npc_grenade_frag") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Grenade_DLight", function()
+    BL.TrackClass("npc_grenade_frag")
+    BL.AddThink("BetterLights_Grenade_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local size = math.max(0, cvar_size:GetFloat())
@@ -41,10 +38,6 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("npc_grenade_frag", update)
-        else
-            for _, n in ipairs(ents.FindByClass("npc_grenade_frag")) do update(n) end
-        end
+        BL.ForEach("npc_grenade_frag", update)
     end)
 end

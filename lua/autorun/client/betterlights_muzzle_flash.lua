@@ -1,7 +1,6 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
-    
+
     local cvar_enable = BL.CreateClientConVar("betterlights_muzzle_enable", "1", true, false, "Enable muzzle flash light on firing")
     local cvar_size = BL.CreateClientConVar("betterlights_muzzle_size", "250", true, false, "Muzzle flash radius")
     local cvar_brightness = BL.CreateClientConVar("betterlights_muzzle_brightness", "2.00", true, false, "Muzzle flash brightness")

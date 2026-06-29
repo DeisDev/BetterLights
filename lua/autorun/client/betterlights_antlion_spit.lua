@@ -1,7 +1,5 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
-    local CurTime = CurTime
     local IsValid = IsValid
     local timer_Simple = timer.Simple
 
@@ -27,9 +25,8 @@ if CLIENT then
     local BL_Spit_Tracked = BL_Spit_Tracked or {}
     local BL_Spit_LastPos = BL_Spit_LastPos or {}
 
-    if BL.TrackClass then BL.TrackClass(TARGET_CLASS) end
+    BL.TrackClass(TARGET_CLASS)
     hook.Add("OnEntityCreated", "BetterLights_AntlionSpit_TrackSpawn", function(ent)
-        if BetterLights and BetterLights._classes and BetterLights._classes[TARGET_CLASS] then return end
         timer_Simple(0, function()
             if not IsValid(ent) then return end
             local cls = (ent.GetClass and ent:GetClass()) or ""
@@ -41,21 +38,11 @@ if CLIENT then
     end)
 
     timer_Simple(0, function()
-        if BL.ForEach then
-            local now = CurTime()
-            BL.ForEach(TARGET_CLASS, function(ent)
-                BL_Spit_Tracked[ent] = now
-                BL_Spit_LastPos[ent] = BL.GetEntityCenter(ent)
-            end)
-        else
-            local now = CurTime()
-            for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do
-                if IsValid(ent) then
-                    BL_Spit_Tracked[ent] = now
-                    BL_Spit_LastPos[ent] = BL.GetEntityCenter(ent)
-                end
-            end
-        end
+        local now = CurTime()
+        BL.ForEach(TARGET_CLASS, function(ent)
+            BL_Spit_Tracked[ent] = now
+            BL_Spit_LastPos[ent] = BL.GetEntityCenter(ent)
+        end)
     end)
 
     hook.Add("EntityRemoved", "BetterLights_AntlionSpit_OnRemove", function(ent, fullUpdate)
@@ -75,16 +62,14 @@ if CLIENT then
 
             local dur = math.max(0, cvar_flash_time:GetFloat())
             if dur <= 0 then return end
-            
+
             local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
             local flashSize = math.max(0, cvar_flash_size:GetFloat())
             local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
             BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 59200)
         end
     end)
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_AntlionSpit", function()
+    BL.AddThink("BetterLights_AntlionSpit", function()
         local doGlow = cvar_enable:GetBool()
 
         local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
@@ -94,29 +79,16 @@ if CLIENT then
             local brightness = math.max(0, cvar_brightness:GetFloat())
             local decay = math.max(0, cvar_decay:GetFloat())
 
-            if BL.ForEach then
-                BL.ForEach(TARGET_CLASS, function(ent)
-                    if not IsValid(ent) then return end
-                    if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = CurTime() end
+            BL.ForEach(TARGET_CLASS, function(ent)
+                if not IsValid(ent) then return end
+                if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = CurTime() end
 
-                    local pos = BL.GetEntityCenter(ent)
-                    if not pos then return end
+                local pos = BL.GetEntityCenter(ent)
+                if not pos then return end
 
-                    BL_Spit_LastPos[ent] = pos
-                    BL.CreateDLight(ent:EntIndex(), pos, gr, gg, gb, brightness, decay, size, false)
-                end)
-            else
-                for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do
-                    if IsValid(ent) then
-                        if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = CurTime() end
-                        local pos = BL.GetEntityCenter(ent)
-                        if pos then
-                            BL_Spit_LastPos[ent] = pos
-                            BL.CreateDLight(ent:EntIndex(), pos, gr, gg, gb, brightness, decay, size, false)
-                        end
-                    end
-                end
-            end
+                BL_Spit_LastPos[ent] = pos
+                BL.CreateDLight(ent:EntIndex(), pos, gr, gg, gb, brightness, decay, size, false)
+            end)
             for ent, _ in pairs(BL_Spit_Tracked) do
                 if not IsValid(ent) then
                     BL_Spit_Tracked[ent] = nil

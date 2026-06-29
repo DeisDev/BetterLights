@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local cvar_player_enable = BL.CreateClientConVar("betterlights_flashlight_player_enable", "0", true, false, "Enable BetterLights flashlight replacement for your player")
@@ -19,7 +18,7 @@ if CLIENT then
     local function syncPlayerEnable()
         if not IsValid(LocalPlayer()) then return end
 
-        net.Start("BetterLights_FlashlightClientEnable")
+        net.Start(BL.NET_FLASHLIGHT_CLIENT_ENABLE)
             net.WriteBool(cvar_player_enable:GetBool())
         net.SendToServer()
     end
@@ -69,7 +68,7 @@ if CLIENT then
         showOnboardingTip(false)
     end
 
-    net.Receive("BetterLights_FlashlightSound", function()
+    net.Receive(BL.NET_FLASHLIGHT_SOUND, function()
         local ply = net.ReadEntity()
         local state = net.ReadBool()
         if not IsValid(ply) then return end
@@ -146,20 +145,8 @@ if CLIENT then
         mask = MASK_SHOT_HULL
     }
 
-    local function removeProjector(ply)
-        local lamp = projectors[ply]
-        if lamp and lamp.IsValid and lamp:IsValid() then
-            lamp:Remove()
-        end
-
-        projectors[ply] = nil
-        projectorData[ply] = nil
-    end
-
     local function removeAllProjectors()
-        for ply in pairs(projectors) do
-            removeProjector(ply)
-        end
+        BL.ClearProjectedTextures(projectors, projectorData)
     end
 
     local function normalizeTexturePath(path)
@@ -440,12 +427,8 @@ if CLIENT then
     end
 
     local function updateProjector(ply, localPlayer)
-        local lamp = projectors[ply]
-        if not lamp or not lamp:IsValid() then
-            lamp = ProjectedTexture()
-            if not lamp then return end
-            projectors[ply] = lamp
-        end
+        local lamp = BL.GetOrCreateProjectedTexture(projectors, ply)
+        if not lamp then return end
 
         local data = projectorData[ply] or {}
         projectorData[ply] = data
@@ -459,16 +442,17 @@ if CLIENT then
         local wallDist = getWallDistance(ply, pos, ang)
         local distance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, MAX_DISTANCE)
 
-        lamp:SetTexture(getTexturePath())
-        lamp:SetPos(pos)
-        lamp:SetAngles(ang)
-        lamp:SetNearZ(NEAR_Z)
-        lamp:SetFarZ(distance)
-        lamp:SetFOV(getFOV(wallDist))
-        lamp:SetBrightness(getBrightness(ply, wallDist))
-        lamp:SetColor(getFlashlightColor())
-        lamp:SetEnableShadows(cvar_shadows:GetBool())
-        lamp:Update()
+        BL.UpdateProjectedTexture(lamp, {
+            texture = getTexturePath(),
+            pos = pos,
+            ang = ang,
+            nearZ = NEAR_Z,
+            farZ = distance,
+            fov = getFOV(wallDist),
+            brightness = getBrightness(ply, wallDist),
+            color = getFlashlightColor(),
+            shadows = cvar_shadows:GetBool()
+        })
     end
 
     local function isRendererEnabled()
@@ -488,21 +472,14 @@ if CLIENT then
             end
         end
 
-        for ply in pairs(projectors) do
-            if not seen[ply] then
-                removeProjector(ply)
-            end
-        end
+        BL.RemoveStaleProjectedTextures(projectors, seen, nil, projectorData)
     end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    local RemoveThink = BL.RemoveThink or function(name) hook.Remove("Think", name) end
 
     refreshThinkRegistration = function()
         if isRendererEnabled() then
-            AddThink(THINK_NAME, runFlashlightThink)
+            BL.AddThink(THINK_NAME, runFlashlightThink)
         else
-            RemoveThink(THINK_NAME)
+            BL.RemoveThink(THINK_NAME)
             removeAllProjectors()
         end
     end

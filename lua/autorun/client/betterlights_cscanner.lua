@@ -1,8 +1,6 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
-    local CurTime = CurTime
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_cscanner_enable", "1", true, false, "Enable dynamic light for Combine Scanners (npc_cscanner)")
     local cvar_size = BL.CreateClientConVar("betterlights_cscanner_size", "120", true, false, "Dynamic light radius for Combine Scanners")
@@ -29,23 +27,14 @@ if CLIENT then
 
     local scannerProjectors = {}
 
-    if BL.TrackClass then
-        BL.TrackClass("npc_cscanner")
-        if GetConVar and GetConVar("betterlights_scanner_searchlight_include_clawscanner") then
-            BL.TrackClass("npc_clawscanner")
-        end
-    end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_CScanner_DLight", function()
-        local now = CurTime()
-
+    BL.TrackClass("npc_cscanner")
+    BL.TrackClass("npc_clawscanner")
+    BL.AddThink("BetterLights_CScanner_DLight", function()
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
         local el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-        local dietime = now + 0.1
         local includeClaw = cvar_sl_include_claw:GetBool()
         local doGlow = cvar_enable:GetBool()
         local doModelsElight = cvar_models_elight:GetBool()
@@ -59,7 +48,7 @@ if CLIENT then
         local sl_shadows = cvar_sl_shadows:GetBool()
 
         local seen = {}
-        
+
         local function processScanner(ent)
             if not IsValid(ent) then return end
             seen[ent] = true
@@ -75,60 +64,38 @@ if CLIENT then
             end
 
             if sl_enable then
-                local lamp = scannerProjectors[ent]
-                if not lamp or not lamp:IsValid() then
-                    lamp = ProjectedTexture()
-                    if lamp then
-                        lamp:SetTexture("effects/flashlight001")
-                        scannerProjectors[ent] = lamp
-                    end
-                end
-                if lamp and lamp:IsValid() then
-                    local origin = pos
-                    if ent.GetUp then
-                        origin = origin - ent:GetUp() * 8
-                    else
-                        origin = origin + Vector(0, 0, -8)
-                    end
-                    local forward = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
-                    local target = origin + forward * 100 + Vector(0, 0, -80)
-                    local ang = (target - origin):Angle()
+                local lamp = BL.GetOrCreateProjectedTexture(scannerProjectors, ent, "effects/flashlight001")
+                if not lamp then return end
 
-                    lamp:SetPos(origin)
-                    lamp:SetAngles(ang)
-                    lamp:SetNearZ(sl_near)
-                    lamp:SetFarZ(sl_far)
-                    lamp:SetFOV(sl_fov)
-                    lamp:SetBrightness(sl_bright)
-                    lamp:SetColor(Color(sl_r, sl_g, sl_b))
-                    lamp:SetEnableShadows(sl_shadows)
-                    lamp:Update()
+                local origin = pos
+                if ent.GetUp then
+                    origin = origin - ent:GetUp() * 8
+                else
+                    origin = origin + Vector(0, 0, -8)
                 end
-            end
-        end
-        
-        if BL.ForEach then
-            BL.ForEach("npc_cscanner", processScanner)
-            if includeClaw then
-                BL.ForEach("npc_clawscanner", processScanner)
-            end
-        else
-            for _, ent in ipairs(ents.FindByClass("npc_cscanner") or {}) do
-                processScanner(ent)
-            end
-            if includeClaw then
-                for _, ent in ipairs(ents.FindByClass("npc_clawscanner") or {}) do
-                    processScanner(ent)
-                end
+                local forward = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
+                local target = origin + forward * 100 + Vector(0, 0, -80)
+
+                BL.UpdateProjectedTexture(lamp, {
+                    pos = origin,
+                    ang = (target - origin):Angle(),
+                    nearZ = sl_near,
+                    farZ = sl_far,
+                    fov = sl_fov,
+                    brightness = sl_bright,
+                    color = Color(sl_r, sl_g, sl_b),
+                    shadows = sl_shadows
+                })
             end
         end
 
-        for ent, lamp in pairs(scannerProjectors) do
-            local removeIt = (not sl_enable) or (not IsValid(ent)) or (not seen[ent])
-            if removeIt then
-                if lamp and lamp.IsValid and lamp:IsValid() then lamp:Remove() end
-                scannerProjectors[ent] = nil
-            end
+        BL.ForEach("npc_cscanner", processScanner)
+        if includeClaw then
+            BL.ForEach("npc_clawscanner", processScanner)
         end
+
+        BL.RemoveStaleProjectedTextures(scannerProjectors, seen, function(ent)
+            return (not sl_enable) or (not IsValid(ent))
+        end)
     end)
 end

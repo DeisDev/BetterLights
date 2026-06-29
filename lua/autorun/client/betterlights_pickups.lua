@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local bat_cvar_enable = BL.CreateClientConVar("betterlights_item_battery_enable", "1", true, false, "Enable dynamic light for item_battery")
@@ -32,11 +31,9 @@ if CLIENT then
     local kit_g = BL.CreateClientConVar("betterlights_item_healthkit_color_g", "255", true, false, "Health kit color - green (0-255)")
     local kit_b = BL.CreateClientConVar("betterlights_item_healthkit_color_b", "150", true, false, "Health kit color - blue (0-255)")
 
-    if BL.TrackClass then
-        BL.TrackClass("item_battery")
-        BL.TrackClass("item_healthvial")
-        BL.TrackClass("item_healthkit")
-    end
+    BL.TrackClass("item_battery")
+    BL.TrackClass("item_healthvial")
+    BL.TrackClass("item_healthkit")
 
     local function processClass(class, r_cvar, g_cvar, b_cvar, c_en, c_size, c_bright, c_decay, c_elight, c_el_mult)
         if not c_en:GetBool() then return end
@@ -62,18 +59,9 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach(class, update)
-        else
-            local list = ents.FindByClass(class)
-            if list then
-                for _, ent in ipairs(list) do update(ent) end
-            end
-        end
+        BL.ForEach(class, update)
     end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Pickups_DLight", function()
+    BL.AddThink("BetterLights_Pickups_DLight", function()
         processClass("item_battery", bat_r, bat_g, bat_b, bat_cvar_enable, bat_cvar_size, bat_cvar_brightness, bat_cvar_decay, bat_cvar_elight, bat_cvar_elight_mult)
         processClass("item_healthvial", vial_r, vial_g, vial_b, vial_cvar_enable, vial_cvar_size, vial_cvar_brightness, vial_cvar_decay, vial_cvar_elight, vial_cvar_elight_mult)
         processClass("item_healthkit", kit_r, kit_g, kit_b, kit_cvar_enable, kit_cvar_size, kit_cvar_brightness, kit_cvar_decay, kit_cvar_elight, kit_cvar_elight_mult)

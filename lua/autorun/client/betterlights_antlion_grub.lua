@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_antlion_grub_enable", "1", true, false, "Enable green glow on Antlion Grubs")
@@ -22,7 +21,7 @@ if CLIENT then
     local squashedLightIds = {}
     local squashedLightCounter = 0
 
-    if BL.TrackClass then BL.TrackClass("npc_antlion_grub") end
+    BL.TrackClass("npc_antlion_grub")
 
     local function isSquashedGrub(ent)
         if not (IsValid(ent) and ent.GetModel) then return false end
@@ -61,9 +60,7 @@ if CLIENT then
             trackSquashedGrub(ent)
         end
     end)
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_AntlionGrub", function()
+    BL.AddThink("BetterLights_AntlionGrub", function()
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
         local function updateGrub(ent)
@@ -81,11 +78,7 @@ if CLIENT then
             BL.CreateLightFromAttachment(ent, ATTACH_NAMES, r, g, b, brightness, decay, size, false)
         end
 
-        if BL.ForEach then
-            BL.ForEach("npc_antlion_grub", updateGrub)
-        else
-            for _, ent in ipairs(ents.FindByClass("npc_antlion_grub")) do updateGrub(ent) end
-        end
+        BL.ForEach("npc_antlion_grub", updateGrub)
 
         if not cvar_squashed_enable:GetBool() then return end
 

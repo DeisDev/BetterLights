@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local cvar_enable = BL.CreateClientConVar("betterlights_strider_muzzle_flash_enable", "1", true, false, "Enable blue muzzle flash light for Striders")

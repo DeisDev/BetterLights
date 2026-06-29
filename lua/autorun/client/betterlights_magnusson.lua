@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local cvar_enable = BL.CreateClientConVar("betterlights_magnusson_enable", "1", true, false, "Enable dynamic light for Magnusson devices (Strider Busters)")
@@ -26,8 +25,8 @@ if CLIENT then
     local spawnTimes = {}
     local lastPositions = {}
 
-    if BL.TrackClass then BL.TrackClass(TARGET_CLASS) end
-    
+    BL.TrackClass(TARGET_CLASS)
+
     timer.Simple(0, function()
         local now = CurTime()
         local function seed(ent)
@@ -36,11 +35,7 @@ if CLIENT then
             lastPositions[ent] = BL.GetEntityCenter(ent)
         end
 
-        if BL.ForEach then
-            BL.ForEach(TARGET_CLASS, seed)
-        else
-            for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do seed(ent) end
-        end
+        BL.ForEach(TARGET_CLASS, seed)
     end)
 
     hook.Add("OnEntityCreated", "BetterLights_Magnusson_Track", function(ent)
@@ -55,12 +50,12 @@ if CLIENT then
 
     hook.Add("EntityRemoved", "BetterLights_Magnusson_FlashOnRemoval", function(ent, fullUpdate)
         if fullUpdate then return end
-        
+
         local spawnTime = spawnTimes[ent]
         local pos = lastPositions[ent]
         spawnTimes[ent] = nil
         lastPositions[ent] = nil
-        
+
         if not spawnTime and not BL.IsEntityClass(ent, TARGET_CLASS) then return end
         if not cvar_flash_enable:GetBool() then return end
 
@@ -72,15 +67,13 @@ if CLIENT then
 
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
-        
+
         local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
         local flashSize = math.max(0, cvar_flash_size:GetFloat())
         local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
         BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 59000)
     end)
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Magnusson_DLight", function()
+    BL.AddThink("BetterLights_Magnusson_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local size = math.max(0, cvar_size:GetFloat())
@@ -106,14 +99,6 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach(TARGET_CLASS, update)
-        else
-            for _, ent in ipairs(ents.FindByClass(TARGET_CLASS)) do
-                if IsValid(ent) then
-                    update(ent)
-                end
-            end
-        end
+        BL.ForEach(TARGET_CLASS, update)
     end)
 end

@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local sc_enable = BL.CreateClientConVar("betterlights_suitcharger_enable", "1", true, false, "Enable glow for item_suitcharger")
     local sc_size = BL.CreateClientConVar("betterlights_suitcharger_size", "75", true, false, "Glow radius for item_suitcharger")
@@ -21,21 +20,19 @@ if CLIENT then
     local hc_g = BL.CreateClientConVar("betterlights_healthcharger_color_g", "190", true, false, "Health charger color - green (0-255)")
     local hc_b = BL.CreateClientConVar("betterlights_healthcharger_color_b", "255", true, false, "Health charger color - blue (0-255)")
 
-    if BL.TrackClass then
-        BL.TrackClass("item_suitcharger")
-        BL.TrackClass("item_healthcharger")
-    end
+    BL.TrackClass("item_suitcharger")
+    BL.TrackClass("item_healthcharger")
 
     local function process(class, en, sz, br, de, el, elmult, rcv, gcv, bcv)
         if not en:GetBool() then return end
-        
+
         local size = math.max(0, sz:GetFloat())
         local brightness = math.max(0, br:GetFloat())
         local decay = math.max(0, de:GetFloat())
         local el_mult = math.max(0, elmult:GetFloat())
         local cr, cg, cb = BL.GetColorFromCvars(rcv, gcv, bcv)
         local doElight = el:GetBool()
-        
+
         local function update(ent)
             if not IsValid(ent) then return end
             local idx = ent:EntIndex()
@@ -48,19 +45,10 @@ if CLIENT then
                 end
             end
         end
-        
-        if BL.ForEach then
-            BL.ForEach(class, update)
-        else
-            local list = ents.FindByClass(class)
-            if list then
-                for _, ent in ipairs(list) do update(ent) end
-            end
-        end
-    end
 
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Chargers_DLight", function()
+        BL.ForEach(class, update)
+    end
+    BL.AddThink("BetterLights_Chargers_DLight", function()
         process("item_suitcharger", sc_enable, sc_size, sc_bright, sc_decay, sc_elight, sc_elmult, sc_r, sc_g, sc_b)
         process("item_healthcharger", hc_enable, hc_size, hc_bright, hc_decay, hc_elight, hc_elmult, hc_r, hc_g, hc_b)
     end)

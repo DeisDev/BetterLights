@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local AMMO = {
@@ -72,9 +71,7 @@ if CLIENT then
         info.cvar_g = BL.CreateClientConVar(prefix .. "_color_g", tostring(info.g), true, false, info.name .. " color - green (0-255)")
         info.cvar_b = BL.CreateClientConVar(prefix .. "_color_b", tostring(info.b), true, false, info.name .. " color - blue (0-255)")
 
-        if BL.TrackClass then
-            BL.TrackClass(info.class)
-        end
+        BL.TrackClass(info.class)
     end
 
     function BL.GetAmmoPickupLightDefinitions()
@@ -105,17 +102,9 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach(info.class, update)
-        else
-            for _, ent in ipairs(ents.FindByClass(info.class)) do
-                update(ent)
-            end
-        end
+        BL.ForEach(info.class, update)
     end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_AmmoPickups_DLight", function()
+    BL.AddThink("BetterLights_AmmoPickups_DLight", function()
         for _, info in ipairs(AMMO) do
             updateAmmo(info)
         end

@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_antlion_guardian_enable", "1", true, false, "Enable green glow on Antlion Guardian")
@@ -26,10 +25,8 @@ if CLIENT then
         })
     end
 
-    if BL.TrackClass then BL.TrackClass("npc_antlionguard") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_AntlionGuardian", function()
+    BL.TrackClass("npc_antlionguard")
+    BL.AddThink("BetterLights_AntlionGuardian", function()
         if not cvar_enable:GetBool() then return end
 
         local size = math.max(0, cvar_size:GetFloat())
@@ -50,10 +47,6 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("npc_antlionguard", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("npc_antlionguard")) do update(ent) end
-        end
+        BL.ForEach("npc_antlionguard", update)
     end)
 end

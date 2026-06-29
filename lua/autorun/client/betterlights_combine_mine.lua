@@ -1,13 +1,12 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
-    
+
     local cvar_enable = BL.CreateClientConVar("betterlights_combine_mine_enable", "1", true, false, "Enable dynamic light for Combine Mines when the player is nearby")
     local cvar_range = BL.CreateClientConVar("betterlights_combine_mine_range", "260", true, false, "Distance at which the mine starts glowing (units)")
     local cvar_size_alert = BL.CreateClientConVar("betterlights_combine_mine_size", "140", true, false, "Dynamic light radius for alert mines")
     local cvar_brightness_alert = BL.CreateClientConVar("betterlights_combine_mine_brightness", "1.2", true, false, "Dynamic light brightness for alert mines")
     local cvar_decay = BL.CreateClientConVar("betterlights_combine_mine_decay", "2000", true, false, "Dynamic light decay for Combine Mines")
-    
+
     local cvar_res_enable = BL.CreateClientConVar("betterlights_combine_mine_resistance_enable", "1", true, false, "Enable dynamic light for Resistance Mines")
     local cvar_res_size = BL.CreateClientConVar("betterlights_combine_mine_resistance_size", "140", true, false, "Dynamic light radius for Resistance Mines")
     local cvar_res_brightness = BL.CreateClientConVar("betterlights_combine_mine_resistance_brightness", "1.0", true, false, "Dynamic light brightness for Resistance Mines")
@@ -49,13 +48,9 @@ if CLIENT then
         })
     end
 
-    if BL.TrackClass then 
-        BL.TrackClass("combine_mine")
-        BL.TrackClass("combine_mine_resistance")
-    end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_CombineMine_DLight", function()
+    BL.TrackClass("combine_mine")
+    BL.TrackClass("combine_mine_resistance")
+    BL.AddThink("BetterLights_CombineMine_DLight", function()
         if not cvar_enable:GetBool() and not cvar_res_enable:GetBool() then return end
 
         local lp = LocalPlayer()
@@ -84,9 +79,9 @@ if CLIENT then
 
         local function updateMine(mine)
             if not IsValid(mine) then return end
-            
+
             local isFriendly = isFriendlyMine(mine)
-            
+
             if isFriendly and not cvar_res_enable:GetBool() then return end
             if not isFriendly and not cvar_enable:GetBool() then return end
 
@@ -94,10 +89,11 @@ if CLIENT then
             if not pos then return end
 
             local r, g, b, size, brightness, useDecay
-            
+
             local dist = eye:DistToSqr(pos)
             local inRange = dist <= (range * range)
-            
+            if not inRange and not cvar_idle_enable:GetBool() then return end
+
             if isFriendly then
                 size = inRange and res_size or size_idle
                 brightness = inRange and res_brightness or brightness_idle
@@ -108,7 +104,7 @@ if CLIENT then
                 brightness = inRange and brightness_alert or brightness_idle
                 r, g, b = inRange and alert_r or idle_r, inRange and alert_g or idle_g, inRange and alert_b or idle_b
                 useDecay = decay
-                
+
                 if inRange and doPulse then
                     local osc = 0.5 + 0.5 * math.sin(now * pulseSpd + mine:EntIndex())
                     brightness = math.max(0, brightness * (1 - pulseAmt + pulseAmt * (0.6 + 0.4 * osc)))
@@ -122,12 +118,7 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("combine_mine", updateMine)
-            BL.ForEach("combine_mine_resistance", updateMine)
-        else
-            for _, mine in ipairs(ents.FindByClass("combine_mine")) do updateMine(mine) end
-            for _, mine in ipairs(ents.FindByClass("combine_mine_resistance")) do updateMine(mine) end
-        end
+        BL.ForEach("combine_mine", updateMine)
+        BL.ForEach("combine_mine_resistance", updateMine)
     end)
 end

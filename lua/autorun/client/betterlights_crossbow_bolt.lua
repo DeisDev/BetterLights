@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_bolt_enable", "1", true, false, "Enable dynamic light for crossbow bolts")
@@ -11,10 +10,8 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_bolt_color_g", "140", true, false, "Crossbow bolt color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_bolt_color_b", "40", true, false, "Crossbow bolt color - blue (0-255)")
 
-    if BL.TrackClass then BL.TrackClass("crossbow_bolt") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_CrossbowBolt_DLight", function()
+    BL.TrackClass("crossbow_bolt")
+    BL.AddThink("BetterLights_CrossbowBolt_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local size = math.max(0, cvar_size:GetFloat())
@@ -28,10 +25,6 @@ if CLIENT then
             BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
         end
 
-        if BL.ForEach then
-            BL.ForEach("crossbow_bolt", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("crossbow_bolt")) do update(ent) end
-        end
+        BL.ForEach("crossbow_bolt", update)
     end)
 end

@@ -1,5 +1,20 @@
 [
   {
+    "version": "v1.5.3",
+    "title": "Better Lights v1.5.3",
+    "items": [
+      "Rewrote some of the internals of the addon.",
+      "Improved the settings menu layout and help text spacing.",
+      "Improved flashlight and spotlight update handling.",
+      "Cleaned up addon loading and networking internals.",
+      "Improved the settings menu layout and custom skin support.",
+      "Improved flashlight, scanner, and chopper spotlight cleanup.",
+      "Fixed the Combine Mine idle glow toggle.",
+      "Fixed scanner searchlight settings when changed after loading.",
+      "Hid the model lookup tool unless developer mode is enabled."
+    ]
+  },
+  {
     "version": "v1.5.2",
     "title": "Better Lights v1.5.2",
     "items": [

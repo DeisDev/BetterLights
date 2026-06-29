@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local cvar_enable = BL.CreateClientConVar("betterlights_crossbow_hold_enable", "1", true, false, "Enable passive dynamic light while holding the Crossbow")
     local cvar_size = BL.CreateClientConVar("betterlights_crossbow_hold_size", "30", true, false, "Dynamic light radius for held Crossbow")
@@ -10,29 +9,7 @@ if CLIENT then
     local cvar_col_r = BL.CreateClientConVar("betterlights_crossbow_hold_color_r", "255", true, false, "Crossbow (held) color - red (0-255)")
     local cvar_col_g = BL.CreateClientConVar("betterlights_crossbow_hold_color_g", "140", true, false, "Crossbow (held) color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_crossbow_hold_color_b", "40", true, false, "Crossbow (held) color - blue (0-255)")
-
-    local ATTACH_NAMES = { "muzzle", "bolt", "tip", "flash", "spark" }
-    local function getHeldCrossbowPos(ply, wep)
-        if IsValid(ply) and ply == LocalPlayer() then
-            local vm = ply:GetViewModel()
-            if IsValid(vm) then
-                local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(vm, ATTACH_NAMES)
-                if pos then return pos end
-            end
-        end
-
-        if IsValid(wep) then
-            local pos = BL.GetAttachmentPos and BL.GetAttachmentPos(wep, ATTACH_NAMES)
-            if pos then return pos end
-            if wep.WorldSpaceCenter then return wep:WorldSpaceCenter() end
-            return wep:GetPos()
-        end
-
-        return ply:EyePos() + (ply.EyeAngles and ply:EyeAngles():Forward() * 20 or Vector(20, 0, 0))
-    end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_CrossbowHold_DLight", function()
+    BL.AddThink("BetterLights_CrossbowHold_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local ply = LocalPlayer()
@@ -72,32 +49,7 @@ if CLIENT then
             if not loaded then return end
         end
 
-        local pos_model = getHeldCrossbowPos(ply, wep)
-
-        local eye = ply:EyePos()
-        local fwd = ply:EyeAngles():Forward()
-        local tr = (BetterLights.TraceLineReuse and BetterLights.TraceLineReuse("xbow_hold", {
-            start = eye,
-            endpos = eye + fwd * 48,
-            filter = { ply, wep }
-        })) or util.TraceLine({ start = eye, endpos = eye + fwd * 48, filter = { ply, wep } })
-        local pos_world = tr.Hit and (tr.HitPos + tr.HitNormal * 6) or (eye + fwd * 24)
-
-        if not pos_model then pos_model = pos_world end
-
-        local dlight = DynamicLight(ply:EntIndex() + 1337)
-        if dlight then
-            dlight.pos = pos_world
-            dlight.r = r
-            dlight.g = g
-            dlight.b = b
-            dlight.brightness = brightness
-            dlight.decay = decay
-            dlight.size = size
-            dlight.minlight = 0
-            dlight.noworld = false
-            dlight.nomodel = false
-            dlight.dietime = CurTime() + 0.1
-        end
+        local pos_world = BL.GetHeldWeaponTraceLightPos(ply, wep, "xbow_hold", 48, 24)
+        BL.CreateDLight(ply:EntIndex() + 1337, pos_world, r, g, b, brightness, decay, size, false)
     end)
 end

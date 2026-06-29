@@ -1,7 +1,5 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
-    local CurTime = CurTime
     local IsValid = IsValid
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
     local cvar_enable = BL.CreateClientConVar("betterlights_heli_bomb_enable", "1", true, false, "Enable dynamic light for helicopter bombs (grenade_helicopter)")
@@ -32,17 +30,15 @@ if CLIENT then
 
         local dur = math.max(0, cvar_flash_time:GetFloat())
         if dur <= 0 then return end
-        
+
         local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
         local flashSize = math.max(0, cvar_flash_size:GetFloat())
         local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
         BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 56000)
     end)
 
-    if BL.TrackClass then BL.TrackClass("grenade_helicopter") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_HeliBomb", function()
+    BL.TrackClass("grenade_helicopter")
+    BL.AddThink("BetterLights_HeliBomb", function()
         if not cvar_enable:GetBool() then return end
 
         local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
@@ -66,10 +62,6 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("grenade_helicopter", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("grenade_helicopter")) do update(ent) end
-        end
+        BL.ForEach("grenade_helicopter", update)
     end)
 end

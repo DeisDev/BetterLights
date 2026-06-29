@@ -1,7 +1,6 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
-    
+
     local cvar_enable = BL.CreateClientConVar("betterlights_explosion_flash_enable", "1", true, false, "Enable generic explosion flashes (env_explosion, explosive barrels, etc.)")
     local cvar_size = BL.CreateClientConVar("betterlights_explosion_flash_size", "380", true, false, "Generic explosion flash radius")
     local cvar_brightness = BL.CreateClientConVar("betterlights_explosion_flash_brightness", "4.6", true, false, "Generic explosion flash brightness")
@@ -20,11 +19,11 @@ if CLIENT then
         local dur = math.max(0, cvar_time:GetFloat())
         if dur <= 0 then return end
         if BL.ShouldSuppressFlash("explosion", pos) then return end
-        
+
         local r, g, b = BL.GetColorFromCvars(cvar_r, cvar_g, cvar_b)
         local size = math.max(0, cvar_size:GetFloat())
         local brightness = math.max(0, cvar_brightness:GetFloat())
-        
+
         BL.CreateFlash(pos, r, g, b, size, brightness, dur, 61000)
         BL.RecordFlashPosition("explosion", pos)
     end
@@ -55,15 +54,15 @@ if CLIENT then
 
     local trackedScanners = {}
     local trackedMines = {}
-    
+
     hook.Add("OnEntityCreated", "BetterLights_Scanner_Track", function(ent)
         timer.Simple(0, function()
             if not IsValid(ent) then return end
-            
+
             if cvar_detect_scanner:GetBool() and isScanner(ent) then
                 trackedScanners[ent] = ent:GetPos()
             end
-            
+
             if cvar_detect_mine:GetBool() and isCombineMine(ent) then
                 trackedMines[ent] = ent:GetPos()
             end
@@ -72,14 +71,12 @@ if CLIENT then
 
     hook.Add("EntityRemoved", "BetterLights_Explosion_OnBarrelRemoved", function(ent, fullUpdate)
         if fullUpdate then return end
-        
-        if cvar_detect_barrel:GetBool() and IsValid(ent) then
-            if BL.IsEntityClass(ent, {"prop_physics", "prop_physics_multiplayer"}) and isExplosiveBarrel(ent) then
-                local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
-                spawnFlashAt(pos)
-            end
+
+        if cvar_detect_barrel:GetBool() and IsValid(ent) and BL.IsEntityClass(ent, {"prop_physics", "prop_physics_multiplayer"}) and isExplosiveBarrel(ent) then
+            local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
+            spawnFlashAt(pos)
         end
-        
+
         if cvar_detect_scanner:GetBool() then
             local lastPos = trackedScanners[ent]
             if lastPos then
@@ -88,7 +85,7 @@ if CLIENT then
                 trackedScanners[ent] = nil
             end
         end
-        
+
         if cvar_detect_mine:GetBool() then
             local lastPos = trackedMines[ent]
             if lastPos then
@@ -98,9 +95,7 @@ if CLIENT then
             end
         end
     end)
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Explosion_Track", function()
+    BL.AddThink("BetterLights_Explosion_Track", function()
         if cvar_detect_scanner:GetBool() then
             for ent, _ in pairs(trackedScanners) do
                 if IsValid(ent) then
@@ -112,7 +107,7 @@ if CLIENT then
         else
             trackedScanners = {}
         end
-        
+
         if cvar_detect_mine:GetBool() then
             for ent, _ in pairs(trackedMines) do
                 if IsValid(ent) then

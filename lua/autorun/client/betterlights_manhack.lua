@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_manhack_enable", "1", true, false, "Enable dynamic light for Manhacks (npc_manhack)")
@@ -14,10 +13,8 @@ if CLIENT then
     local cvar_col_b = BL.CreateClientConVar("betterlights_manhack_color_b", "60", true, false, "Manhack color - blue (0-255)")
     local ATTACH_NAMES = { "Eye", "Light" }
 
-    if BL.TrackClass then BL.TrackClass("npc_manhack") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_Manhack_DLight", function()
+    BL.TrackClass("npc_manhack")
+    BL.AddThink("BetterLights_Manhack_DLight", function()
         if not cvar_enable:GetBool() then return end
 
         local size = math.max(0, cvar_size:GetFloat())
@@ -44,10 +41,6 @@ if CLIENT then
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("npc_manhack", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("npc_manhack")) do update(ent) end
-        end
+        BL.ForEach("npc_manhack", update)
     end)
 end

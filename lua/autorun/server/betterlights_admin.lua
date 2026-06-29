@@ -1,6 +1,7 @@
 if SERVER then
+    local BL = BetterLights
     local cvar_enable = CreateConVar("betterlights_enable", "1", FCVAR_ARCHIVE + FCVAR_REPLICATED, "Enable Better Lights")
-    util.AddNetworkString("BetterLights_SetServerBool")
+    util.AddNetworkString(BL.NET_SET_SERVER_BOOL)
 
     local SERVER_BOOL_CVARS = {
         betterlights_enable = true,
@@ -15,7 +16,7 @@ if SERVER then
         RunConsoleCommand(cvarName, value and "1" or "0")
     end
 
-    net.Receive("BetterLights_SetServerBool", function(_, ply)
+    net.Receive(BL.NET_SET_SERVER_BOOL, function(_, ply)
         if not canChangeServerSettings(ply) then return end
 
         local cvarName = net.ReadString()

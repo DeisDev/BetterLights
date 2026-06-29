@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_antlion_worker_enable", "1", true, false, "Enable subtle glow on Antlion Workers")
@@ -14,10 +13,8 @@ if CLIENT then
     local BONE_NAME = "Antlion.Back_Bone"
     local ATTACH_NAMES = { "glow", "light", "abdomen", "body", "spine" }
 
-    if BL.TrackClass then BL.TrackClass("npc_antlion_worker") end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_AntlionWorker", function()
+    BL.TrackClass("npc_antlion_worker")
+    BL.AddThink("BetterLights_AntlionWorker", function()
         if not cvar_enable:GetBool() then return end
 
         local size = math.max(0, cvar_size:GetFloat())
@@ -30,20 +27,16 @@ if CLIENT then
             if ent.GetNoDraw and ent:GetNoDraw() then return end
 
             local pos = BL.GetBonePosition(ent, BONE_NAME)
-            
+
             if not pos and not BL.CreateLightFromAttachment(ent, ATTACH_NAMES, r, g, b, brightness, decay, size, false) then
                 pos = BL.GetEntityCenter(ent)
             end
-            
+
             if pos then
                 BL.CreateDLight(ent:EntIndex() + 23200, pos, r, g, b, brightness, decay, size, false)
             end
         end
 
-        if BL.ForEach then
-            BL.ForEach("npc_antlion_worker", update)
-        else
-            for _, ent in ipairs(ents.FindByClass("npc_antlion_worker")) do update(ent) end
-        end
+        BL.ForEach("npc_antlion_worker", update)
     end)
 end

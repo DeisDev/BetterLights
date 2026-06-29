@@ -1,5 +1,4 @@
 if CLIENT then
-    BetterLights = BetterLights or {}
     local BL = BetterLights
 
     local CHOPPER_CLASS = "npc_helicopter"
@@ -33,7 +32,7 @@ if CLIENT then
 
     local chopperProjectors = {}
 
-    if BL.TrackClass then BL.TrackClass(CHOPPER_CLASS) end
+    BL.TrackClass(CHOPPER_CLASS)
 
     local function readFlashSettings(rCvar, gCvar, bCvar, sizeCvar, brightnessCvar, timeCvar)
         local duration = math.max(0, timeCvar:GetFloat())
@@ -70,9 +69,7 @@ if CLIENT then
         if not attachId or attachId == 0 then return nil end
         return ent:GetAttachment(attachId)
     end
-
-    local AddThink = BL.AddThink or function(name, fn) hook.Add("Think", name, fn) end
-    AddThink("BetterLights_HunterChopperSpotlight", function()
+    BL.AddThink("BetterLights_HunterChopperSpotlight", function()
         local spotlightEnabled = cvar_spotlight_enable:GetBool()
         local seen = {}
 
@@ -85,42 +82,26 @@ if CLIENT then
             local attachment = getSpotlightAttachment(ent)
             if not (attachment and attachment.Pos and attachment.Ang) then return end
 
-            local lamp = chopperProjectors[ent]
-            if not lamp or not lamp:IsValid() then
-                lamp = ProjectedTexture()
-                if lamp then
-                    lamp:SetTexture("effects/flashlight001")
-                    chopperProjectors[ent] = lamp
-                end
-            end
-
-            if not (lamp and lamp:IsValid()) then return end
+            local lamp = BL.GetOrCreateProjectedTexture(chopperProjectors, ent, "effects/flashlight001")
+            if not lamp then return end
 
             local r, g, b = BL.GetColorFromCvars(cvar_spotlight_r, cvar_spotlight_g, cvar_spotlight_b)
-            lamp:SetPos(attachment.Pos)
-            lamp:SetAngles(attachment.Ang)
-            lamp:SetNearZ(math.max(0.1, cvar_spotlight_near:GetFloat()))
-            lamp:SetFarZ(math.max(1, cvar_spotlight_distance:GetFloat()))
-            lamp:SetFOV(math.Clamp(cvar_spotlight_fov:GetFloat(), 1, 175))
-            lamp:SetBrightness(math.max(0, cvar_spotlight_brightness:GetFloat()))
-            lamp:SetColor(Color(r, g, b))
-            lamp:SetEnableShadows(cvar_spotlight_shadows:GetBool())
-            lamp:Update()
+            BL.UpdateProjectedTexture(lamp, {
+                pos = attachment.Pos,
+                ang = attachment.Ang,
+                nearZ = math.max(0.1, cvar_spotlight_near:GetFloat()),
+                farZ = math.max(1, cvar_spotlight_distance:GetFloat()),
+                fov = math.Clamp(cvar_spotlight_fov:GetFloat(), 1, 175),
+                brightness = math.max(0, cvar_spotlight_brightness:GetFloat()),
+                color = Color(r, g, b),
+                shadows = cvar_spotlight_shadows:GetBool()
+            })
         end
 
-        if BL.ForEach then
-            BL.ForEach(CHOPPER_CLASS, updateChopper)
-        else
-            for _, ent in ipairs(ents.FindByClass(CHOPPER_CLASS)) do
-                updateChopper(ent)
-            end
-        end
+        BL.ForEach(CHOPPER_CLASS, updateChopper)
 
-        for ent, lamp in pairs(chopperProjectors) do
-            if (not spotlightEnabled) or (not IsValid(ent)) or (not seen[ent]) then
-                if lamp and lamp.IsValid and lamp:IsValid() then lamp:Remove() end
-                chopperProjectors[ent] = nil
-            end
-        end
+        BL.RemoveStaleProjectedTextures(chopperProjectors, seen, function(ent)
+            return (not spotlightEnabled) or (not IsValid(ent))
+        end)
     end)
 end
