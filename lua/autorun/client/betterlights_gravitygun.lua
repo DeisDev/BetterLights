@@ -17,7 +17,12 @@ if CLIENT then
     local cvar_super_col_g = BL.CreateClientConVar("betterlights_gravitygun_super_color_g", "140", true, false, "Supercharged gravity gun color - green (0-255)")
     local cvar_super_col_b = BL.CreateClientConVar("betterlights_gravitygun_super_color_b", "255", true, false, "Supercharged gravity gun color - blue (0-255)")
 
-    local ATTACH_NAMES = { "muzzle", "core", "fork", "claw", "muzzle_flash" }
+    local PLACEMENT = {
+        view = { "muzzle" },
+        world = { "muzzle" }
+    }
+    local SURFACE_LIGHT = { key = "gravgun", distance = 48, missDistance = 24, hitOffset = 6, dietime = 0.16 }
+
     local function isSuperCharged(ply, wep)
         if not IsValid(wep) then return false end
         local megaConvar = GetConVar and (GetConVar("physcannon_mega_enabled") or GetConVar("physcannon_mega"))
@@ -67,13 +72,13 @@ if CLIENT then
             r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
         end
 
-        local pos_world, pos_model = BL.GetHeldWeaponLightPositions(ply, wep, ATTACH_NAMES, "gravgun", 48, 24, 16)
         local idx = ply:EntIndex() + 1460
 
-        BL.CreateDLight(idx, pos_world, r, g, b, brightness, decay, size, false, { dietime = 0.16 })
+        local created = BL.CreateHeldWeaponSurfaceLight(ply, wep, SURFACE_LIGHT, idx, r, g, b, brightness, decay, size, false)
+        if not created then return end
 
         if doElight then
-            BL.CreateDLight(idx, pos_model, r, g, b, brightness, decay, size * elMult, true, { dietime = 0.16 })
+            BL.CreateHeldWeaponAttachmentLight(ply, wep, PLACEMENT, idx, r, g, b, brightness, decay, size * elMult, true, { dietime = 0.16 })
         end
     end)
 end

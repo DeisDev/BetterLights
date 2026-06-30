@@ -10,9 +10,6 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_antlion_worker_color_g", "240", true, false, "Antlion Worker color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_antlion_worker_color_b", "120", true, false, "Antlion Worker color - blue (0-255)")
 
-    local BONE_NAME = "Antlion.Back_Bone"
-    local ATTACH_NAMES = { "glow", "light", "abdomen", "body", "spine" }
-
     BL.TrackClass("npc_antlion_worker")
     BL.AddThink("BetterLights_AntlionWorker", function()
         if not cvar_enable:GetBool() then return end
@@ -26,15 +23,7 @@ if CLIENT then
             if not IsValid(ent) then return end
             if ent.GetNoDraw and ent:GetNoDraw() then return end
 
-            local pos = BL.GetBonePosition(ent, BONE_NAME)
-
-            if not pos and not BL.CreateLightFromAttachment(ent, ATTACH_NAMES, r, g, b, brightness, decay, size, false) then
-                pos = BL.GetEntityCenter(ent)
-            end
-
-            if pos then
-                BL.CreateDLight(ent:EntIndex() + 23200, pos, r, g, b, brightness, decay, size, false)
-            end
+            BL.CreateLightAtEntityCenter(ent, ent:EntIndex() + 23200, r, g, b, brightness, decay, size, false)
         end
 
         BL.ForEach("npc_antlion_worker", update)

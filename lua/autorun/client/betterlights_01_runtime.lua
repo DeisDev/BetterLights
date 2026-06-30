@@ -10,10 +10,47 @@ if CLIENT then
     BL._flashPoolMax = 100
     BL._suppressionRecords = BL._suppressionRecords or {}
     BL._activeFlashes = BL._activeFlashes or {}
+    BL._activeDLightRecords = BL._activeDLightRecords or {}
     BL._flashIdCounter = BL._flashIdCounter or 0
     BL._idCounter = BL._idCounter or 0
 
     local THINK_ERROR_DISABLE_COUNT = 3
+
+    local function getDLightRecordKey(index, isElight)
+        return (isElight and "e" or "d") .. tostring(index)
+    end
+
+    local function pruneDLightRecords(now)
+        now = now or CurTime()
+
+        for key, record in pairs(BL._activeDLightRecords) do
+            if not record or not record.die or record.die <= now then
+                BL._activeDLightRecords[key] = nil
+            end
+        end
+    end
+
+    local function recordDLight(index, pos, r, g, b, size, isElight, dieTime)
+        if not index or not pos then return nil end
+
+        local key = getDLightRecordKey(index, isElight)
+        local record = BL._activeDLightRecords[key]
+        if not record then
+            record = {}
+            BL._activeDLightRecords[key] = record
+        end
+
+        record.id = index
+        record.pos = pos
+        record.r = r or 255
+        record.g = g or 255
+        record.b = b or 255
+        record.size = size or 0
+        record.elight = isElight == true
+        record.die = dieTime or CurTime()
+
+        return record
+    end
 
     function BL.GetFlashTable()
         if BL._flashPoolSize > 0 then
@@ -69,6 +106,11 @@ if CLIENT then
         record[#record + 1] = { pos = pos, t = CurTime() }
     end
 
+    function BL.GetActiveDLightRecords()
+        pruneDLightRecords()
+        return BL._activeDLightRecords
+    end
+
     function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
         if not BL.IsEnabled() then return nil end
 
@@ -106,6 +148,7 @@ if CLIENT then
                 local dl = DynamicLight(f.id)
 
                 if dl then
+                    local dieTime = now + 0.05
                     dl.pos = f.pos
                     dl.r = f.r
                     dl.g = f.g
@@ -116,7 +159,8 @@ if CLIENT then
                     dl.minlight = 0
                     dl.noworld = false
                     dl.nomodel = false
-                    dl.dietime = now + 0.05
+                    dl.dietime = dieTime
+                    recordDLight(f.id, f.pos, f.r, f.g, f.b, size, false, dieTime)
                 end
             end
         end
@@ -163,6 +207,7 @@ if CLIENT then
 
         local dl = DynamicLight(index, isElight or false)
         if dl then
+            local dieTime = CurTime() + (options.dietime or 0.1)
             dl.pos = pos
             dl.r = r
             dl.g = g
@@ -175,7 +220,8 @@ if CLIENT then
                 dl.noworld = options.noworld == true
                 dl.nomodel = options.nomodel == true
             end
-            dl.dietime = CurTime() + (options.dietime or 0.1)
+            dl.dietime = dieTime
+            recordDLight(index, pos, r, g, b, size, isElight, dieTime)
         end
         return dl
     end

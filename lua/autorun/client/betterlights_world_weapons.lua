@@ -15,7 +15,7 @@ if CLIENT then
             r = 255,
             g = 110,
             b = 25,
-            attachments = { "muzzle", "bolt", "tip", "flash", "spark" }
+            placement = { attachments = { "muzzle" } }
         },
         {
             class = "gmod_tool",
@@ -30,8 +30,7 @@ if CLIENT then
             r = 255,
             g = 255,
             b = 255,
-            attachments = { "muzzle" },
-            offset = Vector(-7, 0, 0)
+            placement = { attachments = { "muzzle" } }
         },
         {
             class = "weapon_physcannon",
@@ -46,7 +45,7 @@ if CLIENT then
             r = 255,
             g = 140,
             b = 40,
-            attachments = { "muzzle", "core", "fork", "claw", "muzzle_flash" }
+            placement = { attachments = { "core" } }
         },
         {
             class = "weapon_physgun",
@@ -61,7 +60,7 @@ if CLIENT then
             r = 70,
             g = 130,
             b = 255,
-            attachments = { "muzzle", "fork", "muzzle_flash", "laser" }
+            placement = { attachments = { "core" } }
         },
         {
             class = "weapon_medkit",
@@ -76,7 +75,7 @@ if CLIENT then
             r = 150,
             g = 255,
             b = 150,
-            attachments = { "muzzle", "tip", "light", "glow" }
+            placement = { center = true }
         },
         {
             class = "weapon_bugbait",
@@ -91,7 +90,7 @@ if CLIENT then
             r = 90,
             g = 170,
             b = 255,
-            attachments = { "muzzle", "tip", "light", "glow" }
+            placement = { center = true }
         },
         {
             class = "weapon_ar2",
@@ -106,7 +105,7 @@ if CLIENT then
             r = 255,
             g = 70,
             b = 55,
-            attachments = { "muzzle", "muzzle_flash", "1", "laser" }
+            placement = { attachments = { "muzzle" } }
         },
         {
             class = "weapon_frag",
@@ -121,7 +120,7 @@ if CLIENT then
             r = 255,
             g = 40,
             b = 40,
-            attachments = { "muzzle", "tip", "light", "glow" }
+            placement = { center = true }
         }
     }
 
@@ -154,25 +153,14 @@ if CLIENT then
     end
 
     local function getLightPosition(ent, info)
-        local attachments = info.attachments
-        local bones = info.bones
-        local pos = BL.GetAttachmentPos(ent, attachments)
-        if pos then
-            if info.offset then
-                pos = pos + ent:LocalToWorld(info.offset) - ent:GetPos()
-            end
+        local placement = info.placement
+        if not placement then return nil end
 
-            return pos
+        if placement.attachments then
+            return BL.GetAttachmentPos(ent, placement.attachments, placement)
         end
 
-        if bones then
-            for _, boneName in ipairs(bones) do
-                pos = BL.GetBonePosition(ent, boneName)
-                if pos then return pos end
-            end
-        end
-
-        return BL.GetEntityCenter(ent)
+        return nil
     end
 
     local function updateWeapon(info)
@@ -188,10 +176,23 @@ if CLIENT then
         local function update(ent)
             if not isWorldWeapon(ent) then return end
 
+            local idx = ent:EntIndex() + 28000
+            local placement = info.placement or {}
+
+            if placement.center then
+                local created, pos = BL.CreateLightAtEntityCenter(ent, idx, r, g, b, brightness, decay, size, false, placement)
+                if not created then return end
+
+                if doElight then
+                    BL.CreateDLight(idx + 10000, pos, r, g, b, brightness, decay, size * elMult, true)
+                end
+
+                return
+            end
+
             local pos = getLightPosition(ent, info)
             if not pos then return end
 
-            local idx = ent:EntIndex() + 28000
             BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
 
             if doElight then

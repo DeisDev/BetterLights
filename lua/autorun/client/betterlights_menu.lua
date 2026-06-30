@@ -1332,8 +1332,8 @@ if CLIENT then
             addHelpText(origin, phrase("help.forward_offset"))
             origin:NumSlider(phrase("control.attached_side_offset"), "betterlights_flashlight_attachment_offset", -24, 24, 1)
             addHelpText(origin, phrase("help.attached_side_offset"))
-            origin:NumSlider(phrase("control.fallback_side_offset"), "betterlights_flashlight_fallback_offset", -24, 24, 1)
-            addHelpText(origin, phrase("help.fallback_side_offset"))
+            origin:NumSlider(phrase("control.view_origin_side_offset"), "betterlights_flashlight_fallback_offset", -24, 24, 1)
+            addHelpText(origin, phrase("help.view_origin_side_offset"))
             addResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
                 betterlights_flashlight_forward_offset = 0,
@@ -1494,6 +1494,26 @@ if CLIENT then
 
         registerPage("Eye Glow", "BL_CombineSoldiers", "menu.combine_soldiers", function(panel)
             addCombineEyeGlowPanel(panel)
+        end)
+
+        registerPage("Eye Glow", "BL_DogEyeGlow", "menu.dog_eye_glow", function(panel)
+            setupPage(panel, "page.dog_eye_glow.title", "page.dog_eye_glow.desc")
+
+            local dog = addSection(panel, "section.dog_eyes", nil, true)
+            addLightControls(dog, "betterlights_dog_eye", {
+                radiusMax = 200
+            })
+            addColorMixerControl(dog, "control.color", "betterlights_dog_eye_color_r", "betterlights_dog_eye_color_g", "betterlights_dog_eye_color_b", 120, 190, 255)
+
+            addResetButton(panel, {
+                betterlights_dog_eye_enable = 1,
+                betterlights_dog_eye_size = 70,
+                betterlights_dog_eye_brightness = 0.4,
+                betterlights_dog_eye_decay = 1500,
+                betterlights_dog_eye_color_r = 120,
+                betterlights_dog_eye_color_g = 190,
+                betterlights_dog_eye_color_b = 255,
+            })
         end)
 
     registerPage("Pickups", "BL_Pickup_Battery", "menu.battery", function(panel)

@@ -16,22 +16,31 @@ if CLIENT then
     local cvar_ar2_col_g = BL.CreateClientConVar("betterlights_muzzle_ar2_color_g", "190", true, false, "AR2 muzzle flash color - green (0-255)")
     local cvar_ar2_col_b = BL.CreateClientConVar("betterlights_muzzle_ar2_color_b", "255", true, false, "AR2 muzzle flash color - blue (0-255)")
 
+    local function createMuzzleFlash(pos, r, g, b, sizeCvar, brightnessCvar, baseId)
+        local duration = 0.08
+        local size = math.max(0, sizeCvar:GetFloat())
+        local brightness = math.max(0, brightnessCvar:GetFloat())
+        BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
+    end
+
+    local function createConfiguredMuzzleFlash(pos, isAR2)
+        if not pos then return end
+
+        if isAR2 and cvar_ar2_enable:GetBool() then
+            local r, g, b = BL.GetColorFromCvars(cvar_ar2_col_r, cvar_ar2_col_g, cvar_ar2_col_b)
+            createMuzzleFlash(pos, r, g, b, cvar_ar2_size, cvar_ar2_brightness, 61000)
+        else
+            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+            createMuzzleFlash(pos, r, g, b, cvar_size, cvar_brightness, 61000)
+        end
+    end
+
     BL.AddNetworkHandler(BL.NET_MUZZLE_FLASH, function()
         if not cvar_enable:GetBool() then return end
         local pos = net.ReadVector()
         local isAR2 = net.ReadBool()
 
-        local duration = 0.08
-        if isAR2 and cvar_ar2_enable:GetBool() then
-            local r, g, b = BL.GetColorFromCvars(cvar_ar2_col_r, cvar_ar2_col_g, cvar_ar2_col_b)
-            local size = cvar_ar2_size:GetFloat()
-            local brightness = cvar_ar2_brightness:GetFloat()
-            BL.CreateFlash(pos, r, g, b, size, brightness, duration, 61000)
-        else
-            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-            local size = cvar_size:GetFloat()
-            local brightness = cvar_brightness:GetFloat()
-            BL.CreateFlash(pos, r, g, b, size, brightness, duration, 61000)
-        end
+        createConfiguredMuzzleFlash(pos, isAR2)
     end)
+
 end

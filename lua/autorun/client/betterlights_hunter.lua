@@ -89,7 +89,10 @@ if CLIENT then
             local r, g, b = BL.GetColorFromCvars(cvar_muzzle_r, cvar_muzzle_g, cvar_muzzle_b)
             local size = math.max(0, cvar_muzzle_size:GetFloat())
             local brightness = math.max(0, cvar_muzzle_brightness:GetFloat())
-            BL.CreateFlash(getHunterMuzzlePos(pos) or pos, r, g, b, size, brightness, dur, 59300)
+            local muzzlePos = getHunterMuzzlePos(pos)
+            if not muzzlePos then return end
+
+            BL.CreateFlash(muzzlePos, r, g, b, size, brightness, dur, 59300)
         end)
     end)
 
@@ -136,20 +139,11 @@ if CLIENT then
             local function updateHunter(ent)
                 if not IsValid(ent) then return end
 
-                local usedAttachment = false
                 for i, attachmentName in ipairs(EYE_ATTACHMENTS) do
                     local pos = BL.GetAttachmentPos(ent, { attachmentName })
                     if pos then
-                        usedAttachment = true
                         createHunterEyeLight(ent:EntIndex() + 23300 + (i * 100), pos)
                     end
-                end
-
-                if not usedAttachment then
-                    local pos = BL.GetEntityCenter(ent)
-                    if not pos then return end
-
-                    createHunterEyeLight(ent:EntIndex() + 23300, pos)
                 end
             end
 

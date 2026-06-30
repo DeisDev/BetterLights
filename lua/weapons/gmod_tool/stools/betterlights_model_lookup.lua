@@ -12,6 +12,7 @@ local CLIENT_CONVAR_DEFAULTS = {
     output = "console",
     labels = "1",
     header = "1",
+    compact_lines = "1",
     entity_index = "1",
     entity_class = "1",
     model = "1",
@@ -34,6 +35,7 @@ TOOL.ClientConVar = CLIENT_CONVAR_DEFAULTS
 local RESULT_MESSAGE = "BetterLights_ModelLookup_Result"
 local HELD_WEAPON_MESSAGE = "BetterLights_ModelLookup_HeldWeapon"
 local TOOL_CVAR_PREFIX = "betterlights_model_lookup_"
+local deliverReport
 
 if SERVER then
     util.AddNetworkString(RESULT_MESSAGE)
@@ -126,7 +128,7 @@ local function addBlank(lines)
 end
 
 local function addBreak(lines, options)
-    if options.labels and #lines > 0 then
+    if options.labels and not options.compact_lines and #lines > 0 then
         addBlank(lines)
     end
 end
@@ -324,6 +326,14 @@ local function addMaterialInfo(lines, ent, options)
     end
 end
 
+local function compactReportLines(lines)
+    for i = #lines, 1, -1 do
+        if lines[i] == "" then
+            table.remove(lines, i)
+        end
+    end
+end
+
 local function buildReport(trace, options)
     local ent = trace.Entity
     local lines = {}
@@ -364,6 +374,10 @@ local function buildReport(trace, options)
         addLine(lines, "[BetterLights] No lookup fields selected.")
     end
 
+    if options.compact_lines then
+        compactReportLines(lines)
+    end
+
     return table.concat(lines, "\n")
 end
 
@@ -374,12 +388,28 @@ local function buildLookupOptions(readNumber)
         options[name] = readNumber(name, CLIENT_CONVAR_DEFAULTS[name]) ~= 0
     end
 
+    options.compact_lines = readNumber("compact_lines", CLIENT_CONVAR_DEFAULTS.compact_lines) ~= 0
+
     return options
 end
 
 local function getValidatedOutput(output)
     if VALID_OUTPUTS[output] then return output end
     return CLIENT_CONVAR_DEFAULTS.output
+end
+
+local function buildEntityTrace(ent)
+    local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
+
+    return {
+        Entity = ent,
+        Hit = true,
+        HitWorld = false,
+        HitPos = pos,
+        HitNormal = Vector(0, 0, 1),
+        HitGroup = 0,
+        PhysicsBone = 0
+    }
 end
 
 local function sendReport(owner, report, output)
@@ -404,20 +434,6 @@ if SERVER then
         return ply:GetInfoNum(TOOL_CVAR_PREFIX .. name, tonumber(defaultValue) or 0)
     end
 
-    local function buildHeldWeaponTrace(weapon)
-        local pos = weapon.WorldSpaceCenter and weapon:WorldSpaceCenter() or weapon:GetPos()
-
-        return {
-            Entity = weapon,
-            Hit = true,
-            HitWorld = false,
-            HitPos = pos,
-            HitNormal = Vector(0, 0, 1),
-            HitGroup = 0,
-            PhysicsBone = 0
-        }
-    end
-
     net.Receive(HELD_WEAPON_MESSAGE, function(_, ply)
         if not isDeveloperMode() then return end
         if not IsValid(ply) then return end
@@ -433,15 +449,12 @@ if SERVER then
             return getPlayerToolNumber(ply, name, defaultValue)
         end)
 
-        sendReport(ply, buildReport(buildHeldWeaponTrace(weapon), options), output)
+        sendReport(ply, buildReport(buildEntityTrace(weapon), options), output)
     end)
 end
 
 if CLIENT then
-    net.Receive(RESULT_MESSAGE, function()
-        local report = net.ReadString()
-        local output = net.ReadString()
-
+    deliverReport = function(report, output)
         if output == "clipboard" or output == "both" then
             if SetClipboardText then
                 SetClipboardText(report)
@@ -454,6 +467,10 @@ if CLIENT then
         if output == "console" or output == "both" then
             MsgN(report)
         end
+    end
+
+    net.Receive(RESULT_MESSAGE, function()
+        deliverReport(net.ReadString(), net.ReadString())
     end)
 end
 
@@ -492,6 +509,33 @@ if CLIENT then
         if not cvar then return defaultValue end
 
         return cvar:GetString()
+    end
+
+    local function getToolConVarNumber(name, defaultValue)
+        local cvar = GetConVar(TOOL_CVAR_PREFIX .. name)
+        if not cvar then return tonumber(defaultValue) or 0 end
+
+        return cvar:GetInt()
+    end
+
+    local function buildClientLookupOptions()
+        return buildLookupOptions(function(name, defaultValue)
+            return getToolConVarNumber(name, defaultValue)
+        end)
+    end
+
+    local function inspectViewModel()
+        local ply = LocalPlayer()
+        if not IsValid(ply) then return end
+
+        local vm = ply:GetViewModel()
+        if not IsValid(vm) then
+            deliverReport("[BetterLights] No viewmodel to inspect.", "console")
+            return
+        end
+
+        local output = getValidatedOutput(getToolConVarValue("output", CLIENT_CONVAR_DEFAULTS.output))
+        deliverReport(buildReport(buildEntityTrace(vm), buildClientLookupOptions()), output)
     end
 
     local function addChoice(combo, labelKey, value, currentValue)
@@ -545,6 +589,13 @@ if CLIENT then
         end
         actions:AddItem(inspectHeldWeapon)
 
+        local inspectViewModelButton = vgui.Create("DButton")
+        inspectViewModelButton:SetTall(28)
+        inspectViewModelButton:SetText(language.GetPhrase("betterlights.tool.model_lookup.inspect_viewmodel"))
+        inspectViewModelButton:SetTooltip(language.GetPhrase("betterlights.tool.model_lookup.inspect_viewmodel.help"))
+        inspectViewModelButton.DoClick = inspectViewModel
+        actions:AddItem(inspectViewModelButton)
+
         local presets = vgui.Create("DForm")
         presets:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.presets"))
         presets:SetExpanded(true)
@@ -572,6 +623,7 @@ if CLIENT then
 
         addOptionCheckbox(formatting, "betterlights.tool.model_lookup.field.labels", "labels")
         addOptionCheckbox(formatting, "betterlights.tool.model_lookup.field.header", "header")
+        addOptionCheckbox(formatting, "betterlights.tool.model_lookup.field.compact_lines", "compact_lines")
 
         local fields = vgui.Create("DForm")
         fields:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.fields"))

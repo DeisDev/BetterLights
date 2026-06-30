@@ -9,22 +9,8 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_rpg_hold_color_g", "60", true, false, "RPG (Held) color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_rpg_hold_color_b", "60", true, false, "RPG (Held) color - blue (0-255)")
 
-    local ATTACH_NAMES = { "muzzle", "laser", "muzzle_flash" }
+    local SURFACE_LIGHT = { key = "rpg_hold", distance = 8192, missDistance = 1024, hitOffset = 6 }
 
-    local function getLeftHandPos(ply, wep)
-        if not IsValid(ply) then return nil end
-
-        if ply == LocalPlayer() then
-            local vm = ply:GetViewModel()
-            local pos = BL.GetBonePosition(vm, "ValveBiped.Bip01_L_Hand")
-            if pos then return pos end
-        end
-
-        local pos = BL.GetBonePosition(ply, "ValveBiped.Bip01_L_Hand")
-        if pos then return pos end
-
-        return BL.GetHeldWeaponModelLightPos(ply, wep, ATTACH_NAMES, 16)
-    end
     BL.AddThink("BetterLights_RPG_Held_DLight", function()
         if not cvar_enable:GetBool() then return end
 
@@ -39,14 +25,8 @@ if CLIENT then
 
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
-        local pos_world = BL.GetHeldWeaponTraceLightPos(ply, wep, "rpg_hold", 8192, 1024)
         local idx = ply:EntIndex() + 1520
 
-        BL.CreateDLight(idx, pos_world, r, g, b, brightness, decay, size, false)
-
-        local pos_hand = getLeftHandPos(ply, wep)
-        if pos_hand then
-            BL.CreateDLight(idx + 1, pos_hand, r, g, b, brightness, decay, size, false)
-        end
+        BL.CreateHeldWeaponSurfaceLight(ply, wep, SURFACE_LIGHT, idx, r, g, b, brightness, decay, size, false)
     end)
 end

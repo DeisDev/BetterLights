@@ -30,6 +30,7 @@ if CLIENT then
                 decayLabel = false
             })
             addColorMixerControl(ar2, "control.color", "betterlights_bullet_impact_ar2_color_r", "betterlights_bullet_impact_ar2_color_g", "betterlights_bullet_impact_ar2_color_b")
+
             addResetButton(panel, {
                 betterlights_bullet_impact_enable = 1,
                 betterlights_bullet_impact_size = 60,

@@ -14,7 +14,12 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_physgun_color_g", "130", true, false, "Physgun override color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_physgun_color_b", "255", true, false, "Physgun override color - blue (0-255)")
 
-    local ATTACH_NAMES = { "muzzle", "fork", "muzzle_flash", "laser" }
+    local PLACEMENT = {
+        view = { "muzzle" },
+        world = { "muzzle" }
+    }
+    local SURFACE_LIGHT = { key = "physgun", distance = 48, missDistance = 24, hitOffset = 6, dietime = 0.16 }
+
     BL.AddThink("BetterLights_Physgun_DLight", function()
         if not cvar_enable:GetBool() then return end
 
@@ -44,13 +49,13 @@ if CLIENT then
             end
         end
 
-        local pos_world, pos_model = BL.GetHeldWeaponLightPositions(ply, wep, ATTACH_NAMES, "physgun", 48, 24, 16)
         local idx = ply:EntIndex() + 1440
 
-        BL.CreateDLight(idx, pos_world, r, g, b, brightness, decay, size, false, { dietime = 0.16 })
+        local created = BL.CreateHeldWeaponSurfaceLight(ply, wep, SURFACE_LIGHT, idx, r, g, b, brightness, decay, size, false)
+        if not created then return end
 
         if doElight then
-            BL.CreateDLight(idx, pos_model, r, g, b, brightness, decay, size * elMult, true, { dietime = 0.16 })
+            BL.CreateHeldWeaponAttachmentLight(ply, wep, PLACEMENT, idx, r, g, b, brightness, decay, size * elMult, true, { dietime = 0.16 })
         end
     end)
 end

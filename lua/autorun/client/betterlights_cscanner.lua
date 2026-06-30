@@ -26,6 +26,21 @@ if CLIENT then
     local cvar_sl_b = BL.CreateClientConVar("betterlights_cscanner_searchlight_color_b", "255", true, false, "Scanner searchlight color - blue (0-255)")
 
     local scannerProjectors = {}
+    local SCANNER_ATTACHMENTS = {
+        npc_cscanner = {
+            glow = { "eyes" },
+            searchlight = { "light" }
+        },
+        npc_clawscanner = {
+            glow = { "eye" },
+            searchlight = { "light" }
+        }
+    }
+
+    local function getScannerAttachments(ent)
+        if not (IsValid(ent) and ent.GetClass) then return nil end
+        return SCANNER_ATTACHMENTS[ent:GetClass()]
+    end
 
     BL.TrackClass("npc_cscanner")
     BL.TrackClass("npc_clawscanner")
@@ -51,34 +66,32 @@ if CLIENT then
 
         local function processScanner(ent)
             if not IsValid(ent) then return end
-            seen[ent] = true
-            local idx = ent:EntIndex()
-            local pos = BL.GetEntityCenter(ent)
+            local attachments = getScannerAttachments(ent)
+            if not attachments then return end
 
-            if doGlow then
-                BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
+            local idx = ent:EntIndex()
+            local glow = BL.GetAttachmentTransform(ent, attachments.glow)
+            local glowPos = glow and glow.Pos
+
+            if doGlow and glowPos then
+                BL.CreateDLight(idx, glowPos, r, g, b, brightness, decay, size, false)
 
                 if doModelsElight then
-                    BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * el_mult, true)
+                    BL.CreateDLight(idx, glowPos, r, g, b, brightness, decay, size * el_mult, true)
                 end
             end
 
             if sl_enable then
+                local light = BL.GetAttachmentTransform(ent, attachments.searchlight)
+                if not (light and light.Pos and light.Ang) then return end
+
                 local lamp = BL.GetOrCreateProjectedTexture(scannerProjectors, ent, "effects/flashlight001")
                 if not lamp then return end
 
-                local origin = pos
-                if ent.GetUp then
-                    origin = origin - ent:GetUp() * 8
-                else
-                    origin = origin + Vector(0, 0, -8)
-                end
-                local forward = ent.GetForward and ent:GetForward() or Vector(1, 0, 0)
-                local target = origin + forward * 100 + Vector(0, 0, -80)
-
+                seen[ent] = true
                 BL.UpdateProjectedTexture(lamp, {
-                    pos = origin,
-                    ang = (target - origin):Angle(),
+                    pos = light.Pos,
+                    ang = light.Ang,
                     nearZ = sl_near,
                     farZ = sl_far,
                     fov = sl_fov,

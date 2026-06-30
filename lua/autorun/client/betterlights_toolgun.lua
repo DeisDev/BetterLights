@@ -13,7 +13,12 @@ if CLIENT then
     local cvar_col_g = BL.CreateClientConVar("betterlights_toolgun_color_g", "255", true, false, "Tool Gun color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_toolgun_color_b", "255", true, false, "Tool Gun color - blue (0-255)")
 
-    local ATTACH_NAMES = { "muzzle", "spark", "laser", "muzzle_flash", "tip" }
+    local PLACEMENT = {
+        view = { "muzzle" },
+        world = { "muzzle" }
+    }
+    local SURFACE_LIGHT = { key = "toolgun", distance = 48, missDistance = 24, hitOffset = 6, dietime = 0.16 }
+
     BL.AddThink("BetterLights_ToolGun_DLight", function()
         if not cvar_enable:GetBool() then return end
 
@@ -31,13 +36,13 @@ if CLIENT then
 
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
-        local pos_world, pos_model = BL.GetHeldWeaponLightPositions(ply, wep, ATTACH_NAMES, "toolgun", 48, 24, 16)
         local idx = ply:EntIndex() + 1480
 
-        BL.CreateDLight(idx, pos_world, r, g, b, brightness, decay, size, false, { dietime = 0.16 })
+        local created = BL.CreateHeldWeaponSurfaceLight(ply, wep, SURFACE_LIGHT, idx, r, g, b, brightness, decay, size, false)
+        if not created then return end
 
         if doElight then
-            BL.CreateDLight(idx, pos_model, r, g, b, brightness, decay, size * elMult, true, { dietime = 0.16 })
+            BL.CreateHeldWeaponAttachmentLight(ply, wep, PLACEMENT, idx, r, g, b, brightness, decay, size * elMult, true, { dietime = 0.16 })
         end
     end)
 end

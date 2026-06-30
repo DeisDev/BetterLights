@@ -9,6 +9,9 @@ if CLIENT then
     local cvar_col_r = BL.CreateClientConVar("betterlights_crossbow_hold_color_r", "255", true, false, "Crossbow (held) color - red (0-255)")
     local cvar_col_g = BL.CreateClientConVar("betterlights_crossbow_hold_color_g", "140", true, false, "Crossbow (held) color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_crossbow_hold_color_b", "40", true, false, "Crossbow (held) color - blue (0-255)")
+
+    local SURFACE_LIGHT = { key = "xbow_hold", distance = 48, missDistance = 24, hitOffset = 6 }
+
     BL.AddThink("BetterLights_CrossbowHold_DLight", function()
         if not cvar_enable:GetBool() then return end
 
@@ -49,7 +52,6 @@ if CLIENT then
             if not loaded then return end
         end
 
-        local pos_world = BL.GetHeldWeaponTraceLightPos(ply, wep, "xbow_hold", 48, 24)
-        BL.CreateDLight(ply:EntIndex() + 1337, pos_world, r, g, b, brightness, decay, size, false)
+        BL.CreateHeldWeaponSurfaceLight(ply, wep, SURFACE_LIGHT, ply:EntIndex() + 1337, r, g, b, brightness, decay, size, false)
     end)
 end

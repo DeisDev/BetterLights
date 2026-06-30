@@ -8,6 +8,22 @@ if CLIENT then
     BL._removeHandlers = BL._removeHandlers or {}
     BL._attachCache = BL._attachCache or {}
 
+    local function applyPositionOptions(ent, pos, options)
+        if not pos then return nil end
+        if not options then return pos end
+
+        local localOffset = options.localOffset or options.offset
+        if localOffset and ent.LocalToWorld and ent.GetPos then
+            pos = pos + ent:LocalToWorld(localOffset) - ent:GetPos()
+        end
+
+        if options.worldOffset then
+            pos = pos + options.worldOffset
+        end
+
+        return pos
+    end
+
     function BL.IsEntityClass(ent, classes)
         if not IsValid(ent) then return false end
         if not ent.GetClass then return false end
@@ -66,15 +82,18 @@ if CLIENT then
         table.insert(BL._removeHandlers[classname], fn)
     end
 
-    function BL.GetEntityCenter(ent)
+    function BL.GetEntityCenter(ent, options)
         if not IsValid(ent) then return nil end
+        local pos
         if ent.LocalToWorld and ent.OBBCenter then
-            return ent:LocalToWorld(ent:OBBCenter())
+            pos = ent:LocalToWorld(ent:OBBCenter())
         elseif ent.WorldSpaceCenter then
-            return ent:WorldSpaceCenter()
+            pos = ent:WorldSpaceCenter()
         else
-            return ent:GetPos()
+            pos = ent:GetPos()
         end
+
+        return applyPositionOptions(ent, pos, options)
     end
 
     function BL.LookupAttachmentCached(ent, names)
@@ -102,12 +121,9 @@ if CLIENT then
         return nil
     end
 
-    function BL.GetAttachmentPos(ent, names)
+    function BL.GetAttachmentTransform(ent, names, options)
         local id = BL.LookupAttachmentCached(ent, names)
-        if id and ent.GetAttachment then
-            local att = ent:GetAttachment(id)
-            if att and att.Pos then return att.Pos end
-        end
+        if id then return BL.GetAttachmentTransformById(ent, id, options) end
         return nil
     end
 
@@ -148,10 +164,28 @@ if CLIENT then
         })
     end
 
-    function BL.GetAttachmentPosById(ent, attachId)
-        if not IsValid(ent) or not attachId or attachId == 0 then return nil end
+    function BL.GetAttachmentTransformById(ent, attachId, options)
+        if not IsValid(ent) or not attachId or attachId <= 0 then return nil end
+        if not ent.GetAttachment then return nil end
 
         local data = ent:GetAttachment(attachId)
+        if not (data and data.Pos) then return nil end
+        if not options then return data end
+
+        return {
+            Pos = applyPositionOptions(ent, data.Pos, options),
+            Ang = data.Ang,
+            Bone = data.Bone
+        }
+    end
+
+    function BL.GetAttachmentPos(ent, names, options)
+        local data = BL.GetAttachmentTransform(ent, names, options)
+        return (data and data.Pos) or nil
+    end
+
+    function BL.GetAttachmentPosById(ent, attachId, options)
+        local data = BL.GetAttachmentTransformById(ent, attachId, options)
         return (data and data.Pos) or nil
     end
 
@@ -182,17 +216,22 @@ if CLIENT then
         return nil
     end
 
-    function BL.CreateLightFromAttachment(ent, attachNames, r, g, b, brightness, decay, size, isElight)
+    function BL.CreateLightFromAttachment(ent, attachNames, r, g, b, brightness, decay, size, isElight, options)
         if not IsValid(ent) then return false end
 
-        local attachId = BL.LookupAttachmentCached(ent, attachNames)
-        if not attachId or attachId == 0 then return false end
-
-        local pos = BL.GetAttachmentPosById(ent, attachId)
+        local pos = BL.GetAttachmentPos(ent, attachNames, options)
         if not pos then return false end
 
         BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, isElight)
         return true
+    end
+
+    function BL.CreateLightAtEntityCenter(ent, index, r, g, b, brightness, decay, size, isElight, options)
+        local pos = BL.GetEntityCenter(ent, options)
+        if not pos then return false end
+
+        BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight, options)
+        return true, pos
     end
 
     hook.Add("OnEntityCreated", "BetterLights_CoreTrackCreate", function(ent)
