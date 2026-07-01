@@ -50,7 +50,11 @@ if CLIENT then
         registerPage("Gunfire", "BL_MuzzleFlash", "menu.muzzle_flash", function(panel)
             setupPage(panel, "page.muzzle_flash.title", "page.muzzle_flash.desc")
             local generic = addSection(panel, "section.generic_muzzle_flash", nil, true)
+            generic:CheckBox(MENU.Phrase("control.enable"), "betterlights_muzzle_enable")
+            generic:CheckBox(MENU.Phrase("control.show_other_muzzle_flashes"), "betterlights_muzzle_show_others")
+            generic:NumSlider(MENU.Phrase("control.duration"), "betterlights_muzzle_time", 0, 1, 2)
             addLightControls(generic, "betterlights_muzzle", {
+                enableLabel = false,
                 radiusMax = 300,
                 brightnessMax = 2,
                 decayLabel = false
@@ -58,17 +62,32 @@ if CLIENT then
             addColorMixerControl(generic, "control.color", "betterlights_muzzle_color_r", "betterlights_muzzle_color_g", "betterlights_muzzle_color_b")
 
             local ar2 = addSection(panel, "section.ar2_muzzle_flash", "section.ar2_muzzle_flash.desc", true)
+            ar2:CheckBox(MENU.Phrase("control.enable_ar2_tint"), "betterlights_muzzle_ar2_enable")
             addLightControls(ar2, "betterlights_muzzle_ar2", {
-                enableLabel = "control.enable_ar2_tint",
+                enableLabel = false,
                 radiusMax = 300,
                 brightnessMax = 2,
                 decayLabel = false
             })
             addColorMixerControl(ar2, "control.color", "betterlights_muzzle_ar2_color_r", "betterlights_muzzle_ar2_color_g", "betterlights_muzzle_ar2_color_b")
+
+            if MENU.IsDeveloperMode() then
+                local advanced = addSection(panel, "section.muzzle_advanced", "section.muzzle_advanced.desc", false)
+                advanced:CheckBox(MENU.Phrase("control.show_advanced_editor"), "betterlights_muzzle_advanced")
+                advanced:CheckBox(MENU.Phrase("control.debug_logging"), "betterlights_muzzle_debug")
+                if GetConVar("betterlights_muzzle_advanced") and GetConVar("betterlights_muzzle_advanced"):GetBool() and BetterLights.MuzzleFlash.BuildAdvancedEditor then
+                    BetterLights.MuzzleFlash.BuildAdvancedEditor(advanced)
+                end
+            end
+
             addResetButton(panel, {
                 betterlights_muzzle_enable = 1,
                 betterlights_muzzle_size = 250,
                 betterlights_muzzle_brightness = 2.0,
+                betterlights_muzzle_time = 0.08,
+                betterlights_muzzle_show_others = 1,
+                betterlights_muzzle_debug = 0,
+                betterlights_muzzle_advanced = 0,
                 betterlights_muzzle_ar2_enable = 1,
                 betterlights_muzzle_ar2_size = 250,
                 betterlights_muzzle_ar2_brightness = 2.0,

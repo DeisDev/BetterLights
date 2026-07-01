@@ -11,6 +11,7 @@ if CLIENT then
     BL._suppressionRecords = BL._suppressionRecords or {}
     BL._activeFlashes = BL._activeFlashes or {}
     BL._activeDLightRecords = BL._activeDLightRecords or {}
+    BL._flashKeyIds = BL._flashKeyIds or {}
     BL._flashIdCounter = BL._flashIdCounter or 0
     BL._idCounter = BL._idCounter or 0
 
@@ -111,11 +112,26 @@ if CLIENT then
         return BL._activeDLightRecords
     end
 
-    function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId)
+    local function getFlashId(baseId, key)
+        if key then
+            local id = BL._flashKeyIds[key]
+            if not id then
+                BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
+                id = (baseId or 60000) + BL._flashIdCounter
+                BL._flashKeyIds[key] = id
+            end
+
+            return id
+        end
+
+        BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
+        return (baseId or 60000) + BL._flashIdCounter
+    end
+
+    function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId, key)
         if not BL.IsEnabled() then return nil end
 
         local now = CurTime()
-        BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
         local flash = BL.GetFlashTable()
         flash.pos = pos
         flash.r = r
@@ -125,7 +141,7 @@ if CLIENT then
         flash.baseBrightness = brightness
         flash.start = now
         flash.die = now + duration
-        flash.id = (baseId or 60000) + BL._flashIdCounter
+        flash.id = getFlashId(baseId, key)
         table.insert(BL._activeFlashes, flash)
         return flash
     end

@@ -1,5 +1,6 @@
 if SERVER then
     local BL = BetterLights
+    local MF = BL.MuzzleFlash
 
     util.AddNetworkString(BL.NET_EVENT_MESSAGE)
 
@@ -9,136 +10,357 @@ if SERVER then
     local STUNSTICK_TRACE_DISTANCE = 96
     local STUNSTICK_TRACE_MINS = Vector(-8, -8, -8)
     local STUNSTICK_TRACE_MAXS = Vector(8, 8, 8)
-    local MUZZLE_DEFINITIONS_BY_CLASS = {}
+    local SPECIAL_IMPACT_MESSAGES = {
+        [STRIDER_CLASS] = BL.NET_STRIDER_BULLET_IMPACT,
+        [HUNTER_CHOPPER_CLASS] = BL.NET_HUNTER_CHOPPER_BULLET_IMPACT
+    }
+    local WRAPPER_VERSION = 2
+    local recentMuzzleShots = {}
     local recentStunstickImpacts = {}
-
-    local function clampColorChannel(value)
-        value = tonumber(value)
-        if not value then return nil end
-
-        return math.Clamp(math.floor(value + 0.5), 0, 255)
-    end
-
-    local function readColorOption(options)
-        if not options then return nil end
-
-        local color = options.color
-        local r = options.r
-        local g = options.g
-        local b = options.b
-
-        if type(color) == "table" then
-            r = color.r or color[1] or r
-            g = color.g or color[2] or g
-            b = color.b or color[3] or b
-        end
-
-        r = clampColorChannel(r)
-        g = clampColorChannel(g)
-        b = clampColorChannel(b)
-        if not (r and g and b) then return nil end
-
-        return { r = r, g = g, b = b }
-    end
-
-    function BL.RegisterMuzzleFlashAttachment(className, attachmentNames, options)
-        if type(className) ~= "string" or className == "" then return end
-
-        if type(attachmentNames) == "string" then
-            attachmentNames = { attachmentNames }
-        end
-
-        if type(attachmentNames) ~= "table" or #attachmentNames == 0 then return end
-
-        MUZZLE_DEFINITIONS_BY_CLASS[className] = {
-            attachments = attachmentNames,
-            ar2 = options and (options.ar2 == true or options.style == "ar2") or false,
-            color = readColorOption(options),
-            muzzleMessage = options and options.muzzleMessage or nil,
-            impactMessage = options and options.impactMessage or nil
-        }
-    end
-
-    BL.RegisterMuzzleFlashAttachment(STRIDER_CLASS, "MiniGun", {
-        muzzleMessage = BL.NET_STRIDER_MUZZLE_FLASH,
-        impactMessage = BL.NET_STRIDER_BULLET_IMPACT
-    })
-    BL.RegisterMuzzleFlashAttachment(HUNTER_CHOPPER_CLASS, "Muzzle", {
-        muzzleMessage = BL.NET_HUNTER_CHOPPER_MUZZLE_FLASH,
-        impactMessage = BL.NET_HUNTER_CHOPPER_BULLET_IMPACT
-    })
-    BL.RegisterMuzzleFlashAttachment("weapon_ar2", "muzzle", { ar2 = true })
 
     local function isBetterLightsEnabled()
         local cvar = GetConVar("betterlights_enable")
         return not cvar or cvar:GetBool()
     end
 
-    local function isAR2Shot(shooter, bullet)
-        if IsValid(shooter) and shooter.GetClass then
-            local cls = string.lower(shooter:GetClass() or "")
-            if cls == "npc_turret_floor" or cls == "npc_turret_ceiling" then
-                return true
-            end
-            local def = MUZZLE_DEFINITIONS_BY_CLASS[shooter:GetClass()]
-            if def and def.ar2 then return true end
-        end
-        if bullet and type(bullet.TracerName) == "string" and bullet.TracerName ~= "" then
-            local tn = string.lower(bullet.TracerName)
-            if string.find(tn, "ar2", 1, true) then return true end
-        end
-        if IsValid(shooter) then
-            local wep = shooter.GetActiveWeapon and shooter:GetActiveWeapon() or nil
-            if IsValid(wep) then
-                local cls = string.lower(wep:GetClass() or "")
-                local def = MUZZLE_DEFINITIONS_BY_CLASS[wep:GetClass()]
-                if def and def.ar2 then return true end
-                if cls == "weapon_ar2" then return true end
-                local wn = wep.TracerName
-                if type(wn) == "string" and wn ~= "" then
-                    wn = string.lower(wn)
-                    if string.find(wn, "ar2", 1, true) then return true end
-                end
-            end
-        end
-        return false
+    local function getEntityClass(ent)
+        if not (IsValid(ent) and ent.GetClass) then return "" end
+        return string.lower(ent:GetClass() or "")
     end
 
-    local function getAttachmentPos(ent, attachmentNames)
-        if not (IsValid(ent) and ent.LookupAttachment and ent.GetAttachment) then return nil end
-        if not attachmentNames then return nil end
+    local function getWeaponBase(ent)
+        if not IsValid(ent) then return "" end
 
-        for i = 1, #attachmentNames do
-            local attachmentId = ent:LookupAttachment(attachmentNames[i])
-            if attachmentId and attachmentId > 0 then
-                local attachment = ent:GetAttachment(attachmentId)
-                if attachment and attachment.Pos then return attachment.Pos end
-            end
+        local base = ent.Base
+        if base == nil and ent.GetTable then
+            local tab = ent:GetTable()
+            base = tab and tab.Base
+        end
+
+        return string.lower(tostring(base or ""))
+    end
+
+    local function isWeaponEntity(ent)
+        return IsValid(ent) and ent.IsWeapon and ent:IsWeapon()
+    end
+
+    local function resolveWeapon(shooter)
+        if not IsValid(shooter) then return nil end
+        if isWeaponEntity(shooter) then return shooter end
+
+        if shooter.GetActiveWeapon then
+            local weapon = shooter:GetActiveWeapon()
+            if IsValid(weapon) then return weapon end
         end
 
         return nil
     end
 
-    local function getMuzzleDefinition(ent)
-        if not (IsValid(ent) and ent.GetClass) then return nil end
-        return MUZZLE_DEFINITIONS_BY_CLASS[ent:GetClass()]
+    local function resolveShooterAndWeapon(firingEntity)
+        local weapon = resolveWeapon(firingEntity)
+        local shooter = firingEntity
+
+        if isWeaponEntity(firingEntity) and firingEntity.GetOwner then
+            local owner = firingEntity:GetOwner()
+            if IsValid(owner) then
+                shooter = owner
+            end
+        end
+
+        return shooter, weapon
+    end
+
+    local function resolveMuzzleFlashShooterAndWeapon(ent)
+        if IsValid(ent) and ent.GetActiveWeapon then
+            local weapon = ent:GetActiveWeapon()
+            if IsValid(weapon) then
+                return ent, weapon
+            end
+        end
+
+        return resolveShooterAndWeapon(ent)
     end
 
     local function isUsableVector(pos)
         return pos and pos ~= vector_origin
     end
 
-    local function getMuzzleSendOrigin(ent, bullet)
+    local function getSendOrigin(shooter, weapon, bullet)
         if bullet and isUsableVector(bullet.Src) then return bullet.Src end
-        if IsValid(ent) and ent.GetShootPos then return ent:GetShootPos() end
-        if IsValid(ent) and ent.GetPos then return ent:GetPos() end
+        if IsValid(shooter) and shooter.GetShootPos then return shooter:GetShootPos() end
+        if IsValid(weapon) and weapon.GetPos then return weapon:GetPos() end
+        if IsValid(shooter) and shooter.GetPos then return shooter:GetPos() end
         return nil
     end
 
-    local function getSpecialImpactMessage(ent)
-        local def = getMuzzleDefinition(ent)
-        return def and def.impactMessage or nil
+    local function getFrameKey()
+        if isfunction(FrameNumber) then return FrameNumber() end
+        return math.floor(CurTime() * 100)
     end
+
+    local function shouldSendMuzzleShot(shooter, weapon, profileId, adapterId)
+        local frame = getFrameKey()
+        local shooterIndex = IsValid(shooter) and shooter:EntIndex() or 0
+        local weaponIndex = IsValid(weapon) and weapon:EntIndex() or 0
+        local key = tostring(shooterIndex) .. ":" .. tostring(weaponIndex) .. ":" .. tostring(profileId or "") .. ":" .. tostring(adapterId or "")
+
+        if recentMuzzleShots[key] == frame then return false end
+
+        recentMuzzleShots[key] = frame
+        return true
+    end
+
+    local function getSpecialImpactMessage(ent)
+        local className = getEntityClass(ent)
+        return SPECIAL_IMPACT_MESSAGES[className]
+    end
+
+    local function isAR2Shot(shooter, bullet)
+        local weapon = resolveWeapon(shooter)
+        local rule = MF.MatchWeaponRule(shooter, weapon, bullet)
+        if rule and rule.profile == "ar2" then return true end
+
+        local shooterClass = getEntityClass(shooter)
+        if shooterClass == "npc_turret_floor" or shooterClass == "npc_turret_ceiling" then return true end
+
+        if bullet and type(bullet.TracerName) == "string" then
+            return string.find(string.lower(bullet.TracerName), "ar2", 1, true) ~= nil
+        end
+
+        return false
+    end
+
+    local function writeStringList(values)
+        values = values or {}
+        local count = math.min(#values, 15)
+
+        net.WriteUInt(count, 4)
+        for i = 1, count do
+            net.WriteString(tostring(values[i]))
+        end
+    end
+
+    local function sendMuzzleFlash(shooter, weapon, profileId, sourceKind, origin, adapterId, attachments, flags)
+        if not origin then return end
+        if not shouldSendMuzzleShot(shooter, weapon, profileId, adapterId) then return end
+
+        local filter = RecipientFilter()
+        filter:AddPVS(origin)
+        if IsValid(shooter) and shooter:IsPlayer() then
+            filter:AddPlayer(shooter)
+        end
+
+        net.Start(BL.NET_EVENT_MESSAGE)
+            net.WriteUInt(BL.NET_MUZZLE_FLASH, 4)
+            net.WriteUInt(BL.MUZZLE_FLASH_PAYLOAD_VERSION, 4)
+            net.WriteUInt(sourceKind or BL.MUZZLE_SOURCE_FIREBULLETS, 3)
+            net.WriteEntity(IsValid(shooter) and shooter or NULL)
+            net.WriteEntity(IsValid(weapon) and weapon or NULL)
+            net.WriteString(profileId or "default")
+            net.WriteUInt(flags or 0, 8)
+            net.WriteString(adapterId or "")
+            writeStringList(attachments)
+        net.Send(filter)
+    end
+
+    local function isArc9Weapon(weapon)
+        if not IsValid(weapon) then return false end
+        if weapon.ARC9 == true then return true end
+
+        local base = getWeaponBase(weapon)
+        return base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil
+    end
+
+    MF.RegisterAdapter("arc9", {
+        matches = isArc9Weapon
+    })
+
+    MF.ClearRulesBySource("builtin")
+    MF.RegisterProfile("default", { source = "builtin" })
+    MF.RegisterProfile("ar2", { source = "builtin" })
+    MF.RegisterProfile("strider", { source = "builtin" })
+    MF.RegisterProfile("hunter_chopper", { source = "builtin" })
+    MF.RegisterWeaponRule({
+        id = "builtin_strider",
+        class = STRIDER_CLASS,
+        profile = "strider",
+        priority = 1000,
+        attachments = { "MiniGun" },
+        source = "builtin"
+    })
+    MF.RegisterWeaponRule({
+        id = "builtin_hunter_chopper",
+        class = HUNTER_CHOPPER_CLASS,
+        profile = "hunter_chopper",
+        priority = 950,
+        attachments = { "Muzzle" },
+        source = "builtin"
+    })
+    MF.RegisterWeaponRule({
+        id = "builtin_ar2",
+        class = "weapon_ar2",
+        profile = "ar2",
+        priority = 500,
+        attachments = { "muzzle" },
+        source = "builtin"
+    })
+    MF.RegisterWeaponRule({
+        id = "builtin_ar2_tracer",
+        tracer = "ar2",
+        profile = "ar2",
+        priority = 250,
+        source = "builtin"
+    })
+    MF.RegisterWeaponRule({
+        id = "builtin_default",
+        profile = "default",
+        priority = -1000,
+        source = "builtin"
+    })
+
+    local function handleMuzzleFireBullets(ent, bullet)
+        if not isBetterLightsEnabled() then return end
+        if not IsValid(ent) then return end
+        if not bullet then return end
+
+        local shooter, weapon = resolveShooterAndWeapon(ent)
+        local rule = MF.MatchWeaponRule(shooter, weapon, bullet)
+        if not rule then return end
+
+        local origin = getSendOrigin(shooter, weapon, bullet)
+        if not origin then return end
+
+        sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, nil, rule.attachments)
+    end
+
+    hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", handleMuzzleFireBullets)
+    hook.Add("PostEntityFireBullets", "BetterLights_MuzzleFlash_Server_Post", handleMuzzleFireBullets)
+
+    local function handleMuzzleFlashCall(ent)
+        if not isBetterLightsEnabled() then return end
+        if not IsValid(ent) then return end
+
+        local shooter, weapon = resolveMuzzleFlashShooterAndWeapon(ent)
+        local rule = MF.MatchWeaponRule(shooter, weapon, nil)
+        if not rule then return end
+
+        local origin = getSendOrigin(shooter, weapon)
+        if not origin then return end
+
+        sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, nil, rule.attachments)
+    end
+
+    local function wrapEntityFireBullets()
+        local meta = FindMetaTable("Entity")
+        if not (meta and isfunction(meta.FireBullets)) then return end
+        if meta.BetterLightsFireBulletsWrapperVersion == WRAPPER_VERSION then return end
+
+        local original = meta.BetterLightsFireBulletsOriginal or meta.FireBullets
+        meta.BetterLightsFireBulletsWrapperVersion = WRAPPER_VERSION
+        meta.BetterLightsFireBulletsOriginal = original
+        meta.FireBullets = function(self, bullet, suppressHostEvents)
+            local ret = original(self, bullet, suppressHostEvents)
+            handleMuzzleFireBullets(self, bullet)
+            return ret
+        end
+    end
+
+    local function wrapEntityMuzzleFlash()
+        local meta = FindMetaTable("Entity")
+        if not (meta and isfunction(meta.MuzzleFlash)) then return end
+        if meta.BetterLightsMuzzleFlashWrapperVersion == WRAPPER_VERSION then return end
+
+        local original = meta.BetterLightsMuzzleFlashOriginal or meta.MuzzleFlash
+        meta.BetterLightsMuzzleFlashWrapperVersion = WRAPPER_VERSION
+        meta.BetterLightsMuzzleFlashOriginal = original
+        meta.MuzzleFlash = function(self, ...)
+            local ret = original(self, ...)
+            handleMuzzleFlashCall(self)
+            return ret
+        end
+    end
+
+    wrapEntityFireBullets()
+    wrapEntityMuzzleFlash()
+
+    local function sendAdapterMuzzleFlash(weapon, adapterId)
+        if not isBetterLightsEnabled() then return end
+        if not IsValid(weapon) then return end
+
+        local shooter = weapon.GetOwner and weapon:GetOwner() or nil
+        if not IsValid(shooter) then shooter = weapon end
+
+        local rule = MF.MatchWeaponRule(shooter, weapon, nil, adapterId)
+        if not rule then return end
+
+        local origin = getSendOrigin(shooter, weapon)
+        if not origin then return end
+
+        sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_ADAPTER, origin, adapterId, rule.attachments)
+    end
+
+    local function wrapArc9DoEffects(weapon)
+        if not isArc9Weapon(weapon) then return end
+        if weapon.BetterLightsArc9DoEffectsWrapped then return end
+        if not isfunction(weapon.DoEffects) then return end
+
+        local original = weapon.DoEffects
+        weapon.BetterLightsArc9DoEffectsWrapped = true
+        weapon.BetterLightsArc9DoEffectsOriginal = original
+        weapon.DoEffects = function(self, ...)
+            local ret = original(self, ...)
+            sendAdapterMuzzleFlash(self, "arc9")
+            return ret
+        end
+    end
+
+    local function scanArc9Weapons()
+        for _, ent in ipairs(ents.GetAll()) do
+            wrapArc9DoEffects(ent)
+        end
+    end
+
+    hook.Add("OnEntityCreated", "BetterLights_MuzzleFlash_ARC9_Server", function(ent)
+        timer.Simple(0, function()
+            if IsValid(ent) then
+                wrapArc9DoEffects(ent)
+            end
+        end)
+    end)
+
+    hook.Add("InitPostEntity", "BetterLights_MuzzleFlash_ARC9_Init_Server", scanArc9Weapons)
+
+    timer.Create("BetterLights_MuzzleFlash_ARC9_Scan_Server", 2, 0, scanArc9Weapons)
+
+    hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
+        if not isBetterLightsEnabled() then return end
+        if not IsValid(ent) then return end
+        if not bullet then return end
+
+        local prev = bullet.Callback
+        bullet.Callback = function(att, tr, dmginfo)
+            local ret
+            if isfunction(prev) then ret = prev(att, tr, dmginfo) end
+            if not isBetterLightsEnabled() then return ret end
+            if not tr or not tr.Hit or not tr.HitPos then return ret end
+
+            local pos = tr.HitPos
+            if tr.HitNormal then
+                pos = pos + tr.HitNormal * 2
+            end
+
+            net.Start(BL.NET_EVENT_MESSAGE)
+                local specialMessage = getSpecialImpactMessage(ent)
+                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
+                net.WriteVector(pos)
+                if not specialMessage then
+                    net.WriteBool(isAR2Shot(att, bullet))
+                end
+            net.SendPVS(pos)
+
+            return ret
+        end
+    end)
 
     local function isStunstickDamage(attacker, inflictor)
         if IsValid(inflictor) and inflictor.GetClass and inflictor:GetClass() == STUNSTICK_CLASS then
@@ -225,64 +447,6 @@ if SERVER then
 
         sendStunstickImpact(pos)
     end
-
-    hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", function(ent, bullet)
-        if not isBetterLightsEnabled() then return end
-        if not IsValid(ent) then return end
-        if not bullet then return end
-
-        local muzzleDef = getMuzzleDefinition(ent)
-        if muzzleDef and muzzleDef.muzzleMessage then
-            local src = getAttachmentPos(ent, muzzleDef.attachments)
-            if not src then return end
-
-            net.Start(BL.NET_EVENT_MESSAGE)
-                net.WriteUInt(muzzleDef.muzzleMessage, 4)
-                net.WriteVector(src)
-            net.SendPVS(src)
-            return
-        end
-
-        local src = getMuzzleSendOrigin(ent, bullet)
-        if not src then return end
-
-        -- TODO: We do not like using the bullet source for player muzzle flashes, but attachment-based placement kept breaking reliability and we do not have a better solution yet.
-        net.Start(BL.NET_EVENT_MESSAGE)
-            net.WriteUInt(BL.NET_MUZZLE_FLASH, 4)
-            net.WriteVector(src)
-            net.WriteBool(isAR2Shot(ent, bullet))
-        net.SendPVS(src)
-    end)
-
-    hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
-        if not isBetterLightsEnabled() then return end
-        if not IsValid(ent) then return end
-        if not bullet then return end
-
-        local prev = bullet.Callback
-        bullet.Callback = function(att, tr, dmginfo)
-            local ret
-            if isfunction(prev) then ret = prev(att, tr, dmginfo) end
-            if not isBetterLightsEnabled() then return ret end
-            if not tr or not tr.Hit or not tr.HitPos then return ret end
-
-            local pos = tr.HitPos
-            if tr.HitNormal then
-                pos = pos + tr.HitNormal * 2
-            end
-
-            net.Start(BL.NET_EVENT_MESSAGE)
-                local specialMessage = getSpecialImpactMessage(ent)
-                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
-                net.WriteVector(pos)
-                if not specialMessage then
-                    net.WriteBool(isAR2Shot(att, bullet))
-                end
-            net.SendPVS(pos)
-
-            return ret
-        end
-    end)
 
     hook.Add("EntityTakeDamage", "BetterLights_StunstickImpact_Server", function(target, dmginfo)
         if not isBetterLightsEnabled() then return end

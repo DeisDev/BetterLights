@@ -1,20 +1,21 @@
 [b]Better Lights[/b]
 
-[i]Dynamic lights for Garry's Mod.[/i]
+[i]Configurable dynamic lights for Garry's Mod.[/i]
 
 [img]https://files.catbox.moe/8uylmi.gif[/img]
 
 [hr][/hr]
 
-[b]What It Does[/b]
+[b]Overview[/b]
 
-Better Lights adds extra lighting to weapons, NPCs, items, fires, explosions, projectiles, and more.
+Better Lights adds client-side lighting to weapons, NPCs, pickups, projectiles, fire, explosions, and other effects. It is built to be modular, so you can keep the parts you like and turn off anything you do not need.
 
 [list]
-[*]Better flashlight with shadows, custom sounds, color, flicker, sway, and texture options
-[*]Muzzle flashes, bullet impacts, and projectile lights
-[*]Glowing NPCs, items, Combine eyes, pickups, and effects
-[*]Fire, explosion, physgun, toolgun, and gravity gun lights
+[*]Shadow flashlight with color, texture, flicker, sway, sound, and placement options
+[*]Muzzle flashes, bullet impacts and projectile lights
+[*]Lights for pickups, dropped weapons, Combine eyes and NPCs.
+[*]Fire, explosion, physgun, toolgun, gravity gun, RPG, grenade, and crossbow lighting
+[*]Separate settings pages for each feature group
 [/list]
 
 [img]https://files.catbox.moe/z9kpr2.gif[/img]
@@ -23,9 +24,9 @@ Better Lights adds extra lighting to weapons, NPCs, items, fires, explosions, pr
 
 [b]Settings[/b]
 
-Open the spawn menu and go to the [b]Better Lights[/b] tab.
+Open the spawn menu and go to the [b]Better Lights[/b] tab. Most features have their own enable toggle, radius, brightness, color, and placement settings.
 
-You can customize pretty much everything about this addon, and you can also enable or disable anything you want. 
+The flashlight can also be set to use custom textures, custom sounds, color tinting, flicker, sway, and shadow settings.
 
 [img]https://files.catbox.moe/okwsv1.gif[/img]
 
@@ -35,9 +36,9 @@ You can customize pretty much everything about this addon, and you can also enab
 
 [list]
 [*]Works with GShader Library addons
-[*]Works with popular weapon packs like ARC9
+[*]Most features are client-side and can be disabled individually
 [*]Flashlight mods may conflict with the Better Lights flashlight
-[*]Other lighting mods may conflict, but features can be disabled separately
+[*]Other lighting mods may conflict if they affect the same effects
 [/list]
 
 If you report a flashlight issue, please test without other flashlight addons first.
