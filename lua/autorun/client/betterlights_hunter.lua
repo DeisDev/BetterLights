@@ -1,5 +1,6 @@
 if CLIENT then
     local BL = BetterLights
+    local MF = BL.MuzzleFlash
 
     local HUNTER_CLASS = "npc_hunter"
     local FLECHETTE_CLASS = "hunter_flechette"
@@ -19,10 +20,10 @@ if CLIENT then
     local cvar_projectile_brightness = BL.CreateClientConVar("betterlights_hunter_flechette_brightness", "1.25", true, false, "Hunter flechette light brightness")
     local cvar_projectile_decay = BL.CreateClientConVar("betterlights_hunter_flechette_decay", "1800", true, false, "Hunter flechette light decay")
 
-    local cvar_muzzle_enable = BL.CreateClientConVar("betterlights_hunter_muzzle_flash_enable", "1", true, false, "Add blue light when Hunters fire flechettes")
-    local cvar_muzzle_size = BL.CreateClientConVar("betterlights_hunter_muzzle_flash_size", "220", true, false, "Hunter muzzle flash radius")
-    local cvar_muzzle_brightness = BL.CreateClientConVar("betterlights_hunter_muzzle_flash_brightness", "2.0", true, false, "Hunter muzzle flash brightness")
-    local cvar_muzzle_time = BL.CreateClientConVar("betterlights_hunter_muzzle_flash_time", "0.08", true, false, "Hunter muzzle flash duration")
+    BL.CreateClientConVar("betterlights_hunter_muzzle_flash_enable", "1", true, false, "Add blue light when Hunters fire flechettes")
+    BL.CreateClientConVar("betterlights_hunter_muzzle_flash_size", "220", true, false, "Hunter muzzle flash radius")
+    BL.CreateClientConVar("betterlights_hunter_muzzle_flash_brightness", "2.0", true, false, "Hunter muzzle flash brightness")
+    BL.CreateClientConVar("betterlights_hunter_muzzle_flash_time", "0.08", true, false, "Hunter muzzle flash duration")
 
     local cvar_blast_enable = BL.CreateClientConVar("betterlights_hunter_flechette_blast_enable", "1", true, false, "Add blue light when Hunter flechettes explode")
     local cvar_blast_size = BL.CreateClientConVar("betterlights_hunter_flechette_blast_size", "260", true, false, "Hunter flechette blast radius")
@@ -35,9 +36,9 @@ if CLIENT then
     local cvar_projectile_r = BL.CreateClientConVar("betterlights_hunter_flechette_color_r", "0", true, false, "Hunter flechette color - red (0-255)")
     local cvar_projectile_g = BL.CreateClientConVar("betterlights_hunter_flechette_color_g", "235", true, false, "Hunter flechette color - green (0-255)")
     local cvar_projectile_b = BL.CreateClientConVar("betterlights_hunter_flechette_color_b", "255", true, false, "Hunter flechette color - blue (0-255)")
-    local cvar_muzzle_r = BL.CreateClientConVar("betterlights_hunter_muzzle_flash_color_r", "70", true, false, "Hunter muzzle flash color - red (0-255)")
-    local cvar_muzzle_g = BL.CreateClientConVar("betterlights_hunter_muzzle_flash_color_g", "220", true, false, "Hunter muzzle flash color - green (0-255)")
-    local cvar_muzzle_b = BL.CreateClientConVar("betterlights_hunter_muzzle_flash_color_b", "255", true, false, "Hunter muzzle flash color - blue (0-255)")
+    BL.CreateClientConVar("betterlights_hunter_muzzle_flash_color_r", "70", true, false, "Hunter muzzle flash color - red (0-255)")
+    BL.CreateClientConVar("betterlights_hunter_muzzle_flash_color_g", "220", true, false, "Hunter muzzle flash color - green (0-255)")
+    BL.CreateClientConVar("betterlights_hunter_muzzle_flash_color_b", "255", true, false, "Hunter muzzle flash color - blue (0-255)")
     local cvar_blast_r = BL.CreateClientConVar("betterlights_hunter_flechette_blast_color_r", "80", true, false, "Hunter flechette blast color - red (0-255)")
     local cvar_blast_g = BL.CreateClientConVar("betterlights_hunter_flechette_blast_color_g", "230", true, false, "Hunter flechette blast color - green (0-255)")
     local cvar_blast_b = BL.CreateClientConVar("betterlights_hunter_flechette_blast_color_b", "255", true, false, "Hunter flechette blast color - blue (0-255)")
@@ -50,6 +51,7 @@ if CLIENT then
 
     local function getHunterMuzzlePos(projectilePos)
         local bestPos
+        local bestHunter
         local bestDist = MUZZLE_SEARCH_DIST_SQR
 
         local function checkHunter(ent)
@@ -62,12 +64,13 @@ if CLIENT then
             if dist < bestDist then
                 bestDist = dist
                 bestPos = muzzlePos
+                bestHunter = ent
             end
         end
 
         BL.ForEach(HUNTER_CLASS, checkHunter)
 
-        return bestPos
+        return bestPos, bestHunter
     end
 
     hook.Add("OnEntityCreated", "BetterLights_HunterFlechette_Track", function(ent)
@@ -81,18 +84,14 @@ if CLIENT then
             flechetteSpawnTimes[ent] = CurTime()
             flechetteLastPositions[ent] = pos
 
-            if not cvar_muzzle_enable:GetBool() then return end
-
-            local dur = math.max(0, cvar_muzzle_time:GetFloat())
-            if dur <= 0 then return end
-
-            local r, g, b = BL.GetColorFromCvars(cvar_muzzle_r, cvar_muzzle_g, cvar_muzzle_b)
-            local size = math.max(0, cvar_muzzle_size:GetFloat())
-            local brightness = math.max(0, cvar_muzzle_brightness:GetFloat())
-            local muzzlePos = getHunterMuzzlePos(pos)
+            local muzzlePos, hunter = getHunterMuzzlePos(pos)
             if not muzzlePos then return end
 
-            BL.CreateFlash(muzzlePos, r, g, b, size, brightness, dur, 59300)
+            MF.EmitProfileFlash("hunter", muzzlePos, {
+                baseId = 59300,
+                key = IsValid(hunter) and ("hunter:" .. tostring(hunter:EntIndex())) or nil,
+                other = true
+            })
         end)
     end)
 
@@ -150,12 +149,20 @@ if CLIENT then
             BL.ForEach(HUNTER_CLASS, updateHunter)
         end
 
-        if not cvar_projectile_enable:GetBool() then return end
+        local doProjectileGlow = cvar_projectile_enable:GetBool()
+        local size
+        local brightness
+        local decay
+        local r
+        local g
+        local b
 
-        local size = math.max(0, cvar_projectile_size:GetFloat())
-        local brightness = math.max(0, cvar_projectile_brightness:GetFloat())
-        local decay = math.max(0, cvar_projectile_decay:GetFloat())
-        local r, g, b = BL.GetColorFromCvars(cvar_projectile_r, cvar_projectile_g, cvar_projectile_b)
+        if doProjectileGlow then
+            size = math.max(0, cvar_projectile_size:GetFloat())
+            brightness = math.max(0, cvar_projectile_brightness:GetFloat())
+            decay = math.max(0, cvar_projectile_decay:GetFloat())
+            r, g, b = BL.GetColorFromCvars(cvar_projectile_r, cvar_projectile_g, cvar_projectile_b)
+        end
 
         local function updateFlechette(ent)
             if not IsValid(ent) then return end
@@ -164,6 +171,7 @@ if CLIENT then
 
             flechetteLastPositions[ent] = pos
             if not flechetteSpawnTimes[ent] then flechetteSpawnTimes[ent] = CurTime() end
+            if not doProjectileGlow then return end
 
             BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
         end

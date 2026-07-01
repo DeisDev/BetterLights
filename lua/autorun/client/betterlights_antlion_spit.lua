@@ -71,13 +71,18 @@ if CLIENT then
     end)
     BL.AddThink("BetterLights_AntlionSpit", function()
         local doGlow = cvar_enable:GetBool()
-
-        local gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        local size
+        local brightness
+        local decay
+        local gr
+        local gg
+        local gb
 
         if doGlow then
-            local size = math.max(0, cvar_size:GetFloat())
-            local brightness = math.max(0, cvar_brightness:GetFloat())
-            local decay = math.max(0, cvar_decay:GetFloat())
+            size = math.max(0, cvar_size:GetFloat())
+            brightness = math.max(0, cvar_brightness:GetFloat())
+            decay = math.max(0, cvar_decay:GetFloat())
+            gr, gg, gb = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
             BL.ForEach(TARGET_CLASS, function(ent)
                 if not IsValid(ent) then return end
@@ -89,11 +94,19 @@ if CLIENT then
                 BL_Spit_LastPos[ent] = pos
                 BL.CreateDLight(ent:EntIndex(), pos, gr, gg, gb, brightness, decay, size, false)
             end)
-            for ent, _ in pairs(BL_Spit_Tracked) do
-                if not IsValid(ent) then
-                    BL_Spit_Tracked[ent] = nil
-                    BL_Spit_LastPos[ent] = nil
-                end
+        else
+            BL.ForEach(TARGET_CLASS, function(ent)
+                if not IsValid(ent) then return end
+                if BL_Spit_Tracked[ent] == nil then BL_Spit_Tracked[ent] = CurTime() end
+
+                BL_Spit_LastPos[ent] = BL.GetEntityCenter(ent) or BL_Spit_LastPos[ent]
+            end)
+        end
+
+        for ent, _ in pairs(BL_Spit_Tracked) do
+            if not IsValid(ent) then
+                BL_Spit_Tracked[ent] = nil
+                BL_Spit_LastPos[ent] = nil
             end
         end
     end)

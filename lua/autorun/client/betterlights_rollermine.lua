@@ -1,6 +1,5 @@
 if CLIENT then
     local BL = BetterLights
-    BL._rollermineUnified = true
     local cvar_enable = BL.CreateClientConVar("betterlights_rollermine_enable", "1", true, false, "Enable dynamic light for Rollermines (npc_rollermine)")
     local cvar_size = BL.CreateClientConVar("betterlights_rollermine_size", "110", true, false, "Dynamic light radius for Rollermines")
     local cvar_brightness = BL.CreateClientConVar("betterlights_rollermine_brightness", "0.6", true, false, "Dynamic light brightness for Rollermines")

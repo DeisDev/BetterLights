@@ -4,10 +4,10 @@ if CLIENT then
     local CHOPPER_CLASS = "npc_helicopter"
     local SPOTLIGHT_ATTACHMENT = { "Spotlight" }
 
-    local cvar_muzzle_enable = BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_enable", "1", true, false, "Enable blue muzzle flash light for Hunter Choppers")
-    local cvar_muzzle_size = BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_size", "260", true, false, "Hunter Chopper muzzle flash radius")
-    local cvar_muzzle_brightness = BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_brightness", "2.2", true, false, "Hunter Chopper muzzle flash brightness")
-    local cvar_muzzle_time = BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_time", "0.08", true, false, "Hunter Chopper muzzle flash duration")
+    BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_enable", "1", true, false, "Enable blue muzzle flash light for Hunter Choppers")
+    BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_size", "260", true, false, "Hunter Chopper muzzle flash radius")
+    BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_brightness", "2.2", true, false, "Hunter Chopper muzzle flash brightness")
+    BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_time", "0.08", true, false, "Hunter Chopper muzzle flash duration")
     local cvar_impact_enable = BL.CreateClientConVar("betterlights_hunter_chopper_bullet_impact_enable", "1", true, false, "Enable blue bullet impact light for Hunter Choppers")
     local cvar_impact_size = BL.CreateClientConVar("betterlights_hunter_chopper_bullet_impact_size", "80", true, false, "Hunter Chopper bullet impact radius")
     local cvar_impact_brightness = BL.CreateClientConVar("betterlights_hunter_chopper_bullet_impact_brightness", "0.4", true, false, "Hunter Chopper bullet impact brightness")
@@ -20,9 +20,9 @@ if CLIENT then
     local cvar_spotlight_brightness = BL.CreateClientConVar("betterlights_hunter_chopper_spotlight_brightness", "0.85", true, false, "Hunter Chopper spotlight brightness")
     local cvar_spotlight_shadows = BL.CreateClientConVar("betterlights_hunter_chopper_spotlight_shadows", "1", true, false, "Enable Hunter Chopper spotlight shadows")
 
-    local cvar_muzzle_r = BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_color_r", "80", true, false, "Hunter Chopper muzzle flash color - red (0-255)")
-    local cvar_muzzle_g = BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_color_g", "210", true, false, "Hunter Chopper muzzle flash color - green (0-255)")
-    local cvar_muzzle_b = BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_color_b", "255", true, false, "Hunter Chopper muzzle flash color - blue (0-255)")
+    BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_color_r", "80", true, false, "Hunter Chopper muzzle flash color - red (0-255)")
+    BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_color_g", "210", true, false, "Hunter Chopper muzzle flash color - green (0-255)")
+    BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_color_b", "255", true, false, "Hunter Chopper muzzle flash color - blue (0-255)")
     local cvar_impact_r = BL.CreateClientConVar("betterlights_hunter_chopper_bullet_impact_color_r", "80", true, false, "Hunter Chopper bullet impact color - red (0-255)")
     local cvar_impact_g = BL.CreateClientConVar("betterlights_hunter_chopper_bullet_impact_color_g", "210", true, false, "Hunter Chopper bullet impact color - green (0-255)")
     local cvar_impact_b = BL.CreateClientConVar("betterlights_hunter_chopper_bullet_impact_color_b", "255", true, false, "Hunter Chopper bullet impact color - blue (0-255)")
@@ -41,16 +41,6 @@ if CLIENT then
         local r, g, b = BL.GetColorFromCvars(rCvar, gCvar, bCvar)
         return r, g, b, math.max(0, sizeCvar:GetFloat()), math.max(0, brightnessCvar:GetFloat()), duration
     end
-
-    BL.AddNetworkHandler(BL.NET_HUNTER_CHOPPER_MUZZLE_FLASH, function()
-        if not cvar_muzzle_enable:GetBool() then return end
-
-        local pos = net.ReadVector()
-        local r, g, b, size, brightness, duration = readFlashSettings(cvar_muzzle_r, cvar_muzzle_g, cvar_muzzle_b, cvar_muzzle_size, cvar_muzzle_brightness, cvar_muzzle_time)
-        if not duration then return end
-
-        BL.CreateFlash(pos, r, g, b, size, brightness, duration, 59700)
-    end)
 
     BL.AddNetworkHandler(BL.NET_HUNTER_CHOPPER_BULLET_IMPACT, function()
         if not cvar_impact_enable:GetBool() then return end

@@ -288,9 +288,9 @@ if CLIENT then
             g = clampColorChannel(color.g)
             b = clampColorChannel(color.b)
         else
-            r = clampColorChannel(readCvarNumber(profile.rCvar or "betterlights_muzzle_color_r", 255))
-            g = clampColorChannel(readCvarNumber(profile.gCvar or "betterlights_muzzle_color_g", 170))
-            b = clampColorChannel(readCvarNumber(profile.bCvar or "betterlights_muzzle_color_b", 90))
+            r = clampColorChannel(readCvarNumber(profile.rCvar or "betterlights_muzzle_color_r", profile.r or 255))
+            g = clampColorChannel(readCvarNumber(profile.gCvar or "betterlights_muzzle_color_g", profile.g or 170))
+            b = clampColorChannel(readCvarNumber(profile.bCvar or "betterlights_muzzle_color_b", profile.b or 90))
         end
 
         return {
@@ -301,6 +301,32 @@ if CLIENT then
             brightness = math.max(0, readCvarNumber(profile.brightnessCvar or "betterlights_muzzle_brightness", profile.brightness or 2)),
             duration = math.max(0, readCvarNumber(profile.durationCvar or "betterlights_muzzle_time", profile.duration or 0.08))
         }
+    end
+
+    function MF.EmitProfileFlash(profileId, pos, options)
+        if not pos then return false end
+
+        options = options or {}
+        if not cvar_enable:GetBool() then return false end
+        if options.other and not cvar_show_others:GetBool() then return false end
+
+        local profile = MF.GetProfile(profileId)
+        local settings = getProfileSettings(profile, options.colorTag)
+        if not settings then return false end
+
+        BL.CreateFlash(
+            pos,
+            settings.r,
+            settings.g,
+            settings.b,
+            settings.size,
+            settings.brightness,
+            settings.duration,
+            options.baseId or FLASH_BASE_ID,
+            options.key
+        )
+
+        return true
     end
 
     local function isArc9Weapon(weapon)
@@ -701,6 +727,12 @@ if CLIENT then
 
         MF.RegisterProfile("default", {
             colorTag = nil,
+            r = 255,
+            g = 170,
+            b = 90,
+            size = 250,
+            brightness = 2.0,
+            duration = 0.08,
             sizeCvar = "betterlights_muzzle_size",
             brightnessCvar = "betterlights_muzzle_brightness",
             durationCvar = "betterlights_muzzle_time",
@@ -711,6 +743,12 @@ if CLIENT then
         })
         MF.RegisterProfile("ar2", {
             enableCvar = "betterlights_muzzle_ar2_enable",
+            r = 110,
+            g = 190,
+            b = 255,
+            size = 250,
+            brightness = 2.0,
+            duration = 0.08,
             sizeCvar = "betterlights_muzzle_ar2_size",
             brightnessCvar = "betterlights_muzzle_ar2_brightness",
             durationCvar = "betterlights_muzzle_time",
@@ -721,6 +759,12 @@ if CLIENT then
         })
         MF.RegisterProfile("strider", {
             enableCvar = "betterlights_strider_muzzle_flash_enable",
+            r = 80,
+            g = 210,
+            b = 255,
+            size = 320,
+            brightness = 2.4,
+            duration = 0.08,
             sizeCvar = "betterlights_strider_muzzle_flash_size",
             brightnessCvar = "betterlights_strider_muzzle_flash_brightness",
             durationCvar = "betterlights_strider_muzzle_flash_time",
@@ -731,12 +775,34 @@ if CLIENT then
         })
         MF.RegisterProfile("hunter_chopper", {
             enableCvar = "betterlights_hunter_chopper_muzzle_flash_enable",
+            r = 80,
+            g = 210,
+            b = 255,
+            size = 260,
+            brightness = 2.2,
+            duration = 0.08,
             sizeCvar = "betterlights_hunter_chopper_muzzle_flash_size",
             brightnessCvar = "betterlights_hunter_chopper_muzzle_flash_brightness",
             durationCvar = "betterlights_hunter_chopper_muzzle_flash_time",
             rCvar = "betterlights_hunter_chopper_muzzle_flash_color_r",
             gCvar = "betterlights_hunter_chopper_muzzle_flash_color_g",
             bCvar = "betterlights_hunter_chopper_muzzle_flash_color_b",
+            source = "builtin"
+        })
+        MF.RegisterProfile("hunter", {
+            enableCvar = "betterlights_hunter_muzzle_flash_enable",
+            r = 70,
+            g = 220,
+            b = 255,
+            size = 220,
+            brightness = 2.0,
+            duration = 0.08,
+            sizeCvar = "betterlights_hunter_muzzle_flash_size",
+            brightnessCvar = "betterlights_hunter_muzzle_flash_brightness",
+            durationCvar = "betterlights_hunter_muzzle_flash_time",
+            rCvar = "betterlights_hunter_muzzle_flash_color_r",
+            gCvar = "betterlights_hunter_muzzle_flash_color_g",
+            bCvar = "betterlights_hunter_muzzle_flash_color_b",
             source = "builtin"
         })
 

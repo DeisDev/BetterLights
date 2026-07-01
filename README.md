@@ -21,19 +21,13 @@ Better Lights adds extra dynamic lighting to weapons, NPCs, items, projectiles, 
 
 ## Translation Help
 
-Better Lights uses Garry's Mod `.properties` localization files. Each supported language has its own file here:
-
-```text
-resource/localization/<language>/betterlights.properties
-```
-
-The English file is the translation template:
+Better Lights currently maintains an English Garry's Mod `.properties` localization file here:
 
 ```text
 resource/localization/en/betterlights.properties
 ```
 
-To add or improve a translation, copy the English file into the language folder you want to work on, then translate the player-facing text.
+To add a community translation, copy the English file into the language folder you want to work on, then translate the player-facing text.
 
 Please keep these details unchanged:
 
@@ -48,7 +42,7 @@ Before opening a pull request, run the localization validator:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\validate_localization.ps1
 ```
 
-The current non-English translations were made with help from a large language model, so corrections from native speakers are very welcome.
+Community translation corrections from native speakers are welcome.
 
 ## License
 
