@@ -5,6 +5,8 @@
     "items": [
       "Added impact lights for Stun Stick hits.",
       "Added optional eye lights for Dog.",
+      "Improved explosion flashes and reduced false flashes from removed entities.",
+      "Improved scanner searchlights so they aim more reliably and shine farther.",
       "Improved muzzle flash placement for weapons with real muzzle attachments.",
       "Improved ARC9 muzzle flash handling.",
       "Improved held and dropped weapon light placement.",

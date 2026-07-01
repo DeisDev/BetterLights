@@ -12,13 +12,20 @@ BL.NET_BULLET_IMPACT = 2
 BL.NET_STRIDER_BULLET_IMPACT = 4
 BL.NET_HUNTER_CHOPPER_BULLET_IMPACT = 6
 BL.NET_STUNSTICK_IMPACT = 7
+BL.NET_EXPLOSION = 8
 
 BL.MUZZLE_FLASH_PAYLOAD_VERSION = 1
 BL.MUZZLE_SOURCE_FIREBULLETS = 1
 BL.MUZZLE_SOURCE_ADAPTER = 2
 BL.MUZZLE_SOURCE_PREDICTED = 3
 
+BL.EXPLOSION_SOURCE_DAMAGE = 1
+BL.EXPLOSION_SOURCE_EFFECT = 2
+BL.EXPLOSION_SOURCE_INPUT = 3
+BL.EXPLOSION_SOURCE_PARTICLE = 4
+
 BL.MuzzleFlash = BL.MuzzleFlash or {}
+BL.Explosions = BL.Explosions or {}
 
 do
     local MF = BL.MuzzleFlash
@@ -208,4 +215,194 @@ do
 
         return nil
     end
+end
+
+do
+    local EXP = BL.Explosions
+
+    EXP.Profiles = EXP.Profiles or {}
+    EXP.ClassProfiles = EXP.ClassProfiles or {}
+    EXP.EffectProfiles = EXP.EffectProfiles or {}
+    EXP.ParticleProfiles = EXP.ParticleProfiles or {}
+    EXP.InputProfiles = EXP.InputProfiles or {}
+
+    local function normalizeString(value)
+        if value == nil then return nil end
+
+        value = tostring(value)
+        if value == "" then return nil end
+
+        return value
+    end
+
+    local function normalizeKey(value)
+        value = normalizeString(value)
+        if not value then return nil end
+
+        return string.lower(value)
+    end
+
+    local function addValue(out, value)
+        value = normalizeString(value)
+        if not value then return end
+
+        out[#out + 1] = value
+    end
+
+    local function buildList(...)
+        local out = {}
+
+        for i = 1, select("#", ...) do
+            local value = select(i, ...)
+            if type(value) == "table" then
+                for j = 1, #value do
+                    addValue(out, value[j])
+                end
+            else
+                addValue(out, value)
+            end
+        end
+
+        return out
+    end
+
+    local function registerValues(map, values, profileId)
+        for i = 1, #values do
+            local key = normalizeKey(values[i])
+            if key then
+                map[key] = profileId
+            end
+        end
+    end
+
+    function EXP.RegisterProfile(id, def)
+        id = normalizeString(id)
+        if not id then return nil end
+
+        def = def or {}
+        local profile = EXP.Profiles[id] or { id = id }
+
+        for k, v in pairs(def) do
+            profile[k] = v
+        end
+
+        profile.id = id
+        EXP.Profiles[id] = profile
+
+        local classes = buildList(def.class, def.classes)
+        registerValues(EXP.ClassProfiles, classes, id)
+        registerValues(EXP.EffectProfiles, buildList(def.effect, def.effects), id)
+        registerValues(EXP.ParticleProfiles, buildList(def.particle, def.particles), id)
+
+        local inputs = buildList(def.input, def.inputs)
+        if #classes > 0 and #inputs > 0 then
+            for i = 1, #classes do
+                local classKey = normalizeKey(classes[i])
+                if classKey then
+                    EXP.InputProfiles[classKey] = EXP.InputProfiles[classKey] or {}
+                    registerValues(EXP.InputProfiles[classKey], inputs, id)
+                end
+            end
+        end
+
+        return profile
+    end
+
+    function EXP.GetProfile(id)
+        return EXP.Profiles[id or "generic"] or EXP.Profiles.generic
+    end
+
+    function EXP.MatchClass(className)
+        local key = normalizeKey(className)
+        if not key then return nil end
+
+        return EXP.ClassProfiles[key]
+    end
+
+    function EXP.MatchEntity(ent)
+        if not (IsValid(ent) and ent.GetClass) then return nil end
+
+        return EXP.MatchClass(ent:GetClass())
+    end
+
+    function EXP.MatchEffect(effectName)
+        local key = normalizeKey(effectName)
+        if not key then return nil end
+
+        return EXP.EffectProfiles[key]
+    end
+
+    function EXP.MatchParticle(particleName)
+        local key = normalizeKey(particleName)
+        if not key then return nil end
+
+        return EXP.ParticleProfiles[key]
+    end
+
+    function EXP.MatchInput(className, inputName)
+        local classKey = normalizeKey(className)
+        local inputKey = normalizeKey(inputName)
+        if not (classKey and inputKey) then return nil end
+
+        local inputs = EXP.InputProfiles[classKey]
+        return inputs and inputs[inputKey] or nil
+    end
+
+    EXP.RegisterProfile("generic", {
+        effects = {
+            "Explosion",
+            "AR2Explosion",
+            "WaterSurfaceExplosion"
+        },
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("env", {
+        classes = {
+            "env_explosion",
+            "env_physexplosion",
+            "env_ar2explosion"
+        },
+        inputs = { "Explode" },
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("barrel", {
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("scanner", {
+        classes = {
+            "npc_cscanner",
+            "npc_clawscanner"
+        },
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("combine_mine", {
+        classes = { "combine_mine" },
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("rpg", {
+        classes = { "rpg_missile" },
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("heli_bomb", {
+        classes = { "grenade_helicopter" },
+        effects = { "HelicopterMegaBomb" },
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("hunter_flechette", {
+        classes = { "hunter_flechette" },
+        source = "builtin"
+    })
+
+    EXP.RegisterProfile("magnusson", {
+        classes = { "weapon_striderbuster" },
+        damageRemoval = true,
+        source = "builtin"
+    })
 end

@@ -1,5 +1,6 @@
 if CLIENT then
     local BL = BetterLights
+    local EXP = BL.Explosions
     local IsValid = IsValid
     local cvar_enable = BL.CreateClientConVar("betterlights_rpg_enable", "1", true, false, "Enable dynamic light for fired RPG rockets")
     local cvar_size = BL.CreateClientConVar("betterlights_rpg_size", "280", true, false, "Dynamic light radius for RPG rockets")
@@ -18,23 +19,17 @@ if CLIENT then
     local cvar_flash_g = BL.CreateClientConVar("betterlights_rpg_flash_color_g", "210", true, false, "RPG flash color - green (0-255)")
     local cvar_flash_b = BL.CreateClientConVar("betterlights_rpg_flash_color_b", "120", true, false, "RPG flash color - blue (0-255)")
 
-    hook.Add("EntityRemoved", "BetterLights_RPG_FlashOnRemoval", function(ent, fullUpdate)
-        if fullUpdate then return end
-        if not BL.IsEntityClass(ent, "rpg_missile") then return end
-        if not cvar_flash_enable:GetBool() then return end
-
-        local pos = ent.WorldSpaceCenter and ent:WorldSpaceCenter() or ent:GetPos()
-        if BL.ShouldSuppressFlash("rpg", pos) then return end
-
-        local dur = math.max(0, cvar_flash_time:GetFloat())
-        if dur <= 0 then return end
-
-        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
-        local flashSize = math.max(0, cvar_flash_size:GetFloat())
-        local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
-        BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 58000)
-        BL.RecordFlashPosition("rpg", pos)
-    end)
+    EXP.RegisterClientProfile("rpg", {
+        enableCvar = cvar_flash_enable,
+        sizeCvar = cvar_flash_size,
+        brightnessCvar = cvar_flash_brightness,
+        durationCvar = cvar_flash_time,
+        rCvar = cvar_flash_r,
+        gCvar = cvar_flash_g,
+        bCvar = cvar_flash_b,
+        baseId = 58000,
+        suppressionKey = "explosion"
+    })
 
     BL.TrackClass("rpg_missile")
     BL.AddThink("BetterLights_RPGMissile_DLight", function()

@@ -823,6 +823,14 @@ if CLIENT then
             source = "builtin"
         })
         MF.RegisterWeaponRule({
+            id = "builtin_floor_turret",
+            class = "npc_turret_floor",
+            profile = "ar2",
+            priority = 600,
+            attachments = { "light", "4" },
+            source = "builtin"
+        })
+        MF.RegisterWeaponRule({
             id = "builtin_ar2",
             class = "weapon_ar2",
             profile = "ar2",

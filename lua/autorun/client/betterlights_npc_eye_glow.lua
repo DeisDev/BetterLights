@@ -9,9 +9,9 @@ if CLIENT then
         size = 70,
         brightness = 0.4,
         decay = 1500,
-        r = 120,
-        g = 190,
-        b = 255
+        r = 255,
+        g = 60,
+        b = 60
     })
 
     local function createEyeLight(ent, settings, lightOffset)

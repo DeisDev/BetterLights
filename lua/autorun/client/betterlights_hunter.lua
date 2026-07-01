@@ -1,5 +1,6 @@
 if CLIENT then
     local BL = BetterLights
+    local EXP = BL.Explosions
     local MF = BL.MuzzleFlash
 
     local HUNTER_CLASS = "npc_hunter"
@@ -43,11 +44,20 @@ if CLIENT then
     local cvar_blast_g = BL.CreateClientConVar("betterlights_hunter_flechette_blast_color_g", "230", true, false, "Hunter flechette blast color - green (0-255)")
     local cvar_blast_b = BL.CreateClientConVar("betterlights_hunter_flechette_blast_color_b", "255", true, false, "Hunter flechette blast color - blue (0-255)")
 
-    local flechetteSpawnTimes = {}
-    local flechetteLastPositions = {}
-
     BL.TrackClass(HUNTER_CLASS)
     BL.TrackClass(FLECHETTE_CLASS)
+
+    EXP.RegisterClientProfile("hunter_flechette", {
+        enableCvar = cvar_blast_enable,
+        sizeCvar = cvar_blast_size,
+        brightnessCvar = cvar_blast_brightness,
+        durationCvar = cvar_blast_time,
+        rCvar = cvar_blast_r,
+        gCvar = cvar_blast_g,
+        bCvar = cvar_blast_b,
+        baseId = 59400,
+        suppressionKey = "explosion"
+    })
 
     local function getHunterMuzzlePos(projectilePos)
         local bestPos
@@ -81,9 +91,6 @@ if CLIENT then
             local pos = BL.GetEntityCenter(ent)
             if not pos then return end
 
-            flechetteSpawnTimes[ent] = CurTime()
-            flechetteLastPositions[ent] = pos
-
             local muzzlePos, hunter = getHunterMuzzlePos(pos)
             if not muzzlePos then return end
 
@@ -95,29 +102,6 @@ if CLIENT then
         end)
     end)
 
-    hook.Add("EntityRemoved", "BetterLights_HunterFlechette_Blast", function(ent, fullUpdate)
-        if fullUpdate then return end
-
-        local spawnTime = flechetteSpawnTimes[ent]
-        local pos = flechetteLastPositions[ent]
-        flechetteSpawnTimes[ent] = nil
-        flechetteLastPositions[ent] = nil
-
-        if not spawnTime and not BL.IsEntityClass(ent, FLECHETTE_CLASS) then return end
-        if not cvar_blast_enable:GetBool() then return end
-        if spawnTime and CurTime() - spawnTime < 0.05 then return end
-
-        pos = pos or BL.GetEntityCenter(ent)
-        if not pos then return end
-
-        local dur = math.max(0, cvar_blast_time:GetFloat())
-        if dur <= 0 then return end
-
-        local r, g, b = BL.GetColorFromCvars(cvar_blast_r, cvar_blast_g, cvar_blast_b)
-        local size = math.max(0, cvar_blast_size:GetFloat())
-        local brightness = math.max(0, cvar_blast_brightness:GetFloat())
-        BL.CreateFlash(pos, r, g, b, size, brightness, dur, 59400)
-    end)
     BL.AddThink("BetterLights_Hunter", function()
         if cvar_hunter_enable:GetBool() then
             local size = math.max(0, cvar_hunter_size:GetFloat())
@@ -169,8 +153,6 @@ if CLIENT then
             local pos = BL.GetEntityCenter(ent)
             if not pos then return end
 
-            flechetteLastPositions[ent] = pos
-            if not flechetteSpawnTimes[ent] then flechetteSpawnTimes[ent] = CurTime() end
             if not doProjectileGlow then return end
 
             BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)

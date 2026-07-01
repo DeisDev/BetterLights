@@ -1,5 +1,6 @@
 if CLIENT then
     local BL = BetterLights
+    local EXP = BL.Explosions
 
     local cvar_enable = BL.CreateClientConVar("betterlights_magnusson_enable", "1", true, false, "Enable dynamic light for Magnusson devices (Strider Busters)")
     local cvar_size = BL.CreateClientConVar("betterlights_magnusson_size", "130", true, false, "Dynamic light radius for Magnusson devices")
@@ -22,57 +23,20 @@ if CLIENT then
 
     local TARGET_CLASS = "weapon_striderbuster"
 
-    local spawnTimes = {}
-    local lastPositions = {}
-
     BL.TrackClass(TARGET_CLASS)
 
-    timer.Simple(0, function()
-        local now = CurTime()
-        local function seed(ent)
-            if not IsValid(ent) then return end
-            spawnTimes[ent] = now
-            lastPositions[ent] = BL.GetEntityCenter(ent)
-        end
+    EXP.RegisterClientProfile("magnusson", {
+        enableCvar = cvar_flash_enable,
+        sizeCvar = cvar_flash_size,
+        brightnessCvar = cvar_flash_brightness,
+        durationCvar = cvar_flash_time,
+        rCvar = cvar_flash_r,
+        gCvar = cvar_flash_g,
+        bCvar = cvar_flash_b,
+        baseId = 59000,
+        suppressionKey = "explosion"
+    })
 
-        BL.ForEach(TARGET_CLASS, seed)
-    end)
-
-    hook.Add("OnEntityCreated", "BetterLights_Magnusson_Track", function(ent)
-        timer.Simple(0, function()
-            if not IsValid(ent) then return end
-            if ent:GetClass() ~= TARGET_CLASS then return end
-
-            spawnTimes[ent] = CurTime()
-            lastPositions[ent] = BL.GetEntityCenter(ent)
-        end)
-    end)
-
-    hook.Add("EntityRemoved", "BetterLights_Magnusson_FlashOnRemoval", function(ent, fullUpdate)
-        if fullUpdate then return end
-
-        local spawnTime = spawnTimes[ent]
-        local pos = lastPositions[ent]
-        spawnTimes[ent] = nil
-        lastPositions[ent] = nil
-
-        if not spawnTime and not BL.IsEntityClass(ent, TARGET_CLASS) then return end
-        if not cvar_flash_enable:GetBool() then return end
-
-        local now = CurTime()
-        if spawnTime and (now - spawnTime) < 0.2 then return end
-
-        pos = pos or BL.GetEntityCenter(ent)
-        if not pos then return end
-
-        local dur = math.max(0, cvar_flash_time:GetFloat())
-        if dur <= 0 then return end
-
-        local fr, fg, fb = BL.GetColorFromCvars(cvar_flash_r, cvar_flash_g, cvar_flash_b)
-        local flashSize = math.max(0, cvar_flash_size:GetFloat())
-        local flashBrightness = math.max(0, cvar_flash_brightness:GetFloat())
-        BL.CreateFlash(pos, fr, fg, fb, flashSize, flashBrightness, dur, 59000)
-    end)
     BL.AddThink("BetterLights_Magnusson_DLight", function()
         if not cvar_enable:GetBool() then return end
 
@@ -88,9 +52,6 @@ if CLIENT then
             local idx = ent:EntIndex()
             local pos = BL.GetEntityCenter(ent)
             if not pos then return end
-
-            lastPositions[ent] = pos
-            if not spawnTimes[ent] then spawnTimes[ent] = CurTime() end
 
             BL.CreateDLight(idx, pos, gr, gg, gb, brightness, decay, size, false)
 

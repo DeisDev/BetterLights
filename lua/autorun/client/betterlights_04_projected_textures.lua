@@ -33,6 +33,10 @@ if CLIENT then
         lamp:SetBrightness(options.brightness)
         lamp:SetColor(options.color)
         lamp:SetEnableShadows(options.shadows)
+        if options.noCull ~= nil then lamp:SetNoCull(options.noCull) end
+        if options.linearAttenuation then lamp:SetLinearAttenuation(options.linearAttenuation) end
+        if options.constantAttenuation then lamp:SetConstantAttenuation(options.constantAttenuation) end
+        if options.quadraticAttenuation then lamp:SetQuadraticAttenuation(options.quadraticAttenuation) end
         BL._projectedTextureUpdates[lamp] = true
         return true
     end

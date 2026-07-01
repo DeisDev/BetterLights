@@ -6,6 +6,7 @@ if SERVER then
 
     local STRIDER_CLASS = "npc_strider"
     local HUNTER_CHOPPER_CLASS = "npc_helicopter"
+    local FLOOR_TURRET_CLASS = "npc_turret_floor"
     local STUNSTICK_CLASS = "weapon_stunstick"
     local STUNSTICK_TRACE_DISTANCE = 96
     local STUNSTICK_TRACE_MINS = Vector(-8, -8, -8)
@@ -121,7 +122,7 @@ if SERVER then
         if rule and rule.profile == "ar2" then return true end
 
         local shooterClass = getEntityClass(shooter)
-        if shooterClass == "npc_turret_floor" or shooterClass == "npc_turret_ceiling" then return true end
+        if shooterClass == FLOOR_TURRET_CLASS or shooterClass == "npc_turret_ceiling" then return true end
 
         if bullet and type(bullet.TracerName) == "string" then
             return string.find(string.lower(bullet.TracerName), "ar2", 1, true) ~= nil
@@ -194,6 +195,14 @@ if SERVER then
         profile = "hunter_chopper",
         priority = 950,
         attachments = { "Muzzle" },
+        source = "builtin"
+    })
+    MF.RegisterWeaponRule({
+        id = "builtin_floor_turret",
+        class = FLOOR_TURRET_CLASS,
+        profile = "ar2",
+        priority = 600,
+        attachments = { "light", "4" },
         source = "builtin"
     })
     MF.RegisterWeaponRule({

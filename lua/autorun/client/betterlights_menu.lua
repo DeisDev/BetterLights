@@ -1209,17 +1209,12 @@ if CLIENT then
         panel:NumSlider(phrase("control.radius"), "betterlights_explosion_flash_size", 0, 800, 0)
         panel:NumSlider(phrase("control.brightness"), "betterlights_explosion_flash_brightness", 0, 10, 2)
         panel:NumSlider(phrase("control.duration_seconds"), "betterlights_explosion_flash_time", 0, 1, 2)
-        local detection = addSection(panel, "section.detection", nil, true)
-        detection:CheckBox(phrase("control.detect_env_explosions"), "betterlights_explosion_detect_env")
-        detection:CheckBox(phrase("control.detect_barrels"), "betterlights_explosion_detect_barrels")
         addColorMixerControl(panel, "control.color", "betterlights_explosion_flash_color_r", "betterlights_explosion_flash_color_g", "betterlights_explosion_flash_color_b")
         addResetButton(panel, {
             betterlights_explosion_flash_enable = 1,
-            betterlights_explosion_flash_size = 380,
+            betterlights_explosion_flash_size = 460,
             betterlights_explosion_flash_brightness = 4.6,
             betterlights_explosion_flash_time = 0.18,
-            betterlights_explosion_detect_env = 1,
-            betterlights_explosion_detect_barrels = 1,
             betterlights_explosion_flash_color_r = 255,
             betterlights_explosion_flash_color_g = 210,
             betterlights_explosion_flash_color_b = 120,
@@ -1452,23 +1447,34 @@ if CLIENT then
 
     registerPage("NPCs", "BL_CScanner", "menu.cscanner", function(panel)
             setupPage(panel, "page.cscanner.title", "page.cscanner.desc")
-            local glow = addSection(panel, "section.body_glow", nil, true)
-            addLightControls(glow, "betterlights_cscanner", {
-                radiusMax = 600,
-                modelElight = true,
-                modelElightLabel = "control.add_model_elight"
-            })
-            addColorMixerControl(glow, "control.glow_color", "betterlights_cscanner_color_r", "betterlights_cscanner_color_g", "betterlights_cscanner_color_b")
 
-            local searchlight = addSection(panel, "section.searchlight", "section.searchlight.desc", true)
-            searchlight:CheckBox(phrase("control.enable_searchlight"), "betterlights_cscanner_searchlight_enable")
-            searchlight:CheckBox(phrase("control.include_clawscanner"), "betterlights_scanner_searchlight_include_clawscanner")
-            searchlight:CheckBox(phrase("control.cast_shadows"), "betterlights_cscanner_searchlight_shadows")
-            searchlight:NumSlider(phrase("control.fov"), "betterlights_cscanner_searchlight_fov", 1, 175, 0)
-            searchlight:NumSlider(phrase("control.distance"), "betterlights_cscanner_searchlight_distance", 0, 3000, 0)
-            searchlight:NumSlider(phrase("control.near_z"), "betterlights_cscanner_searchlight_near", 0, 128, 0)
-            searchlight:NumSlider(phrase("control.brightness"), "betterlights_cscanner_searchlight_brightness", 0, 2, 2)
-            addColorMixerControl(searchlight, "control.searchlight_color", "betterlights_cscanner_searchlight_color_r", "betterlights_cscanner_searchlight_color_g", "betterlights_cscanner_searchlight_color_b")
+            local function addScannerGlowSection(titleKey, prefix)
+                local glow = addSection(panel, titleKey, nil, true)
+                addLightControls(glow, prefix, {
+                    radiusMax = 600,
+                    modelElight = true,
+                    modelElightLabel = "control.add_model_elight"
+                })
+                addColorMixerControl(glow, "control.glow_color", prefix .. "_color_r", prefix .. "_color_g", prefix .. "_color_b")
+            end
+
+            local function addScannerSearchlightSection(titleKey, prefix)
+                local searchlight = addSection(panel, titleKey, "section.searchlight.desc", true)
+                searchlight:CheckBox(phrase("control.enable_searchlight"), prefix .. "_searchlight_enable")
+                searchlight:CheckBox(phrase("control.cast_shadows"), prefix .. "_searchlight_shadows")
+                searchlight:NumSlider(phrase("control.fov"), prefix .. "_searchlight_fov", 1, 175, 0)
+                searchlight:NumSlider(phrase("control.distance"), prefix .. "_searchlight_distance", 0, 3000, 0)
+                searchlight:NumSlider(phrase("control.near_z"), prefix .. "_searchlight_near", 0, 128, 0)
+                searchlight:NumSlider(phrase("control.brightness"), prefix .. "_searchlight_brightness", 0, 2, 2)
+                searchlight:NumSlider(phrase("control.falloff"), prefix .. "_searchlight_falloff", 0, 100, 0)
+                addColorMixerControl(searchlight, "control.searchlight_color", prefix .. "_searchlight_color_r", prefix .. "_searchlight_color_g", prefix .. "_searchlight_color_b")
+            end
+
+            addScannerGlowSection("section.city_scanner_glow", "betterlights_cscanner")
+            addScannerSearchlightSection("section.city_scanner_searchlight", "betterlights_cscanner")
+            addScannerGlowSection("section.shield_scanner_glow", "betterlights_shieldscanner")
+            addScannerSearchlightSection("section.shield_scanner_searchlight", "betterlights_shieldscanner")
+
             addResetButton(panel, {
                 betterlights_cscanner_enable = 1,
                 betterlights_cscanner_size = 120,
@@ -1480,15 +1486,34 @@ if CLIENT then
                 betterlights_cscanner_color_g = 230,
                 betterlights_cscanner_color_b = 255,
                 betterlights_cscanner_searchlight_enable = 1,
-                betterlights_scanner_searchlight_include_clawscanner = 1,
                 betterlights_cscanner_searchlight_shadows = 1,
                 betterlights_cscanner_searchlight_fov = 38,
                 betterlights_cscanner_searchlight_distance = 900,
                 betterlights_cscanner_searchlight_near = 8,
-                betterlights_cscanner_searchlight_brightness = 0.7,
+                betterlights_cscanner_searchlight_brightness = 1.25,
+                betterlights_cscanner_searchlight_falloff = 25,
                 betterlights_cscanner_searchlight_color_r = 255,
                 betterlights_cscanner_searchlight_color_g = 255,
                 betterlights_cscanner_searchlight_color_b = 255,
+                betterlights_shieldscanner_enable = 1,
+                betterlights_shieldscanner_size = 120,
+                betterlights_shieldscanner_brightness = 0.7,
+                betterlights_shieldscanner_decay = 2000,
+                betterlights_shieldscanner_models_elight = 1,
+                betterlights_shieldscanner_models_elight_size_mult = 1.0,
+                betterlights_shieldscanner_color_r = 180,
+                betterlights_shieldscanner_color_g = 230,
+                betterlights_shieldscanner_color_b = 255,
+                betterlights_shieldscanner_searchlight_enable = 1,
+                betterlights_shieldscanner_searchlight_shadows = 1,
+                betterlights_shieldscanner_searchlight_fov = 38,
+                betterlights_shieldscanner_searchlight_distance = 900,
+                betterlights_shieldscanner_searchlight_near = 8,
+                betterlights_shieldscanner_searchlight_brightness = 1.25,
+                betterlights_shieldscanner_searchlight_falloff = 25,
+                betterlights_shieldscanner_searchlight_color_r = 255,
+                betterlights_shieldscanner_searchlight_color_g = 255,
+                betterlights_shieldscanner_searchlight_color_b = 255,
             })
         end)
 
@@ -1503,16 +1528,16 @@ if CLIENT then
             addLightControls(dog, "betterlights_dog_eye", {
                 radiusMax = 200
             })
-            addColorMixerControl(dog, "control.color", "betterlights_dog_eye_color_r", "betterlights_dog_eye_color_g", "betterlights_dog_eye_color_b", 120, 190, 255)
+            addColorMixerControl(dog, "control.color", "betterlights_dog_eye_color_r", "betterlights_dog_eye_color_g", "betterlights_dog_eye_color_b", 255, 60, 60)
 
             addResetButton(panel, {
                 betterlights_dog_eye_enable = 1,
                 betterlights_dog_eye_size = 70,
                 betterlights_dog_eye_brightness = 0.4,
                 betterlights_dog_eye_decay = 1500,
-                betterlights_dog_eye_color_r = 120,
-                betterlights_dog_eye_color_g = 190,
-                betterlights_dog_eye_color_b = 255,
+                betterlights_dog_eye_color_r = 255,
+                betterlights_dog_eye_color_g = 60,
+                betterlights_dog_eye_color_b = 60,
             })
         end)
 

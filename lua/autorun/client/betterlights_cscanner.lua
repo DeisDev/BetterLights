@@ -2,38 +2,53 @@ if CLIENT then
     local BL = BetterLights
 
     local IsValid = IsValid
-    local cvar_enable = BL.CreateClientConVar("betterlights_cscanner_enable", "1", true, false, "Enable dynamic light for Combine Scanners (npc_cscanner)")
-    local cvar_size = BL.CreateClientConVar("betterlights_cscanner_size", "120", true, false, "Dynamic light radius for Combine Scanners")
-    local cvar_brightness = BL.CreateClientConVar("betterlights_cscanner_brightness", "0.7", true, false, "Dynamic light brightness for Combine Scanners")
-    local cvar_decay = BL.CreateClientConVar("betterlights_cscanner_decay", "2000", true, false, "Dynamic light decay for Combine Scanners")
-    local cvar_models_elight = BL.CreateClientConVar("betterlights_cscanner_models_elight", "1", true, false, "Also add an entity light (elight) to light the scanner model directly")
-    local cvar_models_elight_size_mult = BL.CreateClientConVar("betterlights_cscanner_models_elight_size_mult", "1.0", true, false, "Multiplier for scanner elight radius")
 
-    local cvar_col_r = BL.CreateClientConVar("betterlights_cscanner_color_r", "180", true, false, "Scanner glow color - red (0-255)")
-    local cvar_col_g = BL.CreateClientConVar("betterlights_cscanner_color_g", "230", true, false, "Scanner glow color - green (0-255)")
-    local cvar_col_b = BL.CreateClientConVar("betterlights_cscanner_color_b", "255", true, false, "Scanner glow color - blue (0-255)")
+    local function createScannerSettings(prefix, label, glowColor)
+        return {
+            glow = {
+                enable = BL.CreateClientConVar(prefix .. "_enable", "1", true, false, "Enable dynamic light for " .. label),
+                size = BL.CreateClientConVar(prefix .. "_size", "120", true, false, "Dynamic light radius for " .. label),
+                brightness = BL.CreateClientConVar(prefix .. "_brightness", "0.7", true, false, "Dynamic light brightness for " .. label),
+                decay = BL.CreateClientConVar(prefix .. "_decay", "2000", true, false, "Dynamic light decay for " .. label),
+                modelsElight = BL.CreateClientConVar(prefix .. "_models_elight", "1", true, false, "Also add an entity light (elight) to light the scanner model directly"),
+                modelsElightSizeMult = BL.CreateClientConVar(prefix .. "_models_elight_size_mult", "1.0", true, false, "Multiplier for scanner elight radius"),
+                r = BL.CreateClientConVar(prefix .. "_color_r", tostring(glowColor.r), true, false, label .. " glow color - red (0-255)"),
+                g = BL.CreateClientConVar(prefix .. "_color_g", tostring(glowColor.g), true, false, label .. " glow color - green (0-255)"),
+                b = BL.CreateClientConVar(prefix .. "_color_b", tostring(glowColor.b), true, false, label .. " glow color - blue (0-255)")
+            },
+            searchlight = {
+                enable = BL.CreateClientConVar(prefix .. "_searchlight_enable", "1", true, false, "Add a directional, shadow-casting searchlight to " .. label),
+                fov = BL.CreateClientConVar(prefix .. "_searchlight_fov", "38", true, false, label .. " searchlight FOV (degrees)"),
+                far = BL.CreateClientConVar(prefix .. "_searchlight_distance", "900", true, false, label .. " searchlight distance (FarZ)"),
+                near = BL.CreateClientConVar(prefix .. "_searchlight_near", "8", true, false, label .. " searchlight near plane (NearZ)"),
+                brightness = BL.CreateClientConVar(prefix .. "_searchlight_brightness", "1.25", true, false, label .. " searchlight brightness (0-1+)"),
+                shadows = BL.CreateClientConVar(prefix .. "_searchlight_shadows", "1", true, false, "Enable " .. label .. " searchlight shadows"),
+                falloff = BL.CreateClientConVar(prefix .. "_searchlight_falloff", "25", true, false, label .. " searchlight falloff"),
+                r = BL.CreateClientConVar(prefix .. "_searchlight_color_r", "255", true, false, label .. " searchlight color - red (0-255)"),
+                g = BL.CreateClientConVar(prefix .. "_searchlight_color_g", "255", true, false, label .. " searchlight color - green (0-255)"),
+                b = BL.CreateClientConVar(prefix .. "_searchlight_color_b", "255", true, false, label .. " searchlight color - blue (0-255)")
+            }
+        }
+    end
 
-    local cvar_sl_enable = BL.CreateClientConVar("betterlights_cscanner_searchlight_enable", "1", true, false, "Add a directional, shadow-casting searchlight to scanners")
-    local cvar_sl_fov = BL.CreateClientConVar("betterlights_cscanner_searchlight_fov", "38", true, false, "Searchlight FOV (degrees)")
-    local cvar_sl_far = BL.CreateClientConVar("betterlights_cscanner_searchlight_distance", "900", true, false, "Searchlight distance (FarZ)")
-    local cvar_sl_near = BL.CreateClientConVar("betterlights_cscanner_searchlight_near", "8", true, false, "Searchlight near plane (NearZ)")
-    local cvar_sl_brightness = BL.CreateClientConVar("betterlights_cscanner_searchlight_brightness", "0.7", true, false, "Searchlight brightness (0-1+)")
-    local cvar_sl_shadows = BL.CreateClientConVar("betterlights_cscanner_searchlight_shadows", "1", true, false, "Enable shadow casting for the searchlight (expensive; engine limit ~8)")
-    local cvar_sl_include_claw = BL.CreateClientConVar("betterlights_scanner_searchlight_include_clawscanner", "1", true, false, "Also attach searchlights to npc_clawscanner if present")
-
-    local cvar_sl_r = BL.CreateClientConVar("betterlights_cscanner_searchlight_color_r", "255", true, false, "Scanner searchlight color - red (0-255)")
-    local cvar_sl_g = BL.CreateClientConVar("betterlights_cscanner_searchlight_color_g", "255", true, false, "Scanner searchlight color - green (0-255)")
-    local cvar_sl_b = BL.CreateClientConVar("betterlights_cscanner_searchlight_color_b", "255", true, false, "Scanner searchlight color - blue (0-255)")
+    local cityScanner = createScannerSettings("betterlights_cscanner", "City Scanners", { r = 180, g = 230, b = 255 })
+    local shieldScanner = createScannerSettings("betterlights_shieldscanner", "Shield Scanners", { r = 180, g = 230, b = 255 })
 
     local scannerProjectors = {}
     local SCANNER_ATTACHMENTS = {
         npc_cscanner = {
             glow = { "eyes" },
-            searchlight = { "light" }
+            searchlight = { "light" },
+            searchlightAimAtLocalPlayer = true,
+            searchlightNearZ = 1,
+            settings = cityScanner
         },
         npc_clawscanner = {
             glow = { "eye" },
-            searchlight = { "light" }
+            searchlight = { "light" },
+            searchlightAimAtLocalPlayer = true,
+            searchlightNearZ = 1,
+            settings = shieldScanner
         }
     }
 
@@ -42,73 +57,106 @@ if CLIENT then
         return SCANNER_ATTACHMENTS[ent:GetClass()]
     end
 
+    local function getPlayerAimAngle(pos)
+        local ply = LocalPlayer()
+        if not IsValid(ply) then return nil end
+
+        local target = (ply.WorldSpaceCenter and ply:WorldSpaceCenter()) or (ply.EyePos and ply:EyePos()) or ply:GetPos()
+        local direction = target - pos
+        if direction:LengthSqr() <= 1 then return nil end
+
+        return direction:Angle()
+    end
+
+    local function getSearchlightTransform(ent, attachments)
+        local light = BL.GetAttachmentTransform(ent, attachments.searchlight)
+        if not (light and light.Pos and light.Ang) then return nil end
+
+        local pos = light.Pos
+        local ang
+
+        if attachments.searchlightAimAtLocalPlayer then
+            ang = getPlayerAimAngle(pos)
+        end
+
+        if not ang and ent.GetAimVector then
+            local aim = ent:GetAimVector()
+            if aim and aim ~= vector_origin then
+                ang = aim:Angle()
+            end
+        end
+
+        ang = ang or light.Ang
+
+        return pos, ang, attachments.searchlightNearZ
+    end
+
     BL.TrackClass("npc_cscanner")
     BL.TrackClass("npc_clawscanner")
     BL.AddThink("BetterLights_CScanner_DLight", function()
-        local size = math.max(0, cvar_size:GetFloat())
-        local brightness = math.max(0, cvar_brightness:GetFloat())
-        local decay = math.max(0, cvar_decay:GetFloat())
-        local el_mult = math.max(0, cvar_models_elight_size_mult:GetFloat())
-        local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-        local includeClaw = cvar_sl_include_claw:GetBool()
-        local doGlow = cvar_enable:GetBool()
-        local doModelsElight = cvar_models_elight:GetBool()
-
-        local sl_enable = cvar_sl_enable:GetBool()
-        local sl_near = math.max(0.1, cvar_sl_near:GetFloat())
-        local sl_far = math.max(1, cvar_sl_far:GetFloat())
-        local sl_fov = math.Clamp(cvar_sl_fov:GetFloat(), 1, 175)
-        local sl_bright = cvar_sl_brightness:GetFloat()
-        local sl_r, sl_g, sl_b = BL.GetColorFromCvars(cvar_sl_r, cvar_sl_g, cvar_sl_b)
-        local sl_shadows = cvar_sl_shadows:GetBool()
-
         local seen = {}
 
         local function processScanner(ent)
             if not IsValid(ent) then return end
             local attachments = getScannerAttachments(ent)
-            if not attachments then return end
+            local settings = attachments and attachments.settings
+            if not settings then return end
 
             local idx = ent:EntIndex()
             local glow = BL.GetAttachmentTransform(ent, attachments.glow)
             local glowPos = glow and glow.Pos
+            local glowSettings = settings.glow
 
-            if doGlow and glowPos then
+            if glowSettings.enable:GetBool() and glowPos then
+                local size = math.max(0, glowSettings.size:GetFloat())
+                local brightness = math.max(0, glowSettings.brightness:GetFloat())
+                local decay = math.max(0, glowSettings.decay:GetFloat())
+                local r, g, b = BL.GetColorFromCvars(glowSettings.r, glowSettings.g, glowSettings.b)
+
                 BL.CreateDLight(idx, glowPos, r, g, b, brightness, decay, size, false)
 
-                if doModelsElight then
-                    BL.CreateDLight(idx, glowPos, r, g, b, brightness, decay, size * el_mult, true)
+                if glowSettings.modelsElight:GetBool() then
+                    local elMult = math.max(0, glowSettings.modelsElightSizeMult:GetFloat())
+                    BL.CreateDLight(idx, glowPos, r, g, b, brightness, decay, size * elMult, true)
                 end
             end
 
-            if sl_enable then
-                local light = BL.GetAttachmentTransform(ent, attachments.searchlight)
-                if not (light and light.Pos and light.Ang) then return end
+            local searchlight = settings.searchlight
+            if searchlight.enable:GetBool() then
+                local slNear = math.max(0.1, searchlight.near:GetFloat())
+                local lightPos, lightAng, lightNear = getSearchlightTransform(ent, attachments)
+                if not (lightPos and lightAng) then return end
 
                 local lamp = BL.GetOrCreateProjectedTexture(scannerProjectors, ent, "effects/flashlight001")
                 if not lamp then return end
 
+                local slR, slG, slB = BL.GetColorFromCvars(searchlight.r, searchlight.g, searchlight.b)
+
                 seen[ent] = true
                 BL.UpdateProjectedTexture(lamp, {
-                    pos = light.Pos,
-                    ang = light.Ang,
-                    nearZ = sl_near,
-                    farZ = sl_far,
-                    fov = sl_fov,
-                    brightness = sl_bright,
-                    color = Color(sl_r, sl_g, sl_b),
-                    shadows = sl_shadows
+                    pos = lightPos,
+                    ang = lightAng,
+                    nearZ = lightNear and math.min(slNear, lightNear) or slNear,
+                    farZ = math.max(1, searchlight.far:GetFloat()),
+                    fov = math.Clamp(searchlight.fov:GetFloat(), 1, 175),
+                    brightness = math.max(0, searchlight.brightness:GetFloat()),
+                    color = Color(slR, slG, slB),
+                    shadows = searchlight.shadows:GetBool(),
+                    noCull = true,
+                    linearAttenuation = math.max(0, searchlight.falloff:GetFloat())
                 })
             end
         end
 
         BL.ForEach("npc_cscanner", processScanner)
-        if includeClaw then
-            BL.ForEach("npc_clawscanner", processScanner)
-        end
+        BL.ForEach("npc_clawscanner", processScanner)
 
         BL.RemoveStaleProjectedTextures(scannerProjectors, seen, function(ent)
-            return (not sl_enable) or (not IsValid(ent))
+            if not IsValid(ent) then return true end
+
+            local attachments = getScannerAttachments(ent)
+            local settings = attachments and attachments.settings
+            return not (settings and settings.searchlight.enable:GetBool())
         end)
     end)
 end

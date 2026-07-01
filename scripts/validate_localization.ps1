@@ -86,8 +86,18 @@ function Get-LuaLocalizationKeys {
     $source = Get-Content -LiteralPath $LuaPath -Raw
     $keys = New-Object System.Collections.Generic.HashSet[string]
 
-    foreach ($match in [regex]::Matches($source, 'phrase(?:Format)?\("([^"]+)"')) {
-        $keys.Add("$addonName." + $match.Groups[1].Value) | Out-Null
+    function Add-LuaLocalizationKey {
+        param([string]$Key)
+
+        if ($Key.StartsWith("$addonName.")) {
+            $keys.Add($Key) | Out-Null
+        } else {
+            $keys.Add("$addonName.$Key") | Out-Null
+        }
+    }
+
+    foreach ($match in [regex]::Matches($source, '(?<![A-Za-z0-9_])(?:MENU\.)?[Pp]hrase(?:Format)?\("([^"]+)"')) {
+        Add-LuaLocalizationKey $match.Groups[1].Value
     }
 
     foreach ($match in [regex]::Matches($source, 'language\.GetPhrase\("(' + [regex]::Escape($addonName) + '\.[^"]+)"')) {
@@ -98,10 +108,14 @@ function Get-LuaLocalizationKeys {
         $keys.Add($match.Groups[1].Value) | Out-Null
     }
 
-    foreach ($call in [regex]::Matches($source, 'phrase(?:Format)?\(([^)]*)\)')) {
+    foreach ($call in [regex]::Matches($source, '(?<![A-Za-z0-9_])(?:MENU\.)?[Pp]hrase(?:Format)?\(([^)]*)\)')) {
         foreach ($match in [regex]::Matches($call.Groups[1].Value, '"([^"]+\.[^"]*)"')) {
-            $keys.Add("$addonName." + $match.Groups[1].Value) | Out-Null
+            Add-LuaLocalizationKey $match.Groups[1].Value
         }
+    }
+
+    foreach ($match in [regex]::Matches($source, '"((?:about|ammo|button|category|changelog|combine_eye|control|dialog|help|label|menu|notice|page|placeholder|rollermine|section|state|tooltip|weapon|window)\.[^"]+)"')) {
+        Add-LuaLocalizationKey $match.Groups[1].Value
     }
 
     $helperPatterns = @(
@@ -110,6 +124,9 @@ function Get-LuaLocalizationKeys {
         'addSection\([^,]+,\s*"([^"]+)"',
         'addSection\([^,]+,\s*"[^"]+",\s*"([^"]+)"',
         'addColorMixerControl\([^,]+,\s*"([^"]+)"',
+        'registerPage\([^,]+,\s*[^,]+,\s*"([^"]+)"',
+        'RegisterPage\([^,]+,\s*[^,]+,\s*"([^"]+)"',
+        '\{\s*"[^"]+",\s*"(category\.[^"]+)"',
         'modelElightLabel\s*=\s*"([^"]+)"',
         'enableLabel\s*=\s*"([^"]+)"',
         'radiusLabel\s*=\s*"([^"]+)"',
@@ -122,7 +139,7 @@ function Get-LuaLocalizationKeys {
 
     foreach ($pattern in $helperPatterns) {
         foreach ($match in [regex]::Matches($source, $pattern)) {
-            $keys.Add("$addonName." + $match.Groups[1].Value) | Out-Null
+            Add-LuaLocalizationKey $match.Groups[1].Value
         }
     }
 
