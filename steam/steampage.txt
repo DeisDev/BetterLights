@@ -69,6 +69,16 @@ gm_construct
 
 [hr][/hr]
 
+[b]Screenshot Submissions[/b]
+
+Want your Better Lights artwork featured on this Workshop page? Send screenshots or artwork to me on Discord: [b]@catsniffur[/b]. If I use it, I will add it to the gallery and credit you in the Screenshot Credits section.
+
+[b]Screenshot Credits[/b]
+
+Community screenshot credits will be added here when community submissions are featured.
+
+[hr][/hr]
+
 [b]Support[/b]
 
 For bugs, support, or feature requests, please use GitHub:
