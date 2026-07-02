@@ -13,13 +13,15 @@ if CLIENT then
     local function normalizeVersion(version)
         if not version then return "" end
 
-        local normalized = string.match(version, "v%d+%.%d+%.%d+")
+        version = string.Trim(tostring(version))
+
+        local normalized = string.match(version, "v%d+%.%d+%.%d+[%w%-%.]*")
         if normalized then return normalized end
 
-        normalized = string.match(version, "%d+%.%d+%.%d+")
+        normalized = string.match(version, "%d+%.%d+%.%d+[%w%-%.]*")
         if normalized then return "v" .. normalized end
 
-        return string.Trim(tostring(version))
+        return version
     end
 
     local function readChangelogJson()

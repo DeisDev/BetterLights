@@ -1,7 +1,7 @@
 if CLIENT then
     local BL = BetterLights
 
-    BL.VERSION = "v1.5.3"
+    BL.VERSION = "v1.6.0-beta"
 
     BL._networkHandlers = BL._networkHandlers or {}
     BL._clientConVars = BL._clientConVars or {}
@@ -49,6 +49,61 @@ if CLIENT then
         end
 
         return resolved
+    end
+
+    function BL.ApplyClientSetting(cvarName, value)
+        local cvar = BL._clientConVars[cvarName]
+        if not cvar then
+            return false, "unknown"
+        end
+
+        if cvarName == "betterlights_flashlight_texture" then
+            if BL.SetFlashlightTexturePath(value) then
+                return true
+            end
+
+            return false, "flashlight_texture_unavailable"
+        end
+
+        value = tostring(value)
+        if cvar:GetString() ~= value then
+            cvar:SetString(value)
+        end
+
+        return true
+    end
+
+    function BL.ApplyClientSettings(settings)
+        local result = {
+            applied = 0,
+            skipped = {},
+            skippedUnknown = 0,
+            flashlightTextureUnavailable = false
+        }
+
+        for cvarName, value in pairs(settings or {}) do
+            local ok, reason = BL.ApplyClientSetting(cvarName, value)
+            if ok then
+                result.applied = result.applied + 1
+            else
+                result.skipped[#result.skipped + 1] = {
+                    name = cvarName,
+                    reason = reason
+                }
+
+                if reason == "unknown" then
+                    result.skippedUnknown = result.skippedUnknown + 1
+                elseif reason == "flashlight_texture_unavailable" then
+                    result.flashlightTextureUnavailable = true
+                end
+            end
+        end
+
+        return result
+    end
+
+    function BL.ResetRegisteredClientSettings()
+        return BL.ApplyClientSettings(BL.GetRegisteredClientConVarDefaults())
     end
 
     function BL.CreateClientConVar(name, defaultValue, shouldSave, userData, helpText, min, max)

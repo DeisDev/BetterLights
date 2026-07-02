@@ -264,7 +264,10 @@ if CLIENT then
         path = normalizeTexturePath(path)
         if not isValidTexturePath(path) then return false end
 
-        RunConsoleCommand("betterlights_flashlight_texture", path)
+        if cvar_texture:GetString() ~= path then
+            cvar_texture:SetString(path)
+        end
+
         rememberTexture(path)
         return true
     end

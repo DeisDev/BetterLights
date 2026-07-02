@@ -10,6 +10,7 @@ if CLIENT then
 
     local CATEGORY_DEFS = {
         { "General", "category.general" },
+        { "Profiles", "category.profiles" },
         { "Flashlight", "category.flashlight" },
         { "Weapons", "category.weapons" },
         { "Projectiles", "category.projectiles" },
@@ -101,26 +102,8 @@ if CLIENT then
 
     MENU.AddHelpText = addHelpText
 
-    local function resetClientSetting(cvarName, defaultValue)
-        if cvarName == "betterlights_flashlight_texture" then
-            BetterLights.SetFlashlightTexturePath(defaultValue)
-            return
-        end
-
-        RunConsoleCommand(cvarName, tostring(defaultValue))
-    end
-
     local function resetRegisteredClientSettings()
-        local defaults = BetterLights.GetRegisteredClientConVarDefaults()
-        for cvarName, cvar in pairs(BetterLights.GetRegisteredClientConVars()) do
-            if cvarName == "betterlights_flashlight_texture" then
-                BetterLights.SetFlashlightTexturePath(defaults[cvarName] or "effects/flashlight001")
-            elseif cvar and cvar.Revert then
-                cvar:Revert()
-            else
-                resetClientSetting(cvarName, defaults[cvarName] or "")
-            end
-        end
+        return BetterLights.ResetRegisteredClientSettings()
     end
 
     local function resetFlashlightTextureLists()
@@ -132,9 +115,7 @@ if CLIENT then
         local btn = addStyledButton(panel, label or phrase("button.reset_defaults"), phrase("tooltip.reset_defaults"))
         btn.DoClick = function()
             local resetDefaults = BetterLights.ResolveClientResetDefaults(defaults)
-            for cvar, def in pairs(resetDefaults) do
-                resetClientSetting(cvar, def)
-            end
+            BetterLights.ApplyClientSettings(resetDefaults)
         end
     end
 
@@ -143,35 +124,35 @@ if CLIENT then
     local function addBrightnessResetButton(panel)
         local resetBrightness = addStyledButton(panel, phrase("button.reset_brightness"))
         resetBrightness.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_brightness", tostring(getClientDefault("betterlights_flashlight_brightness", "1.35")))
+            BetterLights.ApplyClientSetting("betterlights_flashlight_brightness", getClientDefault("betterlights_flashlight_brightness", "1.35"))
         end
     end
 
     local function addFovResetButton(panel)
         local resetFov = addStyledButton(panel, phrase("button.reset_fov"))
         resetFov.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_fov", tostring(getClientDefault("betterlights_flashlight_fov", "45")))
+            BetterLights.ApplyClientSetting("betterlights_flashlight_fov", getClientDefault("betterlights_flashlight_fov", "45"))
         end
     end
 
     local function addBeamLengthResetButton(panel)
         local resetBeamLength = addStyledButton(panel, phrase("button.reset_beam_length"))
         resetBeamLength.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_distance", tostring(getClientDefault("betterlights_flashlight_distance", "1200")))
+            BetterLights.ApplyClientSetting("betterlights_flashlight_distance", getClientDefault("betterlights_flashlight_distance", "1200"))
         end
     end
 
     local function addFlickerAmountResetButton(panel)
         local resetFlickerAmount = addStyledButton(panel, phrase("button.reset_flicker_amount"))
         resetFlickerAmount.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_flicker_amount", tostring(getClientDefault("betterlights_flashlight_flicker_amount", "0.05")))
+            BetterLights.ApplyClientSetting("betterlights_flashlight_flicker_amount", getClientDefault("betterlights_flashlight_flicker_amount", "0.05"))
         end
     end
 
     local function addSwayIntensityResetButton(panel)
         local resetSwayIntensity = addStyledButton(panel, phrase("button.reset_sway_intensity"))
         resetSwayIntensity.DoClick = function()
-            RunConsoleCommand("betterlights_flashlight_sway_intensity", tostring(getClientDefault("betterlights_flashlight_sway_intensity", "1")))
+            BetterLights.ApplyClientSetting("betterlights_flashlight_sway_intensity", getClientDefault("betterlights_flashlight_sway_intensity", "1"))
         end
     end
 
@@ -278,9 +259,9 @@ if CLIENT then
         reset:SetText(phrase("button.reset_color"))
         reset:SetTooltip(phrase("tooltip.reset_color"))
         reset.DoClick = function()
-            RunConsoleCommand(rCvar, tostring(getClientDefault(rCvar, defaultR or 255)))
-            RunConsoleCommand(gCvar, tostring(getClientDefault(gCvar, defaultG or 255)))
-            RunConsoleCommand(bCvar, tostring(getClientDefault(bCvar, defaultB or 255)))
+            BetterLights.ApplyClientSetting(rCvar, getClientDefault(rCvar, defaultR or 255))
+            BetterLights.ApplyClientSetting(gCvar, getClientDefault(gCvar, defaultG or 255))
+            BetterLights.ApplyClientSetting(bCvar, getClientDefault(bCvar, defaultB or 255))
         end
 
         panel:AddItem(reset)

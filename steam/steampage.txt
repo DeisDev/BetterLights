@@ -28,6 +28,8 @@ Open the spawn menu and go to the [b]Better Lights[/b] tab. Most features have t
 
 The flashlight can also be set to use custom textures, custom sounds, color tinting, flicker, sway, and shadow settings.
 
+Use [b]Profiles > Settings Profiles[/b] to save, load, import, and export your personal settings.
+
 [img]https://files.catbox.moe/okwsv1.gif[/img]
 
 [hr][/hr]
