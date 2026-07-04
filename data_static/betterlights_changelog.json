@@ -1,5 +1,12 @@
 [
   {
+    "version": "v1.6.0-beta3",
+    "title": "Better Lights v1.6.0-beta3",
+    "items": [
+      "Fixed Better Lights flashlight sounds for nearby players."
+    ]
+  },
+  {
     "version": "v1.6.0-beta2",
     "title": "Better Lights v1.6.0-beta2",
     "items": [

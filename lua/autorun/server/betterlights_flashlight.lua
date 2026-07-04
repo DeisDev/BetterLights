@@ -1,91 +1,127 @@
 if SERVER then
     local BL = BetterLights
+    local FL = BL.Flashlight
 
-    util.AddNetworkString(BL.NET_FLASHLIGHT_CLIENT_ENABLE)
-    util.AddNetworkString(BL.NET_FLASHLIGHT_SOUND)
+    util.AddNetworkString(BL.NET_FLASHLIGHT_CLIENT_SETTINGS)
 
     local INPUT_DEBOUNCE = 0.05
-    local MWBASE_FLASHLIGHT_HOOK = "MW19_PlayerSwitchFlashlight"
+    local CUSTOM_SOUND_ON = "betterlights/flashlight_on.wav"
+    local CUSTOM_SOUND_OFF = "betterlights/flashlight_off.wav"
+    local DEFAULT_SOUND_ON = "HL2Player.FlashLightOn"
+    local DEFAULT_SOUND_OFF = "HL2Player.FlashLightOff"
+    local CUSTOM_SOUND_LEVEL = 77
+    local DEFAULT_SOUND_LEVEL = 75
+    local SOUND_PITCH = 100
+    local SOUND_VOLUME = 1
+    local SOUND_FLAGS = 0
+    local SOUND_DSP = 1
 
     local PLAYER = FindMetaTable("Player")
 
-    local function getWeaponBase(weapon)
-        if not IsValid(weapon) then return "" end
+    local function runIntegrationCallback(callbackName, ...)
+        for _, integration in ipairs(FL.GetIntegrations()) do
+            local callback = integration[callbackName]
+            if isfunction(callback) then
+                callback(...)
+            end
+        end
+    end
 
-        local base = weapon.Base
-        if base == nil and weapon.GetTable then
-            local tab = weapon:GetTable()
-            base = tab and tab.Base
+    local function addSuppressedHook(output, seen, hookName)
+        hookName = tostring(hookName or "")
+        if hookName == "" or seen[hookName] then return end
+
+        output[#output + 1] = hookName
+        seen[hookName] = true
+    end
+
+    local function getSuppressedSwitchHooks(ply, state)
+        local output = {}
+        local seen = {}
+
+        for _, integration in ipairs(FL.GetIntegrations()) do
+            local getHooks = integration.GetSuppressedPlayerSwitchFlashlightHooks
+            if isfunction(getHooks) then
+                local hooks = getHooks(ply, state)
+
+                if type(hooks) == "table" then
+                    for i = 1, #hooks do
+                        addSuppressedHook(output, seen, hooks[i])
+                    end
+                else
+                    addSuppressedHook(output, seen, hooks)
+                end
+            end
         end
 
-        return string.lower(tostring(base or ""))
+        return output
     end
 
-    local function isMwBaseWeapon(weapon)
-        if not IsValid(weapon) then return false end
-        if getWeaponBase(weapon) == "mg_base" then return true end
+    local function removePlayerSwitchFlashlightHooks(hookNames)
+        local removed = {}
+        local flashlightHooks = hook.GetTable().PlayerSwitchFlashlight
+        if not flashlightHooks then return removed end
 
-        if weapons and weapons.IsBasedOn and weapon.GetClass then
-            local className = weapon:GetClass()
-            if className ~= "" and weapons.IsBasedOn(className, "mg_base") then return true end
+        for i = 1, #hookNames do
+            local hookName = hookNames[i]
+            local callback = flashlightHooks[hookName]
+
+            if callback then
+                hook.Remove("PlayerSwitchFlashlight", hookName)
+                removed[#removed + 1] = {
+                    name = hookName,
+                    callback = callback
+                }
+            end
         end
 
-        return isfunction(weapon.GetStoredAttachment)
-            and isfunction(weapon.PlayViewModelAnimation)
-            and isfunction(weapon.GetAllAttachmentsInUse)
+        return removed
     end
 
-    local function hasMwBaseFlashlightAttachment(weapon)
-        if not isMwBaseWeapon(weapon) then return false end
-        if not isfunction(weapon.GetFlashlightAttachment) then return false end
-
-        local ok, attachment = pcall(weapon.GetFlashlightAttachment, weapon)
-        return ok and attachment ~= nil
-    end
-
-    local function clearMwBaseFlashlightFlag(weapon)
-        if not hasMwBaseFlashlightAttachment(weapon) then return end
-        if not isfunction(weapon.RemoveFlag) then return end
-
-        pcall(weapon.RemoveFlag, weapon, "FlashlightOn")
-    end
-
-    local function clearActiveMwBaseFlashlightFlag(ply)
-        if not (IsValid(ply) and ply.GetActiveWeapon) then return end
-
-        clearMwBaseFlashlightFlag(ply:GetActiveWeapon())
-    end
-
-    local function shouldSkipMwBaseFlashlightHook(ply, state)
-        if state ~= true then return false end
-        if not (IsValid(ply) and ply.GetActiveWeapon) then return false end
-
-        return hasMwBaseFlashlightAttachment(ply:GetActiveWeapon())
+    local function restorePlayerSwitchFlashlightHooks(removed)
+        for i = 1, #removed do
+            local hookData = removed[i]
+            hook.Add("PlayerSwitchFlashlight", hookData.name, hookData.callback)
+        end
     end
 
     local function runPlayerSwitchFlashlightHook(ply, state)
-        local skipMwBase = shouldSkipMwBaseFlashlightHook(ply, state)
-        local flashlightHooks = hook.GetTable().PlayerSwitchFlashlight
-        local mwBaseHook = skipMwBase and flashlightHooks and flashlightHooks[MWBASE_FLASHLIGHT_HOOK] or nil
-
-        if mwBaseHook then
-            hook.Remove("PlayerSwitchFlashlight", MWBASE_FLASHLIGHT_HOOK)
-        end
-
+        local removedHooks = removePlayerSwitchFlashlightHooks(getSuppressedSwitchHooks(ply, state))
         local ok, allowed = pcall(hook.Run, "PlayerSwitchFlashlight", ply, state)
-
-        if mwBaseHook then
-            hook.Add("PlayerSwitchFlashlight", MWBASE_FLASHLIGHT_HOOK, mwBaseHook)
-        end
+        restorePlayerSwitchFlashlightHooks(removedHooks)
 
         return ok, allowed
     end
 
+    local function getFlashlightSoundFilters(pos)
+        local audibleFilter = RecipientFilter()
+        local customFilter = RecipientFilter()
+        local defaultFilter = RecipientFilter()
+
+        audibleFilter:AddPAS(pos)
+
+        for _, listener in ipairs(audibleFilter:GetPlayers()) do
+            if listener.BetterLights_CustomFlashlightSounds == false then
+                defaultFilter:AddPlayer(listener)
+            else
+                customFilter:AddPlayer(listener)
+            end
+        end
+
+        return customFilter, defaultFilter
+    end
+
+    local function emitFilteredSound(ply, soundName, soundLevel, filter)
+        if filter:GetCount() <= 0 then return end
+
+        ply:EmitSound(soundName, soundLevel, SOUND_PITCH, SOUND_VOLUME, CHAN_AUTO, SOUND_FLAGS, SOUND_DSP, filter)
+    end
+
     local function emitFlashlightSound(ply, state)
-        net.Start(BL.NET_FLASHLIGHT_SOUND)
-            net.WriteEntity(ply)
-            net.WriteBool(state)
-        net.SendPVS(ply:GetPos())
+        local customFilter, defaultFilter = getFlashlightSoundFilters(ply:GetPos())
+
+        emitFilteredSound(ply, state and CUSTOM_SOUND_ON or CUSTOM_SOUND_OFF, CUSTOM_SOUND_LEVEL, customFilter)
+        emitFilteredSound(ply, state and DEFAULT_SOUND_ON or DEFAULT_SOUND_OFF, DEFAULT_SOUND_LEVEL, defaultFilter)
     end
 
     local function isModuleEnabledFor(ply)
@@ -157,7 +193,7 @@ if SERVER then
         if not skipPermission and not canSwitchFlashlight(ply, state) then return false end
         if isModuleEnabledFor(ply) then
             turnOffVanillaFlashlight(ply)
-            clearActiveMwBaseFlashlightFlag(ply)
+            runIntegrationCallback("OnSetPlayerFlashlight", ply, state)
         end
 
         if ply:GetNWBool("BetterLights_Flashlight", false) == state then return true end
@@ -175,10 +211,11 @@ if SERVER then
         return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false))
     end
 
-    net.Receive(BL.NET_FLASHLIGHT_CLIENT_ENABLE, function(_, ply)
+    net.Receive(BL.NET_FLASHLIGHT_CLIENT_SETTINGS, function(_, ply)
         if not IsValid(ply) then return end
 
         ply.BetterLights_FlashlightEnabled = net.ReadBool()
+        ply.BetterLights_CustomFlashlightSounds = net.ReadBool()
 
         if ply.BetterLights_FlashlightEnabled == false then
             setFlashlight(ply, false, true, true)

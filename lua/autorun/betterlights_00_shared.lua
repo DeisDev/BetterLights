@@ -3,8 +3,7 @@ BetterLights = BetterLights or {}
 local BL = BetterLights
 
 BL.NET_EVENT_MESSAGE = "BetterLights_Event"
-BL.NET_FLASHLIGHT_CLIENT_ENABLE = "BetterLights_FlashlightClientEnable"
-BL.NET_FLASHLIGHT_SOUND = "BetterLights_FlashlightSound"
+BL.NET_FLASHLIGHT_CLIENT_SETTINGS = "BetterLights_FlashlightClientSettings"
 BL.NET_SET_SERVER_BOOL = "BetterLights_SetServerBool"
 
 BL.NET_MUZZLE_FLASH = 1
@@ -26,6 +25,77 @@ BL.EXPLOSION_SOURCE_PARTICLE = 4
 
 BL.MuzzleFlash = BL.MuzzleFlash or {}
 BL.Explosions = BL.Explosions or {}
+BL.Flashlight = BL.Flashlight or {}
+
+do
+    local FL = BL.Flashlight
+
+    FL.IntegrationsById = FL.IntegrationsById or {}
+    FL.Integrations = FL.Integrations or {}
+
+    local function normalizeString(value)
+        if value == nil then return nil end
+
+        value = tostring(value)
+        if value == "" then return nil end
+
+        return value
+    end
+
+    local function rebuildIntegrations()
+        local integrations = {}
+
+        for _, integration in pairs(FL.IntegrationsById) do
+            integrations[#integrations + 1] = integration
+        end
+
+        table.sort(integrations, function(a, b)
+            local ap = tonumber(a.priority) or 0
+            local bp = tonumber(b.priority) or 0
+            if ap ~= bp then return ap > bp end
+
+            return tostring(a.id or "") < tostring(b.id or "")
+        end)
+
+        FL.Integrations = integrations
+    end
+
+    function FL.RegisterIntegration(def)
+        if type(def) ~= "table" then return nil end
+
+        local id = normalizeString(def.id)
+        if not id then return nil end
+
+        local integration = {}
+        for k, v in pairs(def) do
+            integration[k] = v
+        end
+
+        integration.id = id
+        integration.priority = tonumber(integration.priority) or 0
+        FL.IntegrationsById[id] = integration
+        rebuildIntegrations()
+        return integration
+    end
+
+    function FL.GetIntegrations()
+        return FL.Integrations
+    end
+
+    function FL.GetWeaponBase(weapon)
+        if not IsValid(weapon) then return "" end
+
+        local base = weapon.Base
+        if base == nil and weapon.GetTable then
+            local tab = weapon:GetTable()
+            base = tab and tab.Base
+        end
+
+        return string.lower(tostring(base or ""))
+    end
+
+    rebuildIntegrations()
+end
 
 do
     local MF = BL.MuzzleFlash
