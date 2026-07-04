@@ -51,8 +51,9 @@ Busy combat, large NPC scenes, heavy particle effects, and other lighting addons
 [b]Compatibility[/b]
 
 [list]
-[*]Works with GShader Library addons and includes ARC9 muzzle flash support.
-[*]Most features are client-side and can be disabled individually.
+[*]Should work with most GShader Library addons.
+[*]Includes integrations with MW Base and ARC9 for muzzle flashes and flashlight attachments. If there is another weapon base that doesn't work with better lights, send the link and I can take a look at it. 
+[*]Most features are client-side and can be disabled individually. There are a few server-side effects such as muzzle flashes, flashlight beams and bullet impacts.
 [*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=3754051046]Re-Light - Dynamic Lights[/url] is not compatible. It covers the same kind of lighting, so choose Better Lights or Re-Light, not both.
 [/list]
 
