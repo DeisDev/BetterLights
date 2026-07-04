@@ -329,9 +329,8 @@ if CLIENT then
         return true
     end
 
-    local function isArc9Weapon(weapon)
-        if not IsValid(weapon) then return false end
-        if weapon.ARC9 == true then return true end
+    local function getWeaponBase(weapon)
+        if not IsValid(weapon) then return "" end
 
         local base = weapon.Base
         if base == nil and weapon.GetTable then
@@ -339,76 +338,15 @@ if CLIENT then
             base = tab and tab.Base
         end
 
-        base = string.lower(tostring(base or ""))
-        return base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil
+        return string.lower(tostring(base or ""))
     end
 
-    local function arc9OwnLightEnabled(isLocal)
-        local light = GetConVar("arc9_muzzle_light")
-        if not (light and light:GetBool()) then return false end
-        if isLocal then return true end
-
-        local others = GetConVar("arc9_muzzle_others")
-        return others and others:GetBool()
-    end
-
-    local function readArc9MuzzleDevice(weapon, isLocal)
-        if not (IsValid(weapon) and isfunction(weapon.GetMuzzleDevice)) then return nil end
-
-        local ok, device = pcall(function()
-            return weapon:GetMuzzleDevice(not isLocal, 1)
-        end)
-
-        if ok then return device end
-        return nil
-    end
-
-    local function arc9HasNoFlash(weapon, isLocal)
-        if not IsValid(weapon) then return false end
-        if weapon.NoMuzzleEffect == true or weapon.NoFlash == true then return true end
-
-        local device = readArc9MuzzleDevice(weapon, isLocal)
-        if type(device) == "table" then
-            return device.NoMuzzleEffect == true or device.NoFlash == true or device.Silencer == true
-        end
-
-        return false
-    end
-
-    local function resolveArc9Muzzle(weapon, isLocal)
-        if not IsValid(weapon) then return nil end
-
-        if isLocal and isfunction(weapon.GetQCAMuzzle) then
-            local ok, pos = pcall(function()
-                return weapon:GetQCAMuzzle()
-            end)
-
-            if ok and isVector(pos) then return pos end
-            if ok and type(pos) == "table" and isVector(pos.Pos) then return pos.Pos end
-        end
-
-        local device = readArc9MuzzleDevice(weapon, isLocal)
-        if type(device) == "table" then
-            if isVector(device.Pos) then return device.Pos end
-            if IsValid(device) and device.GetPos then return device:GetPos() end
-        elseif IsValid(device) and device.GetPos then
-            return device:GetPos()
-        end
-
-        return nil
-    end
-
-    MF.RegisterAdapter("arc9", {
-        matches = isArc9Weapon,
-        suppress = function(payload)
-            local isLocal = payload.shooter == LocalPlayer()
-            if arc9OwnLightEnabled(isLocal) then return true end
-            return arc9HasNoFlash(payload.weapon, isLocal)
-        end,
-        resolve = function(payload)
-            return resolveArc9Muzzle(payload.weapon, payload.shooter == LocalPlayer())
-        end
-    })
+    MF.IsVector = isVector
+    MF.GetAttachmentById = getAttachmentById
+    MF.GetAttachmentByName = getAttachmentByName
+    MF.GetFirstPersonAttachmentFallback = getFirstPersonAttachmentFallback
+    MF.BuildAttachmentCandidates = buildAttachmentCandidates
+    MF.GetWeaponBase = getWeaponBase
 
     local function getAdapterForWeapon(weapon, adapterId)
         if adapterId and adapterId ~= "" then
@@ -676,37 +614,7 @@ if CLIENT then
         })
     end
 
-    local function wrapArc9DoEffects(weapon)
-        if not isArc9Weapon(weapon) then return end
-        if weapon.BetterLightsArc9DoEffectsWrapped then return end
-        if not isfunction(weapon.DoEffects) then return end
-
-        local original = weapon.DoEffects
-        weapon.BetterLightsArc9DoEffectsWrapped = true
-        weapon.BetterLightsArc9DoEffectsOriginal = original
-        weapon.DoEffects = function(self, ...)
-            local ret = original(self, ...)
-            handleAdapterShot(self, "arc9")
-            return ret
-        end
-    end
-
-    local function scanArc9Weapons()
-        for _, ent in ipairs(ents.GetAll()) do
-            wrapArc9DoEffects(ent)
-        end
-    end
-
-    hook.Add("OnEntityCreated", "BetterLights_MuzzleFlash_ARC9_Client", function(ent)
-        timer.Simple(0, function()
-            if IsValid(ent) then
-                wrapArc9DoEffects(ent)
-            end
-        end)
-    end)
-
-    hook.Add("InitPostEntity", "BetterLights_MuzzleFlash_ARC9_Init_Client", scanArc9Weapons)
-    timer.Create("BetterLights_MuzzleFlash_ARC9_Scan_Client", 2, 0, scanArc9Weapons)
+    MF.HandleAdapterShot = handleAdapterShot
 
     local function registerBuiltIns()
         MF.ClearRulesBySource("builtin")

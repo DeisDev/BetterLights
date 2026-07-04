@@ -1,7 +1,7 @@
 if CLIENT then
     local BL = BetterLights
 
-    BL.VERSION = "v1.6.0-beta"
+    BL.VERSION = "v1.6.0-beta2"
 
     BL._networkHandlers = BL._networkHandlers or {}
     BL._clientConVars = BL._clientConVars or {}

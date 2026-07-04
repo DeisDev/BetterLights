@@ -164,17 +164,17 @@ if SERVER then
         net.Send(filter)
     end
 
-    local function isArc9Weapon(weapon)
-        if not IsValid(weapon) then return false end
-        if weapon.ARC9 == true then return true end
+    local function getAdapterIdForWeapon(weapon)
+        for id, adapter in pairs(MF.Adapters) do
+            if adapter.matches and adapter.matches(weapon) then
+                return id
+            end
+        end
 
-        local base = getWeaponBase(weapon)
-        return base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil
+        return nil
     end
 
-    MF.RegisterAdapter("arc9", {
-        matches = isArc9Weapon
-    })
+    MF.GetWeaponBase = getWeaponBase
 
     MF.ClearRulesBySource("builtin")
     MF.RegisterProfile("default", { source = "builtin" })
@@ -233,13 +233,14 @@ if SERVER then
         if not bullet then return end
 
         local shooter, weapon = resolveShooterAndWeapon(ent)
-        local rule = MF.MatchWeaponRule(shooter, weapon, bullet)
+        local adapterId = getAdapterIdForWeapon(weapon)
+        local rule = MF.MatchWeaponRule(shooter, weapon, bullet, adapterId)
         if not rule then return end
 
         local origin = getSendOrigin(shooter, weapon, bullet)
         if not origin then return end
 
-        sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, nil, rule.attachments)
+        sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, adapterId, rule.attachments)
     end
 
     hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", handleMuzzleFireBullets)
@@ -250,13 +251,14 @@ if SERVER then
         if not IsValid(ent) then return end
 
         local shooter, weapon = resolveMuzzleFlashShooterAndWeapon(ent)
-        local rule = MF.MatchWeaponRule(shooter, weapon, nil)
+        local adapterId = getAdapterIdForWeapon(weapon)
+        local rule = MF.MatchWeaponRule(shooter, weapon, nil, adapterId)
         if not rule then return end
 
         local origin = getSendOrigin(shooter, weapon)
         if not origin then return end
 
-        sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, nil, rule.attachments)
+        sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, adapterId, rule.attachments)
     end
 
     local function wrapEntityFireBullets()
@@ -308,38 +310,7 @@ if SERVER then
         sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_ADAPTER, origin, adapterId, rule.attachments)
     end
 
-    local function wrapArc9DoEffects(weapon)
-        if not isArc9Weapon(weapon) then return end
-        if weapon.BetterLightsArc9DoEffectsWrapped then return end
-        if not isfunction(weapon.DoEffects) then return end
-
-        local original = weapon.DoEffects
-        weapon.BetterLightsArc9DoEffectsWrapped = true
-        weapon.BetterLightsArc9DoEffectsOriginal = original
-        weapon.DoEffects = function(self, ...)
-            local ret = original(self, ...)
-            sendAdapterMuzzleFlash(self, "arc9")
-            return ret
-        end
-    end
-
-    local function scanArc9Weapons()
-        for _, ent in ipairs(ents.GetAll()) do
-            wrapArc9DoEffects(ent)
-        end
-    end
-
-    hook.Add("OnEntityCreated", "BetterLights_MuzzleFlash_ARC9_Server", function(ent)
-        timer.Simple(0, function()
-            if IsValid(ent) then
-                wrapArc9DoEffects(ent)
-            end
-        end)
-    end)
-
-    hook.Add("InitPostEntity", "BetterLights_MuzzleFlash_ARC9_Init_Server", scanArc9Weapons)
-
-    timer.Create("BetterLights_MuzzleFlash_ARC9_Scan_Server", 2, 0, scanArc9Weapons)
+    MF.SendAdapterMuzzleFlash = sendAdapterMuzzleFlash
 
     hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
         if not isBetterLightsEnabled() then return end
