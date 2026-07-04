@@ -116,6 +116,16 @@ if SERVER then
         return SPECIAL_IMPACT_MESSAGES[className]
     end
 
+    local function isBuiltinDefaultMuzzleRule(rule)
+        return rule and rule.id == "builtin_default" and rule.source == "builtin"
+    end
+
+    local function shouldSendMuzzleRule(rule, weapon)
+        if not isBuiltinDefaultMuzzleRule(rule) then return true end
+
+        return IsValid(weapon)
+    end
+
     local function isAR2Shot(shooter, bullet)
         local weapon = resolveWeapon(shooter)
         local rule = MF.MatchWeaponRule(shooter, weapon, bullet)
@@ -236,6 +246,7 @@ if SERVER then
         local adapterId = getAdapterIdForWeapon(weapon)
         local rule = MF.MatchWeaponRule(shooter, weapon, bullet, adapterId)
         if not rule then return end
+        if not shouldSendMuzzleRule(rule, weapon) then return end
 
         local origin = getSendOrigin(shooter, weapon, bullet)
         if not origin then return end
@@ -254,6 +265,7 @@ if SERVER then
         local adapterId = getAdapterIdForWeapon(weapon)
         local rule = MF.MatchWeaponRule(shooter, weapon, nil, adapterId)
         if not rule then return end
+        if not shouldSendMuzzleRule(rule, weapon) then return end
 
         local origin = getSendOrigin(shooter, weapon)
         if not origin then return end

@@ -4,6 +4,9 @@ if CLIENT then
 
     local cvar_player_enable = BL.CreateClientConVar("betterlights_flashlight_player_enable", "0", true, false, "Enable BetterLights flashlight replacement for your player")
     local cvar_custom_sounds = BL.CreateClientConVar("betterlights_flashlight_custom_sounds", "1", true, false, "Use BetterLights flashlight on/off sounds instead of vanilla flashlight sound events")
+    local cvar_mwbase_flashlight_override_disabled = BL.CreateClientConVar("betterlights_integration_mwbase_disable_flashlight_override", "0", true, false, "Use MW Base flashlight handling while MW Base weapons are active")
+    local cvar_arccw_flashlight_override_disabled = BL.CreateClientConVar("betterlights_integration_arccw_disable_flashlight_override", "0", true, false, "Use ArcCW flashlight handling while ArcCW weapons are active")
+    local cvar_arc9_flashlight_override_disabled = BL.CreateClientConVar("betterlights_integration_arc9_disable_flashlight_override", "0", true, false, "Use ARC9 flashlight handling while ARC9 weapons are active")
     local refreshThinkRegistration
     local ONBOARDING_COOKIE = "betterlights_flashlight_onboarding_seen"
 
@@ -17,6 +20,9 @@ if CLIENT then
         net.Start(BL.NET_FLASHLIGHT_CLIENT_SETTINGS)
             net.WriteBool(cvar_player_enable:GetBool())
             net.WriteBool(cvar_custom_sounds:GetBool())
+            net.WriteBool(cvar_mwbase_flashlight_override_disabled:GetBool())
+            net.WriteBool(cvar_arccw_flashlight_override_disabled:GetBool())
+            net.WriteBool(cvar_arc9_flashlight_override_disabled:GetBool())
         net.SendToServer()
     end
 
@@ -59,6 +65,17 @@ if CLIENT then
     cvars.AddChangeCallback("betterlights_flashlight_custom_sounds", function()
         queueFlashlightSettingsSync()
     end, "BetterLights_FlashlightCustomSounds")
+
+    local function queueIntegrationFlashlightSettingsSync()
+        queueFlashlightSettingsSync()
+        if refreshThinkRegistration then
+            refreshThinkRegistration()
+        end
+    end
+
+    cvars.AddChangeCallback("betterlights_integration_mwbase_disable_flashlight_override", queueIntegrationFlashlightSettingsSync, "BetterLights_MWBaseFlashlightOverride")
+    cvars.AddChangeCallback("betterlights_integration_arccw_disable_flashlight_override", queueIntegrationFlashlightSettingsSync, "BetterLights_ArcCWFlashlightOverride")
+    cvars.AddChangeCallback("betterlights_integration_arc9_disable_flashlight_override", queueIntegrationFlashlightSettingsSync, "BetterLights_ARC9FlashlightOverride")
 
     hook.Add("OnReloaded", "BetterLights_FlashlightSyncSettingsReload", function()
         queueFlashlightSettingsSync()

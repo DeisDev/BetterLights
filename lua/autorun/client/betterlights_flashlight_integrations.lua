@@ -7,6 +7,11 @@ if CLIENT then
     local MWBASE_ATTACHMENT_NAMES = { "muzzle", "tag_flash", "tag_muzzle", "tag_barrel", "tag_tip", "tip" }
     local getWeaponBase = FL.GetWeaponBase
 
+    local function isIntegrationFlashlightOverrideDisabled(id)
+        local cvar = GetConVar("betterlights_integration_" .. id .. "_disable_flashlight_override")
+        return cvar and cvar:GetBool()
+    end
+
     local function isArcCWWeapon(weapon)
         if not IsValid(weapon) then return false end
         if weapon.ArcCW == true then return true end
@@ -173,6 +178,7 @@ if CLIENT then
 
     local function shouldReplaceArcCWFlashlights()
         if not ProjectedTexture then return false end
+        if isIntegrationFlashlightOverrideDisabled("arccw") then return false end
 
         local globalCvar = GetConVar("betterlights_enable")
         if globalCvar and not globalCvar:GetBool() then return false end
@@ -347,6 +353,7 @@ if CLIENT then
 
     cvars.AddChangeCallback("betterlights_enable", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsGlobal")
     cvars.AddChangeCallback("betterlights_flashlight_player_enable", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsPlayer")
+    cvars.AddChangeCallback("betterlights_integration_arccw_disable_flashlight_override", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsIntegration")
 
     hook.Add("InitPostEntity", "BetterLights_Flashlight_ArcCW_Init_Client", scanArcCWFlashlightWeapons)
     timer.Create("BetterLights_Flashlight_ArcCW_Scan_Client", 2, 0, scanArcCWFlashlightWeapons)

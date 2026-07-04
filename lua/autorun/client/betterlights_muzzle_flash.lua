@@ -401,6 +401,10 @@ if CLIENT then
         return ok and suppress == true
     end
 
+    local function isBuiltinDefaultMuzzleRule(rule)
+        return rule and rule.id == "builtin_default" and rule.source == "builtin"
+    end
+
     local function emitMuzzleFlash(payload, attempt)
         attempt = attempt or 1
 
@@ -415,6 +419,7 @@ if CLIENT then
 
         local profileId = rule and rule.profile or payload.profileId or "default"
         if shouldSuppressServerEcho(payload.shooter, payload.weapon, profileId, payload.adapterId) then return end
+        if isBuiltinDefaultMuzzleRule(rule) and not IsValid(payload.weapon) then return end
 
         local profile = MF.GetProfile(profileId)
         local settings = getProfileSettings(profile, rule and rule.colorTag or nil)

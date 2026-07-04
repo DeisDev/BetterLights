@@ -124,9 +124,20 @@ if SERVER then
         emitFilteredSound(ply, state and DEFAULT_SOUND_ON or DEFAULT_SOUND_OFF, DEFAULT_SOUND_LEVEL, defaultFilter)
     end
 
+    local function isFlashlightOverrideDisabledFor(ply)
+        for _, integration in ipairs(FL.GetIntegrations()) do
+            local callback = integration.IsFlashlightOverrideDisabled
+            if isfunction(callback) and callback(ply) == true then
+                return true
+            end
+        end
+
+        return false
+    end
+
     local function isModuleEnabledFor(ply)
         local globalCvar = GetConVar("betterlights_enable")
-        return (not globalCvar or globalCvar:GetBool()) and IsValid(ply) and ply.BetterLights_FlashlightEnabled == true
+        return (not globalCvar or globalCvar:GetBool()) and IsValid(ply) and ply.BetterLights_FlashlightEnabled == true and not isFlashlightOverrideDisabledFor(ply)
     end
 
     local function recentlyHandledInput(ply)
@@ -211,19 +222,34 @@ if SERVER then
         return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false))
     end
 
-    net.Receive(BL.NET_FLASHLIGHT_CLIENT_SETTINGS, function(_, ply)
+    local function clearFlashlightIfOverrideDisabled(ply)
+        if not IsValid(ply) then return end
+        if not ply:GetNWBool("BetterLights_Flashlight", false) then return end
+        if not isFlashlightOverrideDisabledFor(ply) then return end
+
+        setFlashlight(ply, false, true, true)
+    end
+
+    net.Receive(BL.NET_FLASHLIGHT_CLIENT_SETTINGS, function(len, ply)
         if not IsValid(ply) then return end
 
         ply.BetterLights_FlashlightEnabled = net.ReadBool()
         ply.BetterLights_CustomFlashlightSounds = net.ReadBool()
+        ply.BetterLights_MWBaseFlashlightOverrideDisabled = len >= 5 and net.ReadBool() or false
+        ply.BetterLights_ArcCWFlashlightOverrideDisabled = len >= 5 and net.ReadBool() or false
+        ply.BetterLights_ARC9FlashlightOverrideDisabled = len >= 5 and net.ReadBool() or false
 
-        if ply.BetterLights_FlashlightEnabled == false then
+        if ply.BetterLights_FlashlightEnabled == false or isFlashlightOverrideDisabledFor(ply) then
             setFlashlight(ply, false, true, true)
         end
     end)
 
     hook.Add("StartCommand", "BetterLights_FlashlightImpulse", function(ply, cmd)
-        if not isModuleEnabledFor(ply) then return end
+        if not isModuleEnabledFor(ply) then
+            clearFlashlightIfOverrideDisabled(ply)
+            return
+        end
+
         if cmd:GetImpulse() ~= 100 then return end
 
         cmd:SetImpulse(0)
@@ -257,6 +283,12 @@ if SERVER then
 
     hook.Add("PlayerSilentDeath", "BetterLights_FlashlightSilentDeath", function(ply)
         setFlashlight(ply, false, true, true)
+    end)
+
+    hook.Add("PlayerSwitchWeapon", "BetterLights_FlashlightIntegrationSwitch", function(ply)
+        timer.Simple(0, function()
+            clearFlashlightIfOverrideDisabled(ply)
+        end)
     end)
 
     cvars.AddChangeCallback("betterlights_enable", function(_, _, new)

@@ -19,6 +19,7 @@ if CLIENT then
         { "Gunfire", "category.gunfire" },
         { "Environment", "category.environment" },
         { "Pickups", "category.pickups" },
+        { "Integrations", "category.integrations" },
         { "Developer", "category.developer", developer = true },
         { "About", "category.about" }
     }
@@ -1646,6 +1647,7 @@ if CLIENT then
         BetterLights.Menu.RegisterGunfirePanels()
         BetterLights.Menu.RegisterWeaponPanels()
         addClientPanels()
+        BetterLights.Menu.RegisterIntegrationPanels()
         BetterLights.Menu.RegisterDeveloperPanel()
         BetterLights.Menu.RegisterAboutPanel()
     end)
