@@ -5,8 +5,81 @@ if SERVER then
     util.AddNetworkString(BL.NET_FLASHLIGHT_SOUND)
 
     local INPUT_DEBOUNCE = 0.05
+    local MWBASE_FLASHLIGHT_HOOK = "MW19_PlayerSwitchFlashlight"
 
     local PLAYER = FindMetaTable("Player")
+
+    local function getWeaponBase(weapon)
+        if not IsValid(weapon) then return "" end
+
+        local base = weapon.Base
+        if base == nil and weapon.GetTable then
+            local tab = weapon:GetTable()
+            base = tab and tab.Base
+        end
+
+        return string.lower(tostring(base or ""))
+    end
+
+    local function isMwBaseWeapon(weapon)
+        if not IsValid(weapon) then return false end
+        if getWeaponBase(weapon) == "mg_base" then return true end
+
+        if weapons and weapons.IsBasedOn and weapon.GetClass then
+            local className = weapon:GetClass()
+            if className ~= "" and weapons.IsBasedOn(className, "mg_base") then return true end
+        end
+
+        return isfunction(weapon.GetStoredAttachment)
+            and isfunction(weapon.PlayViewModelAnimation)
+            and isfunction(weapon.GetAllAttachmentsInUse)
+    end
+
+    local function hasMwBaseFlashlightAttachment(weapon)
+        if not isMwBaseWeapon(weapon) then return false end
+        if not isfunction(weapon.GetFlashlightAttachment) then return false end
+
+        local ok, attachment = pcall(weapon.GetFlashlightAttachment, weapon)
+        return ok and attachment ~= nil
+    end
+
+    local function clearMwBaseFlashlightFlag(weapon)
+        if not hasMwBaseFlashlightAttachment(weapon) then return end
+        if not isfunction(weapon.RemoveFlag) then return end
+
+        pcall(weapon.RemoveFlag, weapon, "FlashlightOn")
+    end
+
+    local function clearActiveMwBaseFlashlightFlag(ply)
+        if not (IsValid(ply) and ply.GetActiveWeapon) then return end
+
+        clearMwBaseFlashlightFlag(ply:GetActiveWeapon())
+    end
+
+    local function shouldSkipMwBaseFlashlightHook(ply, state)
+        if state ~= true then return false end
+        if not (IsValid(ply) and ply.GetActiveWeapon) then return false end
+
+        return hasMwBaseFlashlightAttachment(ply:GetActiveWeapon())
+    end
+
+    local function runPlayerSwitchFlashlightHook(ply, state)
+        local skipMwBase = shouldSkipMwBaseFlashlightHook(ply, state)
+        local flashlightHooks = hook.GetTable().PlayerSwitchFlashlight
+        local mwBaseHook = skipMwBase and flashlightHooks and flashlightHooks[MWBASE_FLASHLIGHT_HOOK] or nil
+
+        if mwBaseHook then
+            hook.Remove("PlayerSwitchFlashlight", MWBASE_FLASHLIGHT_HOOK)
+        end
+
+        local ok, allowed = pcall(hook.Run, "PlayerSwitchFlashlight", ply, state)
+
+        if mwBaseHook then
+            hook.Add("PlayerSwitchFlashlight", MWBASE_FLASHLIGHT_HOOK, mwBaseHook)
+        end
+
+        return ok, allowed
+    end
 
     local function emitFlashlightSound(ply, state)
         net.Start(BL.NET_FLASHLIGHT_SOUND)
@@ -66,7 +139,7 @@ if SERVER then
         if not canUseFlashlight(ply) then return false end
 
         ply.BetterLights_CheckingSwitchHook = true
-        local ok, allowed = pcall(hook.Run, "PlayerSwitchFlashlight", ply, state)
+        local ok, allowed = runPlayerSwitchFlashlightHook(ply, state)
         ply.BetterLights_CheckingSwitchHook = nil
 
         if not ok then
@@ -84,6 +157,7 @@ if SERVER then
         if not skipPermission and not canSwitchFlashlight(ply, state) then return false end
         if isModuleEnabledFor(ply) then
             turnOffVanillaFlashlight(ply)
+            clearActiveMwBaseFlashlightFlag(ply)
         end
 
         if ply:GetNWBool("BetterLights_Flashlight", false) == state then return true end
