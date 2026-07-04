@@ -51,11 +51,34 @@ if CLIENT then
 
     BL.TrackClass("npc_combine_s")
 
-    local variants = {
-        { model = "combine_super_soldier", default = "elite" },
-        { model = "prisonguard", skinMap = {[0] = "prisonYellow", [1] = "prisonRed"}, default = "prisonYellow" },
-        { model = "combine_soldier", skinMap = {[0] = "standardBlue", [1] = "standardOrange"}, default = "standardBlue" }
+    local modelVariants = {
+        ["models/combine_super_soldier.mdl"] = {
+            default = "elite"
+        },
+        ["models/combine_soldier_prisonguard.mdl"] = {
+            skinMap = {[0] = "prisonYellow", [1] = "prisonRed"},
+            default = "prisonYellow"
+        },
+        ["models/combine_soldier.mdl"] = {
+            skinMap = {[0] = "standardBlue", [1] = "standardOrange"},
+            default = "standardBlue"
+        }
     }
+
+    local function getColorKey(ent)
+        if not (IsValid(ent) and ent.GetModel) then return nil end
+
+        local model = ent:GetModel()
+        local variant = model and modelVariants[model]
+        if not variant then return nil end
+
+        if variant.skinMap then
+            local skin = (ent.GetSkin and ent:GetSkin()) or 0
+            return variant.skinMap[skin] or variant.default
+        end
+
+        return variant.default
+    end
 
     local function getSettings(colorKey)
         local selected = colorCvars[colorKey] or colorCvars.standardBlue
@@ -68,7 +91,9 @@ if CLIENT then
 
     BL.AddThink("BetterLights_CombineSoldier", function()
         BL.ForEach("npc_combine_s", function(ent)
-            local colorKey = BL.DetectModelVariant(ent, variants) or "standardBlue"
+            local colorKey = getColorKey(ent)
+            if not colorKey then return end
+
             local settings, size, brightness, decay, red, green, blue = getSettings(colorKey)
             if not settings.enable:GetBool() then return end
 

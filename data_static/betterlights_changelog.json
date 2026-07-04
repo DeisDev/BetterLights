@@ -4,7 +4,8 @@
     "title": "Better Lights v1.6.0-beta2",
     "items": [
       "Improved MW Base muzzle flash handling.",
-      "Better Lights flashlight can now attach to MW Base weapons."
+      "Better Lights flashlight can now attach to MW Base weapons.",
+      "Fixed eye glow appearing on some custom Combine NPC models."
     ]
   },
   {
