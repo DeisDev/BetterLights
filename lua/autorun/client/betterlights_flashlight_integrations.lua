@@ -5,6 +5,12 @@ if CLIENT then
     local ARCCW_FLASHLIGHT_ATTACHMENT_NAMES = { "laser", "muzzle", "1" }
     local ARCCW_MUZZLE_ATTACHMENT_NAMES = { "muzzle", "1" }
     local MWBASE_ATTACHMENT_NAMES = { "muzzle", "tag_flash", "tag_muzzle", "tag_barrel", "tag_tip", "tip" }
+    local M9K_ATTACHMENT_NAMES = { "1", "muzzle", "Muzzle" }
+    local M9K_BASES = {
+        bobs_gun_base = true,
+        bobs_scoped_base = true,
+        bobs_shotty_base = true
+    }
     local getWeaponBase = FL.GetWeaponBase
 
     local function isIntegrationFlashlightOverrideDisabled(id)
@@ -41,6 +47,24 @@ if CLIENT then
             and isfunction(weapon.GetAllAttachmentsInUse)
     end
 
+    local function isM9KWeapon(weapon)
+        if not IsValid(weapon) then return false end
+        if M9K_BASES[getWeaponBase(weapon)] then return true end
+
+        if weapon.GetClass then
+            local className = weapon:GetClass()
+            if string.StartWith(className, "m9k_") then return true end
+
+            if className ~= "" and weapons and weapons.IsBasedOn then
+                for base in pairs(M9K_BASES) do
+                    if weapons.IsBasedOn(className, base) then return true end
+                end
+            end
+        end
+
+        return false
+    end
+
     local function getMwBaseViewModel(weapon)
         if not (IsValid(weapon) and isfunction(weapon.GetViewModel)) then return nil end
 
@@ -71,6 +95,13 @@ if CLIENT then
         end
 
         return nil
+    end
+
+    local function getPlayerAimAngle(ply)
+        local aim = ply.GetAimVector and ply:GetAimVector() or nil
+        if aim then return aim:Angle() end
+
+        return ply:EyeAngles()
     end
 
     local function readArcCWBuffOverride(weapon, key, fallback)
@@ -331,6 +362,27 @@ if CLIENT then
         return resolveMwBaseAttachmentTransform(activeWeapon, MWBASE_ATTACHMENT_NAMES, 0)
     end
 
+    local function getM9KAttachmentTransform(ply, localPlayer, activeWeapon)
+        if not isM9KWeapon(activeWeapon) then return nil end
+
+        local useViewModel = ply == localPlayer and not ply:ShouldDrawLocalPlayer()
+        local source = useViewModel and ply:GetViewModel() or activeWeapon
+        local attachmentNames = {
+            activeWeapon.MuzzleAttachment or "1",
+            M9K_ATTACHMENT_NAMES[1],
+            M9K_ATTACHMENT_NAMES[2],
+            M9K_ATTACHMENT_NAMES[3]
+        }
+        local attachment = resolveAttachmentTransform(source, attachmentNames)
+        if not attachment then return nil end
+
+        return {
+            Pos = attachment.Pos,
+            Ang = getPlayerAimAngle(ply),
+            Bone = attachment.Bone
+        }
+    end
+
     FL.RegisterIntegration({
         id = "arccw",
         priority = 110,
@@ -341,6 +393,12 @@ if CLIENT then
         id = "mwbase",
         priority = 100,
         GetAttachmentTransform = getMwBaseAttachmentTransform
+    })
+
+    FL.RegisterIntegration({
+        id = "m9k",
+        priority = 90,
+        GetAttachmentTransform = getM9KAttachmentTransform
     })
 
     hook.Add("OnEntityCreated", "BetterLights_Flashlight_ArcCW_Client", function(ent)
