@@ -2,6 +2,7 @@ if CLIENT then
     local BL = BetterLights
     local MF = BL.MuzzleFlash
 
+    local ARCCW_ATTACHMENTS = { "muzzle", "1" }
     local MWBASE_ATTACHMENTS = { "muzzle", "tag_flash", "tag_muzzle", "tag_barrel", "tag_tip", "tip" }
 
     local isVector = MF.IsVector
@@ -17,6 +18,21 @@ if CLIENT then
 
         local base = getWeaponBase(weapon)
         return base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil
+    end
+
+    local function isArcCWWeapon(weapon)
+        if not IsValid(weapon) then return false end
+        if weapon.ArcCW == true then return true end
+
+        local base = getWeaponBase(weapon)
+        if base == "arccw_base" or string.find(base, "arccw", 1, true) ~= nil then return true end
+
+        if weapons and weapons.IsBasedOn and weapon.GetClass then
+            local className = weapon:GetClass()
+            if className ~= "" and weapons.IsBasedOn(className, "arccw_base") then return true end
+        end
+
+        return false
     end
 
     local function isMwBaseWeapon(weapon)
@@ -40,6 +56,73 @@ if CLIENT then
 
         local others = GetConVar("arc9_muzzle_others")
         return others and others:GetBool()
+    end
+
+    local function readArcCWBuffOverride(weapon, key, fallback)
+        if not (IsValid(weapon) and isfunction(weapon.GetBuff_Override)) then return fallback end
+
+        local ok, value = pcall(weapon.GetBuff_Override, weapon, key, fallback)
+        if ok then return value end
+        return fallback
+    end
+
+    local function readArcCWMuzzleAttachmentId(weapon)
+        local attachmentId = readArcCWBuffOverride(weapon, "Override_MuzzleEffectAttachment", weapon.MuzzleEffectAttachment or 1)
+        attachmentId = tonumber(attachmentId)
+        if attachmentId and attachmentId > 0 then return attachmentId end
+
+        return 1
+    end
+
+    local function readArcCWMuzzleDevice(weapon, worldModel)
+        if not (IsValid(weapon) and isfunction(weapon.GetMuzzleDevice)) then return nil end
+
+        local ok, device = pcall(weapon.GetMuzzleDevice, weapon, worldModel)
+        if ok and IsValid(device) then return device end
+        return nil
+    end
+
+    local function arcCWHasNoFlash(weapon)
+        if not IsValid(weapon) then return false end
+
+        local noFlash = weapon.NoFlash
+        if weapon.BetterLightsArcCWMuzzleLightReplaced then
+            noFlash = weapon.BetterLightsArcCWOriginalNoFlash
+        end
+
+        if noFlash == true then return true end
+        if readArcCWBuffOverride(weapon, "Silencer", false) then return true end
+        if readArcCWBuffOverride(weapon, "FlashHider", false) then return true end
+
+        return false
+    end
+
+    local function shouldReplaceArcCWMuzzleLight()
+        local globalCvar = GetConVar("betterlights_enable")
+        if globalCvar and not globalCvar:GetBool() then return false end
+
+        local muzzleCvar = GetConVar("betterlights_muzzle_enable")
+        return not muzzleCvar or muzzleCvar:GetBool()
+    end
+
+    local function refreshArcCWMuzzleLightReplacement(weapon)
+        if not isArcCWWeapon(weapon) then return end
+
+        if shouldReplaceArcCWMuzzleLight() then
+            if not weapon.BetterLightsArcCWMuzzleLightReplaced then
+                weapon.BetterLightsArcCWOriginalNoFlash = weapon.NoFlash
+                weapon.BetterLightsArcCWMuzzleLightReplaced = true
+            end
+
+            weapon.NoFlash = true
+            return
+        end
+
+        if not weapon.BetterLightsArcCWMuzzleLightReplaced then return end
+
+        weapon.NoFlash = weapon.BetterLightsArcCWOriginalNoFlash
+        weapon.BetterLightsArcCWOriginalNoFlash = nil
+        weapon.BetterLightsArcCWMuzzleLightReplaced = nil
     end
 
     local function readArc9MuzzleDevice(weapon, isLocal)
@@ -86,6 +169,27 @@ if CLIENT then
         end
 
         return nil
+    end
+
+    local function resolveArcCWMuzzle(weapon, shooter)
+        if not IsValid(weapon) then return nil end
+
+        local localPlayer = LocalPlayer()
+        local useViewModel = shooter == localPlayer and IsValid(shooter) and not shooter:ShouldDrawLocalPlayer()
+        local worldModel = not useViewModel
+        local attachmentId = worldModel and 1 or readArcCWMuzzleAttachmentId(weapon)
+        local muzzleDevice = readArcCWMuzzleDevice(weapon, worldModel)
+        local firstPersonFallback = getFirstPersonAttachmentFallback(shooter)
+
+        if firstPersonFallback then
+            if getAttachmentById(muzzleDevice, attachmentId) or getAttachmentById(weapon, attachmentId) then
+                return firstPersonFallback
+            end
+
+            return nil
+        end
+
+        return getAttachmentById(muzzleDevice, attachmentId) or getAttachmentById(weapon, attachmentId)
     end
 
     local function buildMwBaseAttachmentCandidates(attachments)
@@ -177,6 +281,16 @@ if CLIENT then
         end
     })
 
+    MF.RegisterAdapter("arccw", {
+        matches = isArcCWWeapon,
+        suppress = function(payload)
+            return arcCWHasNoFlash(payload.weapon)
+        end,
+        resolve = function(payload)
+            return resolveArcCWMuzzle(payload.weapon, payload.shooter)
+        end
+    })
+
     MF.RegisterAdapter("mwbase", {
         matches = isMwBaseWeapon,
         resolve = resolveMwBaseMuzzle
@@ -191,6 +305,15 @@ if CLIENT then
         source = "builtin"
     })
 
+    MF.RegisterWeaponRule({
+        id = "builtin_arccw",
+        adapter = "arccw",
+        profile = "default",
+        priority = -875,
+        attachments = ARCCW_ATTACHMENTS,
+        source = "builtin"
+    })
+
     local function wrapArc9DoEffects(weapon)
         if not isArc9Weapon(weapon) then return end
         if weapon.BetterLightsArc9DoEffectsWrapped then return end
@@ -202,6 +325,23 @@ if CLIENT then
         weapon.DoEffects = function(self, ...)
             local ret = original(self, ...)
             MF.HandleAdapterShot(self, "arc9")
+            return ret
+        end
+    end
+
+    local function wrapArcCWDoEffects(weapon)
+        if not isArcCWWeapon(weapon) then return end
+        if weapon.BetterLightsArcCWDoEffectsWrapped then return end
+        if not isfunction(weapon.DoEffects) then return end
+
+        local original = weapon.DoEffects
+        weapon.BetterLightsArcCWDoEffectsWrapped = true
+        weapon.BetterLightsArcCWDoEffectsOriginal = original
+        weapon.DoEffects = function(self, ...)
+            refreshArcCWMuzzleLightReplacement(self)
+            local ret = original(self, ...)
+            if IsFirstTimePredicted and not IsFirstTimePredicted() then return ret end
+            MF.HandleAdapterShot(self, "arccw")
             return ret
         end
     end
@@ -225,6 +365,8 @@ if CLIENT then
     local function scanAdapterWeapons()
         for _, ent in ipairs(ents.GetAll()) do
             wrapArc9DoEffects(ent)
+            wrapArcCWDoEffects(ent)
+            refreshArcCWMuzzleLightReplacement(ent)
             wrapMwBaseProjectiles(ent)
         end
     end
@@ -233,10 +375,15 @@ if CLIENT then
         timer.Simple(0, function()
             if IsValid(ent) then
                 wrapArc9DoEffects(ent)
+                wrapArcCWDoEffects(ent)
+                refreshArcCWMuzzleLightReplacement(ent)
                 wrapMwBaseProjectiles(ent)
             end
         end)
     end)
+
+    cvars.AddChangeCallback("betterlights_enable", scanAdapterWeapons, "BetterLights_ArcCWMuzzleLightReplacementGlobal")
+    cvars.AddChangeCallback("betterlights_muzzle_enable", scanAdapterWeapons, "BetterLights_ArcCWMuzzleLightReplacementMuzzle")
 
     hook.Add("InitPostEntity", "BetterLights_MuzzleFlash_Adapters_Init_Client", scanAdapterWeapons)
     timer.Create("BetterLights_MuzzleFlash_Adapters_Scan_Client", 2, 0, scanAdapterWeapons)

@@ -2,6 +2,7 @@ if SERVER then
     local BL = BetterLights
     local MF = BL.MuzzleFlash
 
+    local ARCCW_ATTACHMENTS = { "muzzle", "1" }
     local MWBASE_ATTACHMENTS = { "muzzle", "tag_flash", "tag_muzzle", "tag_barrel", "tag_tip", "tip" }
     local getWeaponBase = MF.GetWeaponBase
 
@@ -11,6 +12,21 @@ if SERVER then
 
         local base = getWeaponBase(weapon)
         return base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil
+    end
+
+    local function isArcCWWeapon(weapon)
+        if not IsValid(weapon) then return false end
+        if weapon.ArcCW == true then return true end
+
+        local base = getWeaponBase(weapon)
+        if base == "arccw_base" or string.find(base, "arccw", 1, true) ~= nil then return true end
+
+        if weapons and weapons.IsBasedOn and weapon.GetClass then
+            local className = weapon:GetClass()
+            if className ~= "" and weapons.IsBasedOn(className, "arccw_base") then return true end
+        end
+
+        return false
     end
 
     local function isMwBaseWeapon(weapon)
@@ -31,6 +47,10 @@ if SERVER then
         matches = isArc9Weapon
     })
 
+    MF.RegisterAdapter("arccw", {
+        matches = isArcCWWeapon
+    })
+
     MF.RegisterAdapter("mwbase", {
         matches = isMwBaseWeapon
     })
@@ -41,6 +61,15 @@ if SERVER then
         profile = "default",
         priority = -900,
         attachments = MWBASE_ATTACHMENTS,
+        source = "builtin"
+    })
+
+    MF.RegisterWeaponRule({
+        id = "builtin_arccw",
+        adapter = "arccw",
+        profile = "default",
+        priority = -875,
+        attachments = ARCCW_ATTACHMENTS,
         source = "builtin"
     })
 
@@ -55,6 +84,21 @@ if SERVER then
         weapon.DoEffects = function(self, ...)
             local ret = original(self, ...)
             MF.SendAdapterMuzzleFlash(self, "arc9")
+            return ret
+        end
+    end
+
+    local function wrapArcCWDoEffects(weapon)
+        if not isArcCWWeapon(weapon) then return end
+        if weapon.BetterLightsArcCWDoEffectsWrapped then return end
+        if not isfunction(weapon.DoEffects) then return end
+
+        local original = weapon.DoEffects
+        weapon.BetterLightsArcCWDoEffectsWrapped = true
+        weapon.BetterLightsArcCWDoEffectsOriginal = original
+        weapon.DoEffects = function(self, ...)
+            local ret = original(self, ...)
+            MF.SendAdapterMuzzleFlash(self, "arccw")
             return ret
         end
     end
@@ -77,6 +121,7 @@ if SERVER then
     local function scanAdapterWeapons()
         for _, ent in ipairs(ents.GetAll()) do
             wrapArc9DoEffects(ent)
+            wrapArcCWDoEffects(ent)
             wrapMwBaseProjectiles(ent)
         end
     end
@@ -85,6 +130,7 @@ if SERVER then
         timer.Simple(0, function()
             if IsValid(ent) then
                 wrapArc9DoEffects(ent)
+                wrapArcCWDoEffects(ent)
                 wrapMwBaseProjectiles(ent)
             end
         end)
