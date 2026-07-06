@@ -4,7 +4,8 @@
     "title": "Better Lights v1.6.0-beta7",
     "items": [
       "Added advanced flashlight shadow settings.",
-      "Improved flashlight shadow stability on props."
+      "Improved flashlight shadow stability near props.",
+      "Fixed scanner searchlights on some models."
     ]
   },
   {

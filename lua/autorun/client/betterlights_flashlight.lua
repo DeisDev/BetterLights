@@ -110,9 +110,9 @@ if CLIENT then
     local cvar_flare_others = BL.CreateClientConVar("betterlights_flashlight_flare_others", "1", true, false, "Show flashlight lens flares on other players", 0, 1)
     local cvar_flare_size = BL.CreateClientConVar("betterlights_flashlight_flare_size", "1", true, false, "Flashlight lens flare size", 0.25, 3)
     local cvar_flare_opacity = BL.CreateClientConVar("betterlights_flashlight_flare_opacity", "90", true, false, "Flashlight lens flare opacity", 0, 255)
-    local cvar_shadow_depth_bias = BL.CreateClientConVar("betterlights_flashlight_shadow_depth_bias", "0.0006", true, false, "Flashlight shadow depth bias")
-    local cvar_shadow_slope_scale_depth_bias = BL.CreateClientConVar("betterlights_flashlight_shadow_slope_scale_depth_bias", "3", true, false, "Flashlight shadow slope scale depth bias")
-    local cvar_shadow_filter = BL.CreateClientConVar("betterlights_flashlight_shadow_filter", "1", true, false, "Flashlight shadow filter size")
+    local cvar_shadow_depth_bias = BL.CreateClientConVar("betterlights_flashlight_shadow_depth_bias", "0.001", true, false, "Flashlight shadow depth bias")
+    local cvar_shadow_slope_scale_depth_bias = BL.CreateClientConVar("betterlights_flashlight_shadow_slope_scale_depth_bias", "4", true, false, "Flashlight shadow slope scale depth bias")
+    local cvar_shadow_filter = BL.CreateClientConVar("betterlights_flashlight_shadow_filter", "1.25", true, false, "Flashlight shadow filter size")
 
     local DEFAULT_TEXTURE = "effects/flashlight001"
     local RECENT_TEXTURE_COOKIE = "betterlights_flashlight_recent_textures"

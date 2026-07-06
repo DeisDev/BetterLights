@@ -68,8 +68,24 @@ if CLIENT then
         return direction:Angle()
     end
 
+    local function getFallbackSearchlightTransform(ent, attachments)
+        local glow = BL.GetAttachmentTransform(ent, attachments.glow)
+        if glow and glow.Pos then
+            glow.Ang = glow.Ang or (ent.GetAngles and ent:GetAngles()) or Angle(0, 0, 0)
+            return glow
+        end
+
+        local pos = BL.GetEntityCenter(ent)
+        if not pos then return nil end
+
+        return {
+            Pos = pos,
+            Ang = (ent.GetAngles and ent:GetAngles()) or Angle(0, 0, 0)
+        }
+    end
+
     local function getSearchlightTransform(ent, attachments)
-        local light = BL.GetAttachmentTransform(ent, attachments.searchlight)
+        local light = BL.GetAttachmentTransform(ent, attachments.searchlight) or getFallbackSearchlightTransform(ent, attachments)
         if not (light and light.Pos and light.Ang) then return nil end
 
         local pos = light.Pos
