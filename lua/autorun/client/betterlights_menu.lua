@@ -63,6 +63,12 @@ if CLIENT then
         spawnmenu.AddToolMenuOption(TAB_ID, category, id, phrase(titleKey), "", "", buildPanel)
     end
 
+    function MENU.RefreshSettingsPanel()
+        timer.Simple(0, function()
+            RunConsoleCommand("spawnmenu_reload")
+        end)
+    end
+
     local function registerPage(category, id, titleKey, buildPanel)
         MENU.RegisterPage(category, id, titleKey, buildPanel)
     end

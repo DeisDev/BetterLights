@@ -8,12 +8,19 @@ if CLIENT then
         local addSection = MENU.AddSection
         local addStyledButton = MENU.AddStyledButton
         local registerPage = MENU.RegisterPage
+        local refreshSettingsPanel = MENU.RefreshSettingsPanel
         local isDeveloperMode = MENU.IsDeveloperMode
 
         if not isDeveloperMode() then return end
 
-        registerPage("Developer", "BL_DeveloperTools", "menu.developer_tools", function(panel)
+        local function buildDeveloperToolsPanel(panel)
             setupPage(panel, "page.developer_tools.title", "page.developer_tools.desc")
+
+            local settingsPanel = addSection(panel, "section.settings_panel", "section.settings_panel.desc", false)
+            local refreshSettings = addStyledButton(settingsPanel, phrase("button.refresh_settings_panel"))
+            refreshSettings.DoClick = function()
+                refreshSettingsPanel()
+            end
 
             local lightOrigins = addSection(panel, "section.dynamic_light_origins", "section.dynamic_light_origins.desc", true)
             lightOrigins:CheckBox(phrase("control.show_light_origins"), "betterlights_debug_light_origins_enable")
@@ -26,6 +33,8 @@ if CLIENT then
             testTip.DoClick = function()
                 BetterLights.ShowFlashlightOnboardingTip(true)
             end
-        end)
+        end
+
+        registerPage("Developer", "BL_DeveloperTools", "menu.developer_tools", buildDeveloperToolsPanel)
     end
 end
