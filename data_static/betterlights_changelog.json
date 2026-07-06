@@ -1,5 +1,13 @@
 [
   {
+    "version": "v1.6.0-beta7",
+    "title": "Better Lights v1.6.0-beta7",
+    "items": [
+      "Added advanced flashlight shadow settings.",
+      "Improved flashlight shadow stability on props."
+    ]
+  },
+  {
     "version": "v1.6.0-beta6",
     "title": "Better Lights v1.6.0-beta6",
     "items": [

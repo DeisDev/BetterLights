@@ -33,6 +33,9 @@ if CLIENT then
         lamp:SetBrightness(options.brightness)
         lamp:SetColor(options.color)
         lamp:SetEnableShadows(options.shadows)
+        if options.shadowDepthBias then lamp:SetShadowDepthBias(options.shadowDepthBias) end
+        if options.shadowSlopeScaleDepthBias then lamp:SetShadowSlopeScaleDepthBias(options.shadowSlopeScaleDepthBias) end
+        if options.shadowFilter then lamp:SetShadowFilter(options.shadowFilter) end
         if options.noCull ~= nil then lamp:SetNoCull(options.noCull) end
         if options.linearAttenuation then lamp:SetLinearAttenuation(options.linearAttenuation) end
         if options.constantAttenuation then lamp:SetConstantAttenuation(options.constantAttenuation) end

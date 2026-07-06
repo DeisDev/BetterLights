@@ -516,6 +516,12 @@ if CLIENT then
         beam:NumSlider(phrase("control.beam_length"), "betterlights_flashlight_distance", 128, 4096, 0)
         addBeamLengthResetButton(beam)
 
+        local advancedShadows = addSection(panel, "section.advanced_shadows", "section.advanced_shadows.desc", false)
+        addHelpText(advancedShadows, phrase("help.advanced_shadow_settings"))
+        advancedShadows:NumSlider(phrase("control.shadow_depth_bias"), "betterlights_flashlight_shadow_depth_bias", 0, 0.005, 5)
+        advancedShadows:NumSlider(phrase("control.shadow_slope_scale_depth_bias"), "betterlights_flashlight_shadow_slope_scale_depth_bias", 0, 8, 2)
+        advancedShadows:NumSlider(phrase("control.shadow_filter"), "betterlights_flashlight_shadow_filter", 0, 4, 2)
+
         local flare = addSection(panel, "section.flare", "section.flare.desc", true)
         flare:CheckBox(phrase("control.flashlight_flare"), "betterlights_flashlight_flare_enable")
         flare:CheckBox(phrase("control.show_other_flashlight_flares"), "betterlights_flashlight_flare_others")
@@ -655,6 +661,9 @@ if CLIENT then
             betterlights_flashlight_flare_others = 1,
             betterlights_flashlight_flare_size = 1,
             betterlights_flashlight_flare_opacity = 90,
+            betterlights_flashlight_shadow_depth_bias = 0.0006,
+            betterlights_flashlight_shadow_slope_scale_depth_bias = 3,
+            betterlights_flashlight_shadow_filter = 1,
             betterlights_flashlight_color_r = 255,
             betterlights_flashlight_color_g = 245,
             betterlights_flashlight_color_b = 225,
