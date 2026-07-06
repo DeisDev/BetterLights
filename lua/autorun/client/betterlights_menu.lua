@@ -516,6 +516,13 @@ if CLIENT then
         beam:NumSlider(phrase("control.beam_length"), "betterlights_flashlight_distance", 128, 4096, 0)
         addBeamLengthResetButton(beam)
 
+        local flare = addSection(panel, "section.flare", "section.flare.desc", true)
+        flare:CheckBox(phrase("control.flashlight_flare"), "betterlights_flashlight_flare_enable")
+        flare:CheckBox(phrase("control.show_other_flashlight_flares"), "betterlights_flashlight_flare_others")
+        addHelpText(flare, phrase("help.show_other_flashlight_flares"))
+        flare:NumSlider(phrase("control.flare_size"), "betterlights_flashlight_flare_size", 0.25, 3, 2)
+        flare:NumSlider(phrase("control.flare_opacity"), "betterlights_flashlight_flare_opacity", 0, 255, 0)
+
         local colorSection = addSection(panel, "section.color", "section.color.desc", true)
         addColorMixerControl(colorSection, "control.flashlight_color", "betterlights_flashlight_color_r", "betterlights_flashlight_color_g", "betterlights_flashlight_color_b", 255, 245, 225)
 
@@ -644,6 +651,10 @@ if CLIENT then
             betterlights_flashlight_flicker_amount = 0.05,
             betterlights_flashlight_sway = 1,
             betterlights_flashlight_sway_intensity = 1,
+            betterlights_flashlight_flare_enable = 1,
+            betterlights_flashlight_flare_others = 1,
+            betterlights_flashlight_flare_size = 1,
+            betterlights_flashlight_flare_opacity = 90,
             betterlights_flashlight_color_r = 255,
             betterlights_flashlight_color_g = 245,
             betterlights_flashlight_color_b = 225,

@@ -1,15 +1,24 @@
 if CLIENT then
     local BL = BetterLights
 
-    BL.VERSION = "v1.6.0-beta5"
+    BL.VERSION = "v1.6.0-beta6"
 
     BL._networkHandlers = BL._networkHandlers or {}
     BL._clientConVars = BL._clientConVars or {}
     BL._clientConVarDefaults = BL._clientConVarDefaults or {}
 
+    local MAIN_VIEW_POS_EPSILON_SQR = 1
+
     function BL.IsEnabled()
         local cvar = GetConVar("betterlights_enable")
         return not cvar or cvar:GetBool()
+    end
+
+    function BL.IsMainViewRender(isDrawingDepth)
+        if isDrawingDepth then return false end
+
+        -- Off-screen render.RenderView passes can run 3D hooks before the main view.
+        return EyePos():DistToSqr(MainEyePos()) <= MAIN_VIEW_POS_EPSILON_SQR
     end
 
     function BL.AddNetworkHandler(msgType, fn)

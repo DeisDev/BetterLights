@@ -72,7 +72,9 @@ if CLIENT then
         end
     end
 
-    hook.Add("PreDrawOpaqueRenderables", "BetterLights_ProjectorUpdate", function()
+    hook.Add("PreDrawOpaqueRenderables", "BetterLights_ProjectorUpdate", function(isDrawingDepth)
+        if not BL.IsMainViewRender(isDrawingDepth) then return end
+
         for lamp in pairs(BL._projectedTextureUpdates) do
             BL._projectedTextureUpdates[lamp] = nil
 

@@ -106,6 +106,10 @@ if CLIENT then
     local cvar_color_g = BL.CreateClientConVar("betterlights_flashlight_color_g", "245", true, false, "Flashlight color - green (0-255)")
     local cvar_color_b = BL.CreateClientConVar("betterlights_flashlight_color_b", "225", true, false, "Flashlight color - blue (0-255)")
     local cvar_texture = BL.CreateClientConVar("betterlights_flashlight_texture", "effects/flashlight001", true, false, "Flashlight texture material path")
+    local cvar_flare = BL.CreateClientConVar("betterlights_flashlight_flare_enable", "1", true, false, "Show a visible lens flare at the flashlight source", 0, 1)
+    local cvar_flare_others = BL.CreateClientConVar("betterlights_flashlight_flare_others", "1", true, false, "Show flashlight lens flares on other players", 0, 1)
+    local cvar_flare_size = BL.CreateClientConVar("betterlights_flashlight_flare_size", "1", true, false, "Flashlight lens flare size", 0.25, 3)
+    local cvar_flare_opacity = BL.CreateClientConVar("betterlights_flashlight_flare_opacity", "90", true, false, "Flashlight lens flare opacity", 0, 255)
 
     local DEFAULT_TEXTURE = "effects/flashlight001"
     local RECENT_TEXTURE_COOKIE = "betterlights_flashlight_recent_textures"
@@ -131,6 +135,13 @@ if CLIENT then
     local MAX_FLICKER_AMOUNT = 0.3
     local AIM_SMOOTHING = 18
     local MAX_SWAY_INTENSITY = 3
+    local FLARE_MATERIAL = Material("sprites/light_ignorez")
+    local FLARE_PIXVIS_SIZE = 16
+    local FLARE_MIN_DISTANCE = 16
+    local FLARE_MIN_SIZE = 32
+    local FLARE_MAX_SIZE = 384
+    local FLARE_CORE_SCALE = 0.32
+    local FLARE_MAX_FADE_DISTANCE = 2048
     local ATTACHMENT_OFFSET_FORWARD = 1
     local ATTACHMENT_OFFSET_DOWN = 2
     local EYE_OFFSET_FORWARD = 26
@@ -145,6 +156,7 @@ if CLIENT then
 
     local projectors = {}
     local projectorData = {}
+    local flarePixVis = {}
     local knownTextureCache
     local traceData = {
         mins = Vector(-4, -4, -4),
@@ -154,6 +166,20 @@ if CLIENT then
 
     local function removeAllProjectors()
         BL.ClearProjectedTextures(projectors, projectorData)
+    end
+
+    local function clearFlareHandles()
+        for ply in pairs(flarePixVis) do
+            flarePixVis[ply] = nil
+        end
+    end
+
+    local function removeStaleFlareHandles(seen)
+        for ply in pairs(flarePixVis) do
+            if not seen[ply] then
+                flarePixVis[ply] = nil
+            end
+        end
     end
 
     local function normalizeTexturePath(path)
@@ -369,7 +395,8 @@ if CLIENT then
 
         if not (attachment and attachment.Pos and attachment.Ang) then return end
 
-        return applyAttachmentOffset(attachment.Pos, attachment.Ang), attachment.Ang
+        -- Keep projector offsets separate so the visible flare stays on the attachment.
+        return applyAttachmentOffset(attachment.Pos, attachment.Ang), attachment.Ang, attachment.Pos, attachment.Ang
     end
 
     local function getViewOriginTransform(ply)
@@ -389,12 +416,12 @@ if CLIENT then
             ang = ang + ply:GetViewPunchAngles()
         end
 
-        return pos, ang
+        return pos, ang, pos, ang
     end
 
     local function getFlashlightOriginTransform(ply, localPlayer)
-        local pos, ang = getWeaponAttachmentTransform(ply, localPlayer)
-        if pos then return pos, ang end
+        local pos, ang, flarePos, flareAng = getWeaponAttachmentTransform(ply, localPlayer)
+        if pos then return pos, ang, flarePos, flareAng end
 
         return getViewOriginTransform(ply)
     end
@@ -461,9 +488,12 @@ if CLIENT then
         local data = projectorData[ply] or {}
         projectorData[ply] = data
 
-        local pos, ang = getFlashlightOriginTransform(ply, localPlayer)
+        local pos, ang, flarePos, flareAng = getFlashlightOriginTransform(ply, localPlayer)
 
         ang = getSmoothedAngle(data, ang)
+        data.flarePos = flarePos or pos
+        data.flareAng = flareAng or ang
+
         local wallDist = getWallDistance(ply, pos, ang)
         local distance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, MAX_DISTANCE)
 
@@ -485,6 +515,87 @@ if CLIENT then
         return (not globalCvar or globalCvar:GetBool()) and cvar_player_enable:GetBool()
     end
 
+    local function shouldDrawFlare(ply, localPlayer)
+        if not cvar_flare:GetBool() then return false end
+        if not IsValid(ply) or not ply:Alive() then return false end
+        if not ply:GetNWBool("BetterLights_Flashlight", false) then return false end
+
+        if ply ~= localPlayer then
+            return cvar_flare_others:GetBool()
+        end
+
+        return ply:ShouldDrawLocalPlayer()
+    end
+
+    local function getFlareHandle(ply)
+        local record = flarePixVis[ply]
+        if record then return record end
+
+        record = {
+            handle = util.GetPixelVisibleHandle(),
+            frame = -1
+        }
+        flarePixVis[ply] = record
+        return record
+    end
+
+    local function drawFlareForPlayer(ply, localPlayer, frameNumber)
+        if not shouldDrawFlare(ply, localPlayer) then return end
+
+        local data = projectorData[ply]
+        if not (data and data.flarePos and data.flareAng) then return end
+
+        local record = getFlareHandle(ply)
+        if record.frame == frameNumber then return end
+        record.frame = frameNumber
+
+        local pos = data.flarePos
+        local ang = data.flareAng
+        local viewNormal = pos - EyePos()
+        local dist = viewNormal:Length()
+        if dist <= FLARE_MIN_DISTANCE then return end
+
+        viewNormal:Normalize()
+
+        local facing = viewNormal:Dot(ang:Forward() * -1)
+        if facing <= 0 then return end
+
+        local visible = util.PixelVisible(pos, FLARE_PIXVIS_SIZE, record.handle)
+        if visible <= 0 then return end
+
+        local fadeDistance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, FLARE_MAX_FADE_DISTANCE)
+        local distanceFade = 1 - math.Clamp((dist - FLARE_MIN_DISTANCE) / fadeDistance, 0, 1)
+        if distanceFade <= 0 then return end
+
+        local sizeScale = math.Clamp(cvar_flare_size:GetFloat(), 0.25, 3)
+        local spriteSize = math.Clamp(dist * visible * facing * 0.7 * sizeScale, FLARE_MIN_SIZE * sizeScale, FLARE_MAX_SIZE * sizeScale)
+        local spriteAlpha = math.Clamp(cvar_flare_opacity:GetFloat() * visible * facing * distanceFade, 0, 255)
+        if spriteAlpha <= 0 then return end
+
+        local spriteColor = getFlashlightColor()
+        spriteColor.a = spriteAlpha
+
+        render.DrawSprite(pos, spriteSize, spriteSize, spriteColor)
+
+        spriteColor.a = math.Clamp(spriteAlpha * 2, 0, 255)
+        render.DrawSprite(pos, spriteSize * FLARE_CORE_SCALE, spriteSize * FLARE_CORE_SCALE, spriteColor)
+    end
+
+    local function drawFlashlightFlares()
+        if FLARE_MATERIAL:IsError() then return end
+        if not isRendererEnabled() then return end
+
+        local localPlayer = LocalPlayer()
+        if not IsValid(localPlayer) then return end
+
+        render.SetMaterial(FLARE_MATERIAL)
+
+        local frameNumber = FrameNumber()
+        for ply in pairs(projectorData) do
+            drawFlareForPlayer(ply, localPlayer, frameNumber)
+        end
+    end
+
     local function runFlashlightThink()
         local seen = {}
 
@@ -498,6 +609,7 @@ if CLIENT then
         end
 
         BL.RemoveStaleProjectedTextures(projectors, seen, nil, projectorData)
+        removeStaleFlareHandles(seen)
     end
 
     refreshThinkRegistration = function()
@@ -506,6 +618,7 @@ if CLIENT then
         else
             BL.RemoveThink(THINK_NAME)
             removeAllProjectors()
+            clearFlareHandles()
         end
     end
 
@@ -517,5 +630,13 @@ if CLIENT then
 
     hook.Add("ShutDown", "BetterLights_PlayerFlashlightsCleanup", function()
         removeAllProjectors()
+        clearFlareHandles()
+    end)
+
+    hook.Add("PostDrawTranslucentRenderables", "BetterLights_PlayerFlashlightFlares", function(isDrawingDepth, isDrawingSkybox)
+        if isDrawingSkybox then return end
+        if not BL.IsMainViewRender(isDrawingDepth) then return end
+
+        drawFlashlightFlares()
     end)
 end
