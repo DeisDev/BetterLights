@@ -15,6 +15,8 @@ if SERVER then
     local SOUND_VOLUME = 1
     local SOUND_FLAGS = 0
     local SOUND_DSP = 1
+    local REPLACEMENT_SETTING = "betterlights_flashlight_player_enable"
+    local SOUNDS_SETTING = "betterlights_flashlight_custom_sounds"
 
     local PLAYER = FindMetaTable("Player")
 
@@ -101,10 +103,13 @@ if SERVER then
         audibleFilter:AddPAS(pos)
 
         for _, listener in ipairs(audibleFilter:GetPlayers()) do
-            if listener.BetterLights_CustomFlashlightSounds == false then
-                defaultFilter:AddPlayer(listener)
-            else
+            local useCustomSounds = BL.IsEnabledForPlayer(listener)
+                and BL.GetEffectiveServerFlashlightBool(SOUNDS_SETTING, listener.BetterLights_CustomFlashlightSounds)
+
+            if useCustomSounds then
                 customFilter:AddPlayer(listener)
+            else
+                defaultFilter:AddPlayer(listener)
             end
         end
 
@@ -136,8 +141,10 @@ if SERVER then
     end
 
     local function isModuleEnabledFor(ply)
-        local globalCvar = GetConVar("betterlights_enable")
-        return (not globalCvar or globalCvar:GetBool()) and IsValid(ply) and ply.BetterLights_FlashlightEnabled == true and not isFlashlightOverrideDisabledFor(ply)
+        return IsValid(ply)
+            and BL.IsEnabledForPlayer(ply)
+            and BL.GetEffectiveServerFlashlightBool(REPLACEMENT_SETTING, ply.BetterLights_FlashlightEnabled)
+            and not isFlashlightOverrideDisabledFor(ply)
     end
 
     local function recentlyHandledInput(ply)
@@ -222,31 +229,39 @@ if SERVER then
         return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false))
     end
 
-    local function clearFlashlightIfOverrideDisabled(ply)
+    local function reconcileFlashlightEligibility(ply)
         if not IsValid(ply) then return end
+
+        if isModuleEnabledFor(ply) then
+            if isVanillaFlashlightOn(ply) then
+                setFlashlight(ply, true, true, true)
+            end
+
+            return
+        end
+
         if not ply:GetNWBool("BetterLights_Flashlight", false) then return end
-        if not isFlashlightOverrideDisabledFor(ply) then return end
 
         setFlashlight(ply, false, true, true)
     end
 
     net.Receive(BL.NET_FLASHLIGHT_CLIENT_SETTINGS, function(len, ply)
         if not IsValid(ply) then return end
+        if len < 6 then return end
 
+        ply.BetterLights_ClientEnabled = net.ReadBool()
         ply.BetterLights_FlashlightEnabled = net.ReadBool()
         ply.BetterLights_CustomFlashlightSounds = net.ReadBool()
-        ply.BetterLights_MWBaseFlashlightOverrideDisabled = len >= 5 and net.ReadBool() or false
-        ply.BetterLights_ArcCWFlashlightOverrideDisabled = len >= 5 and net.ReadBool() or false
-        ply.BetterLights_ARC9FlashlightOverrideDisabled = len >= 5 and net.ReadBool() or false
+        ply.BetterLights_MWBaseFlashlightOverrideDisabled = net.ReadBool()
+        ply.BetterLights_ArcCWFlashlightOverrideDisabled = net.ReadBool()
+        ply.BetterLights_ARC9FlashlightOverrideDisabled = net.ReadBool()
 
-        if ply.BetterLights_FlashlightEnabled == false or isFlashlightOverrideDisabledFor(ply) then
-            setFlashlight(ply, false, true, true)
-        end
+        reconcileFlashlightEligibility(ply)
     end)
 
     hook.Add("StartCommand", "BetterLights_FlashlightImpulse", function(ply, cmd)
         if not isModuleEnabledFor(ply) then
-            clearFlashlightIfOverrideDisabled(ply)
+            reconcileFlashlightEligibility(ply)
             return
         end
 
@@ -287,17 +302,18 @@ if SERVER then
 
     hook.Add("PlayerSwitchWeapon", "BetterLights_FlashlightIntegrationSwitch", function(ply)
         timer.Simple(0, function()
-            clearFlashlightIfOverrideDisabled(ply)
+            reconcileFlashlightEligibility(ply)
         end)
     end)
 
-    cvars.AddChangeCallback("betterlights_enable", function(_, _, new)
-        if new ~= "0" then return end
-
+    local function reconcileFlashlights()
         for _, ply in ipairs(player.GetAll()) do
-            setFlashlight(ply, false, true, true)
+            reconcileFlashlightEligibility(ply)
         end
-    end, "BetterLights_FlashlightDisableOnGlobalDisable")
+    end
+
+    cvars.AddChangeCallback("betterlights_enable", reconcileFlashlights, "BetterLights_FlashlightPolicyChanged")
+    hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_FlashlightServerSettingsChanged", reconcileFlashlights)
 
     cvars.AddChangeCallback("mp_flashlight", function(_, _, new)
         if new ~= "0" then return end

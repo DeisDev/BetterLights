@@ -19,11 +19,6 @@ if SERVER then
     local recentMuzzleShots = {}
     local recentStunstickImpacts = {}
 
-    local function isBetterLightsEnabled()
-        local cvar = GetConVar("betterlights_enable")
-        return not cvar or cvar:GetBool()
-    end
-
     local function getEntityClass(ent)
         if not (IsValid(ent) and ent.GetClass) then return "" end
         return string.lower(ent:GetClass() or "")
@@ -238,7 +233,7 @@ if SERVER then
     })
 
     local function handleMuzzleFireBullets(ent, bullet)
-        if not isBetterLightsEnabled() then return end
+        if not BL.IsServerEnabled() then return end
         if not IsValid(ent) then return end
         if not bullet then return end
 
@@ -258,7 +253,7 @@ if SERVER then
     hook.Add("PostEntityFireBullets", "BetterLights_MuzzleFlash_Server_Post", handleMuzzleFireBullets)
 
     local function handleMuzzleFlashCall(ent)
-        if not isBetterLightsEnabled() then return end
+        if not BL.IsServerEnabled() then return end
         if not IsValid(ent) then return end
 
         local shooter, weapon = resolveMuzzleFlashShooterAndWeapon(ent)
@@ -307,7 +302,7 @@ if SERVER then
     wrapEntityMuzzleFlash()
 
     local function sendAdapterMuzzleFlash(weapon, adapterId)
-        if not isBetterLightsEnabled() then return end
+        if not BL.IsServerEnabled() then return end
         if not IsValid(weapon) then return end
 
         local shooter = weapon.GetOwner and weapon:GetOwner() or nil
@@ -325,7 +320,7 @@ if SERVER then
     MF.SendAdapterMuzzleFlash = sendAdapterMuzzleFlash
 
     hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
-        if not isBetterLightsEnabled() then return end
+        if not BL.IsServerEnabled() then return end
         if not IsValid(ent) then return end
         if not bullet then return end
 
@@ -333,7 +328,7 @@ if SERVER then
         bullet.Callback = function(att, tr, dmginfo)
             local ret
             if isfunction(prev) then ret = prev(att, tr, dmginfo) end
-            if not isBetterLightsEnabled() then return ret end
+            if not BL.IsServerEnabled() then return ret end
             if not tr or not tr.Hit or not tr.HitPos then return ret end
 
             local pos = tr.HitPos
@@ -441,7 +436,7 @@ if SERVER then
     end
 
     hook.Add("EntityTakeDamage", "BetterLights_StunstickImpact_Server", function(target, dmginfo)
-        if not isBetterLightsEnabled() then return end
+        if not BL.IsServerEnabled() then return end
         if not IsValid(target) then return end
         if not dmginfo then return end
 
@@ -458,13 +453,13 @@ if SERVER then
 
     hook.Add("KeyPress", "BetterLights_StunstickImpact_KeyPress", function(ply, key)
         if key ~= IN_ATTACK then return end
-        if not isBetterLightsEnabled() then return end
+        if not BL.IsServerEnabled() then return end
 
         local weapon = getActiveStunstick(ply)
         if not weapon then return end
 
         timer.Simple(0, function()
-            if not isBetterLightsEnabled() then return end
+            if not BL.IsServerEnabled() then return end
             if not IsValid(ply) then return end
             if getActiveStunstick(ply) ~= weapon then return end
 

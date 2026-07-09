@@ -1,6 +1,7 @@
 if CLIENT then
 
     local MENU = BetterLights.Menu
+    local activeClientPanel
 
     local function notify(key, kind, duration, ...)
         local text = select("#", ...) > 0 and MENU.PhraseFormat(key, ...) or MENU.Phrase(key)
@@ -432,47 +433,98 @@ if CLIENT then
             openImportWindow(list)
         end
 
-        local reset = addSection(panel, "section.profile_reset", "section.profile_reset.desc", true)
-        local resetPersonal = addStyledButton(reset, phrase("button.reset_personal_settings"))
-        resetPersonal.DoClick = function()
-            Derma_Query(
-                MENU.Phrase("dialog.profile_reset_personal.message"),
-                MENU.Phrase("dialog.profile_reset_personal.title"),
-                MENU.Phrase("button.reset_defaults"),
-                function()
-                    BetterLights.ResetRegisteredClientSettings()
-                    notify("notice.profile_personal_settings_reset", NOTIFY_GENERIC, 4)
-                end,
-                MENU.Phrase("button.cancel")
-            )
-        end
     end
 
-    function MENU.RegisterGeneralPanel()
+    local function buildClientPage(panel)
+        activeClientPanel = panel
+
         local phrase = MENU.Phrase
-        local setupPage = MENU.SetupPage
-        local addSection = MENU.AddSection
-        local addStyledButton = MENU.AddStyledButton
-        local addHelpText = MENU.AddHelpText
-        local addServerBoolCheckbox = MENU.AddServerBoolCheckbox
-        local addServerBoolResetButton = MENU.AddServerBoolResetButton
-        local resetAllSettings = MENU.ResetAllSettings
+        local serverStateReady = BetterLights.HasServerSettingsState
+            and BetterLights.HasServerSettingsState()
+        local mode = BetterLights.GetServerMode and BetterLights.GetServerMode()
+            or BetterLights.SERVER_MODE_PLAYER_CHOICE
+        local preference = true
+        if BetterLights.IsClientEnabledPreference then
+            preference = BetterLights.IsClientEnabledPreference()
+        end
+        local canChange = false
+        if serverStateReady then
+            if BetterLights.CanChangeClientEnabledPreference then
+                canChange = BetterLights.CanChangeClientEnabledPreference()
+            else
+                canChange = mode == BetterLights.SERVER_MODE_PLAYER_CHOICE
+            end
+        end
+
+        MENU.SetupPage(panel, "page.client.title", "page.client.desc")
+
+        local client = MENU.AddSection(panel, "section.client", "section.client.desc", true)
+        local enabled = vgui.Create("DCheckBoxLabel")
+        enabled:SetText(phrase("control.enable_better_lights_client"))
+        enabled:SetValue(preference and 1 or 0)
+        enabled:SizeToContents()
+        enabled:SetEnabled(canChange)
+        client:AddItem(enabled)
+
+        enabled.OnChange = function(_, value)
+            if BetterLights.SetClientEnabledPreference then
+                BetterLights.SetClientEnabledPreference(value)
+            else
+                BetterLights.ApplyClientSetting("betterlights_client_enable", value and 1 or 0)
+            end
+        end
+
+        if not serverStateReady then
+            MENU.AddHelpText(client, phrase("help.server_settings_loading"))
+        elseif mode == BetterLights.SERVER_MODE_ENABLED then
+            MENU.AddHelpText(client, phrase("help.client_policy_enabled"))
+        elseif mode == BetterLights.SERVER_MODE_DISABLED then
+            MENU.AddHelpText(client, phrase("help.client_policy_disabled"))
+        else
+            MENU.AddHelpText(client, phrase("help.client_policy_player_choice"))
+        end
+
+        if serverStateReady then
+            local effectiveKey = BetterLights.IsEnabled and BetterLights.IsEnabled()
+                and "help.client_effective_enabled"
+                or "help.client_effective_disabled"
+            MENU.AddHelpText(client, phrase(effectiveKey))
+        end
+        MENU.AddHelpText(client, phrase("help.optional_bind"))
+
+        local maintenance = MENU.AddSection(panel, "section.personal_maintenance", "section.personal_maintenance.desc", true)
+        local reset = MENU.AddStyledButton(maintenance, phrase("button.reset_personal_settings"))
+        reset.DoClick = function()
+            Derma_Query(
+                phrase("dialog.reset_personal_settings.message"),
+                phrase("dialog.reset_personal_settings.title"),
+                phrase("button.reset_personal_settings"),
+                function()
+                    BetterLights.ResetRegisteredClientSettings()
+                    BetterLights.ClearFlashlightRecentTextures()
+                    BetterLights.ClearFlashlightKnownTextureCache()
+                    notify("notice.personal_settings_reset", NOTIFY_GENERIC, 4)
+                end,
+                phrase("button.cancel")
+            )
+        end
+
+        MENU.AddHelpText(maintenance, phrase("help.personal_reset_scope"))
+    end
+
+    hook.Add("BetterLights_ClientEnabledPreferenceChanged", "BetterLights_RefreshClientSettingsPage", function()
+        timer.Simple(0, function()
+            if IsValid(activeClientPanel) then
+                buildClientPage(activeClientPanel)
+            end
+        end)
+    end)
+
+    function MENU.RegisterGeneralPanel()
         local registerPage = MENU.RegisterPage
 
-        registerPage("General", "BL_Admin", "menu.admin", function(panel)
-            setupPage(panel, "page.admin.title", "page.admin.desc")
-
-            local server = addSection(panel, "section.server", "section.server.desc", true)
-            addServerBoolCheckbox(server, phrase("control.enable_better_lights"), "betterlights_enable")
-            addServerBoolResetButton(server, {
-                betterlights_enable = 1,
-            })
-
-            local maintenance = addSection(panel, "section.maintenance", "section.maintenance.desc", true)
-            local resetAllBtn = addStyledButton(maintenance, phrase("button.reset_all_settings"))
-            resetAllBtn.DoClick = resetAllSettings
-            addHelpText(maintenance, phrase("help.optional_bind"))
-        end)
+        registerPage("General", "BL_Client", "menu.client", buildClientPage)
+        MENU.RegisterServerPanels()
 
         registerPage("Profiles", "BL_Profiles", "page.profiles.title", buildProfilesPage)
     end

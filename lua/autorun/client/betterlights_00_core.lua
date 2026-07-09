@@ -1,18 +1,14 @@
 if CLIENT then
     local BL = BetterLights
 
-    BL.VERSION = "v1.6.0-beta7"
+    BL.VERSION = "v1.6.0-beta8"
 
     BL._networkHandlers = BL._networkHandlers or {}
     BL._clientConVars = BL._clientConVars or {}
     BL._clientConVarDefaults = BL._clientConVarDefaults or {}
+    BL._clientConVarMetadata = BL._clientConVarMetadata or {}
 
     local MAIN_VIEW_POS_EPSILON_SQR = 1
-
-    function BL.IsEnabled()
-        local cvar = GetConVar("betterlights_enable")
-        return not cvar or cvar:GetBool()
-    end
 
     function BL.IsMainViewRender(isDrawingDepth)
         if isDrawingDepth then return false end
@@ -42,6 +38,19 @@ if CLIENT then
 
     function BL.GetRegisteredClientConVarDefaults()
         return BL._clientConVarDefaults
+    end
+
+    function BL.GetRegisteredClientConVarMetadata()
+        return BL._clientConVarMetadata
+    end
+
+    function BL.GetClientConVarMetadata(name)
+        return BL._clientConVarMetadata[name]
+    end
+
+    function BL.IsClientConVarProfileSetting(name)
+        local metadata = BL.GetClientConVarMetadata(name)
+        return not metadata or metadata.includeInProfiles ~= false
     end
 
     function BL.GetClientConVarDefault(name, fallback)
@@ -115,8 +124,9 @@ if CLIENT then
         return BL.ApplyClientSettings(BL.GetRegisteredClientConVarDefaults())
     end
 
-    function BL.CreateClientConVar(name, defaultValue, shouldSave, userData, helpText, min, max)
+    function BL.CreateClientConVar(name, defaultValue, shouldSave, userData, helpText, min, max, metadata)
         BL._clientConVarDefaults[name] = tostring(defaultValue)
+        BL._clientConVarMetadata[name] = metadata or {}
         local cvar = CreateClientConVar(name, tostring(defaultValue), shouldSave, userData, helpText, min, max)
         BL._clientConVars[name] = cvar
         return cvar

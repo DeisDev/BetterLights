@@ -18,6 +18,7 @@ if CLIENT then
         if not IsValid(LocalPlayer()) then return end
 
         net.Start(BL.NET_FLASHLIGHT_CLIENT_SETTINGS)
+            net.WriteBool(BL.IsClientEnabledPreference())
             net.WriteBool(cvar_player_enable:GetBool())
             net.WriteBool(cvar_custom_sounds:GetBool())
             net.WriteBool(cvar_mwbase_flashlight_override_disabled:GetBool())
@@ -40,7 +41,7 @@ if CLIENT then
         end
 
         timer.Simple(force and 0 or 4, function()
-            if not force and cvar_player_enable:GetBool() then return end
+            if not force and BL.GetEffectiveFlashlightBool("betterlights_flashlight_player_enable") then return end
             notification.AddLegacy(phrase("notice.flashlight_onboarding"), NOTIFY_GENERIC, 6)
             surface.PlaySound("buttons/button15.wav")
         end)
@@ -65,6 +66,10 @@ if CLIENT then
     cvars.AddChangeCallback("betterlights_flashlight_custom_sounds", function()
         queueFlashlightSettingsSync()
     end, "BetterLights_FlashlightCustomSounds")
+
+    cvars.AddChangeCallback("betterlights_client_enable", function()
+        queueFlashlightSettingsSync()
+    end, "BetterLights_ClientEnableFlashlightSync")
 
     local function queueIntegrationFlashlightSettingsSync()
         queueFlashlightSettingsSync()
@@ -113,6 +118,18 @@ if CLIENT then
     local cvar_shadow_depth_bias = BL.CreateClientConVar("betterlights_flashlight_shadow_depth_bias", "0.001", true, false, "Flashlight shadow depth bias")
     local cvar_shadow_slope_scale_depth_bias = BL.CreateClientConVar("betterlights_flashlight_shadow_slope_scale_depth_bias", "4", true, false, "Flashlight shadow slope scale depth bias")
     local cvar_shadow_filter = BL.CreateClientConVar("betterlights_flashlight_shadow_filter", "1.25", true, false, "Flashlight shadow filter size")
+
+    local function getEffectiveBool(cvar)
+        return BL.GetEffectiveFlashlightBool(cvar:GetName(), cvar:GetBool())
+    end
+
+    local function getEffectiveNumber(cvar)
+        return BL.GetEffectiveFlashlightNumber(cvar:GetName(), cvar:GetFloat())
+    end
+
+    local function getEffectiveString(cvar)
+        return BL.GetEffectiveFlashlightString(cvar:GetName(), cvar:GetString())
+    end
 
     local DEFAULT_TEXTURE = "effects/flashlight001"
     local RECENT_TEXTURE_COOKIE = "betterlights_flashlight_recent_textures"
@@ -167,6 +184,8 @@ if CLIENT then
         mask = MASK_SHOT_HULL
     }
 
+    BL.RegisterProjectedTextureStore(projectors, projectorData)
+
     local function removeAllProjectors()
         BL.ClearProjectedTextures(projectors, projectorData)
     end
@@ -204,7 +223,7 @@ if CLIENT then
     end
 
     local function getTexturePath()
-        local path = normalizeTexturePath(cvar_texture:GetString())
+        local path = normalizeTexturePath(getEffectiveString(cvar_texture))
         if path == "" or not isValidTexturePath(path) then
             return DEFAULT_TEXTURE
         end
@@ -348,8 +367,8 @@ if CLIENT then
 
     local function applyAttachmentOffset(pos, ang)
         return pos
-            + ang:Forward() * (ATTACHMENT_OFFSET_FORWARD + math.Clamp(cvar_forward_offset:GetFloat(), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
-            + ang:Right() * cvar_attachment_offset:GetFloat()
+            + ang:Forward() * (ATTACHMENT_OFFSET_FORWARD + math.Clamp(getEffectiveNumber(cvar_forward_offset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
+            + ang:Right() * getEffectiveNumber(cvar_attachment_offset)
             - ang:Up() * ATTACHMENT_OFFSET_DOWN
     end
 
@@ -382,7 +401,7 @@ if CLIENT then
     end
 
     local function getWeaponAttachmentTransform(ply, localPlayer)
-        if not cvar_attachment:GetBool() then return end
+        if not getEffectiveBool(cvar_attachment) then return end
         if ply.InVehicle and ply:InVehicle() then return end
         if isFirstPersonZooming(ply, localPlayer) then return end
 
@@ -411,8 +430,8 @@ if CLIENT then
         local downOffset = inVehicle and VEHICLE_OFFSET_DOWN or EYE_OFFSET_DOWN
 
         pos = pos
-            + ang:Forward() * (forwardOffset + math.Clamp(cvar_forward_offset:GetFloat(), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
-            + ang:Right() * cvar_view_origin_offset:GetFloat()
+            + ang:Forward() * (forwardOffset + math.Clamp(getEffectiveNumber(cvar_forward_offset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
+            + ang:Right() * getEffectiveNumber(cvar_view_origin_offset)
             - ang:Up() * downOffset
 
         if not inVehicle and ply.GetViewPunchAngles then
@@ -440,19 +459,19 @@ if CLIENT then
 
     local function getFlashlightColor()
         return Color(
-            math.Clamp(cvar_color_r:GetInt(), 0, 255),
-            math.Clamp(cvar_color_g:GetInt(), 0, 255),
-            math.Clamp(cvar_color_b:GetInt(), 0, 255)
+            math.Clamp(getEffectiveNumber(cvar_color_r), 0, 255),
+            math.Clamp(getEffectiveNumber(cvar_color_g), 0, 255),
+            math.Clamp(getEffectiveNumber(cvar_color_b), 0, 255)
         )
     end
 
     local function getSmoothedAngle(data, ang)
-        if not cvar_sway:GetBool() then
+        if not getEffectiveBool(cvar_sway) then
             data.smoothAng = nil
             return ang
         end
 
-        local intensity = math.Clamp(cvar_sway_intensity:GetFloat(), 0, MAX_SWAY_INTENSITY)
+        local intensity = math.Clamp(getEffectiveNumber(cvar_sway_intensity), 0, MAX_SWAY_INTENSITY)
         if intensity <= 0 then
             data.smoothAng = nil
             return ang
@@ -465,7 +484,7 @@ if CLIENT then
     end
 
     local function getFOV(wallDist)
-        local fov = math.Clamp(cvar_fov:GetFloat(), MIN_FOV, MAX_FOV)
+        local fov = math.Clamp(getEffectiveNumber(cvar_fov), MIN_FOV, MAX_FOV)
         local minWallFov = math.max(MIN_FOV, fov * WALL_FOV_SCALE)
         local t = math.Clamp(wallDist / WALL_SHRINK_DISTANCE, 0, 1)
         return Lerp(t, minWallFov, fov)
@@ -473,14 +492,14 @@ if CLIENT then
 
     local function getBrightness(ply, wallDist)
         local t = math.Clamp(wallDist / WALL_SHRINK_DISTANCE, 0, 1)
-        local baseBrightness = math.Clamp(cvar_brightness:GetFloat(), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+        local baseBrightness = math.Clamp(getEffectiveNumber(cvar_brightness), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
         local brightness = baseBrightness * Lerp(t, CLOSE_WALL_BRIGHTNESS_SCALE, 1)
 
-        if not cvar_flicker:GetBool() then return brightness end
+        if not getEffectiveBool(cvar_flicker) then return brightness end
 
         local phase = ply:EntIndex() * 0.731
         local wave = math.sin(CurTime() * 22 + phase) * 0.65 + math.sin(CurTime() * 47 + phase * 1.7) * 0.35
-        local amount = math.Clamp(cvar_flicker_amount:GetFloat(), 0, MAX_FLICKER_AMOUNT)
+        local amount = math.Clamp(getEffectiveNumber(cvar_flicker_amount), 0, MAX_FLICKER_AMOUNT)
         return math.max(0, brightness * (1 + wave * amount))
     end
 
@@ -498,7 +517,7 @@ if CLIENT then
         data.flareAng = flareAng or ang
 
         local wallDist = getWallDistance(ply, pos, ang)
-        local distance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, MAX_DISTANCE)
+        local distance = math.Clamp(getEffectiveNumber(cvar_distance), MIN_DISTANCE, MAX_DISTANCE)
 
         BL.UpdateProjectedTexture(lamp, {
             texture = getTexturePath(),
@@ -509,25 +528,24 @@ if CLIENT then
             fov = getFOV(wallDist),
             brightness = getBrightness(ply, wallDist),
             color = getFlashlightColor(),
-            shadows = cvar_shadows:GetBool(),
-            shadowDepthBias = math.max(0, cvar_shadow_depth_bias:GetFloat()),
-            shadowSlopeScaleDepthBias = math.max(0, cvar_shadow_slope_scale_depth_bias:GetFloat()),
-            shadowFilter = math.max(0, cvar_shadow_filter:GetFloat())
+            shadows = getEffectiveBool(cvar_shadows),
+            shadowDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_depth_bias)),
+            shadowSlopeScaleDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_slope_scale_depth_bias)),
+            shadowFilter = math.max(0, getEffectiveNumber(cvar_shadow_filter))
         })
     end
 
     local function isRendererEnabled()
-        local globalCvar = GetConVar("betterlights_enable")
-        return (not globalCvar or globalCvar:GetBool()) and cvar_player_enable:GetBool()
+        return BL.IsEnabled() and getEffectiveBool(cvar_player_enable)
     end
 
     local function shouldDrawFlare(ply, localPlayer)
-        if not cvar_flare:GetBool() then return false end
+        if not getEffectiveBool(cvar_flare) then return false end
         if not IsValid(ply) or not ply:Alive() then return false end
         if not ply:GetNWBool("BetterLights_Flashlight", false) then return false end
 
         if ply ~= localPlayer then
-            return cvar_flare_others:GetBool()
+            return getEffectiveBool(cvar_flare_others)
         end
 
         return ply:ShouldDrawLocalPlayer()
@@ -569,13 +587,13 @@ if CLIENT then
         local visible = util.PixelVisible(pos, FLARE_PIXVIS_SIZE, record.handle)
         if visible <= 0 then return end
 
-        local fadeDistance = math.Clamp(cvar_distance:GetFloat(), MIN_DISTANCE, FLARE_MAX_FADE_DISTANCE)
+        local fadeDistance = math.Clamp(getEffectiveNumber(cvar_distance), MIN_DISTANCE, FLARE_MAX_FADE_DISTANCE)
         local distanceFade = 1 - math.Clamp((dist - FLARE_MIN_DISTANCE) / fadeDistance, 0, 1)
         if distanceFade <= 0 then return end
 
-        local sizeScale = math.Clamp(cvar_flare_size:GetFloat(), 0.25, 3)
+        local sizeScale = math.Clamp(getEffectiveNumber(cvar_flare_size), 0.25, 3)
         local spriteSize = math.Clamp(dist * visible * facing * 0.7 * sizeScale, FLARE_MIN_SIZE * sizeScale, FLARE_MAX_SIZE * sizeScale)
-        local spriteAlpha = math.Clamp(cvar_flare_opacity:GetFloat() * visible * facing * distanceFade, 0, 255)
+        local spriteAlpha = math.Clamp(getEffectiveNumber(cvar_flare_opacity) * visible * facing * distanceFade, 0, 255)
         if spriteAlpha <= 0 then return end
 
         local spriteColor = getFlashlightColor()
@@ -628,9 +646,8 @@ if CLIENT then
         end
     end
 
-    cvars.AddChangeCallback("betterlights_enable", function()
-        refreshThinkRegistration()
-    end, "BetterLights_GlobalEnableFlashlight")
+    hook.Add("BetterLights_EffectiveEnabledChanged", "BetterLights_GlobalEnableFlashlight", refreshThinkRegistration)
+    hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_ServerSettingsFlashlight", refreshThinkRegistration)
 
     refreshThinkRegistration()
 

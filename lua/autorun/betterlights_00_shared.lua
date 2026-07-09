@@ -4,7 +4,14 @@ local BL = BetterLights
 
 BL.NET_EVENT_MESSAGE = "BetterLights_Event"
 BL.NET_FLASHLIGHT_CLIENT_SETTINGS = "BetterLights_FlashlightClientSettings"
-BL.NET_SET_SERVER_BOOL = "BetterLights_SetServerBool"
+BL.NET_SERVER_SETTINGS_REQUEST = "BetterLights_RequestServerSettings"
+BL.NET_SERVER_SETTINGS_APPLY = "BetterLights_ApplyServerSettings"
+BL.NET_SERVER_SETTINGS_STATE = "BetterLights_ServerSettings"
+
+BL.SERVER_MODE_DISABLED = 0
+BL.SERVER_MODE_ENABLED = 1
+BL.SERVER_MODE_PLAYER_CHOICE = 2
+BL.SERVER_SETTINGS_PROTOCOL_VERSION = 1
 
 BL.NET_MUZZLE_FLASH = 1
 BL.NET_BULLET_IMPACT = 2
@@ -26,6 +33,522 @@ BL.EXPLOSION_SOURCE_PARTICLE = 4
 BL.MuzzleFlash = BL.MuzzleFlash or {}
 BL.Explosions = BL.Explosions or {}
 BL.Flashlight = BL.Flashlight or {}
+
+do
+    local NUMBER_EPSILON = 0.000001
+    local schema = {
+        {
+            id = 1,
+            order = 1,
+            name = "betterlights_flashlight_player_enable",
+            type = "bool",
+            default = false,
+            section = "behavior",
+            sectionKey = "section.behavior",
+            labelKey = "control.replace_flashlight",
+            serverLabelKey = "control.replace_player_flashlights"
+        },
+        {
+            id = 2,
+            order = 2,
+            name = "betterlights_flashlight_custom_sounds",
+            type = "bool",
+            default = true,
+            section = "behavior",
+            sectionKey = "section.behavior",
+            labelKey = "control.use_flashlight_sounds"
+        },
+        {
+            id = 3,
+            order = 3,
+            name = "betterlights_flashlight_weapon_attachment",
+            type = "bool",
+            default = true,
+            section = "position",
+            sectionKey = "section.origin",
+            labelKey = "control.attach_beam_to_weapon"
+        },
+        {
+            id = 4,
+            order = 4,
+            name = "betterlights_flashlight_forward_offset",
+            type = "number",
+            default = 0,
+            min = -32,
+            max = 96,
+            decimals = 1,
+            section = "position",
+            sectionKey = "section.origin",
+            labelKey = "control.forward_offset"
+        },
+        {
+            id = 5,
+            order = 5,
+            name = "betterlights_flashlight_attachment_offset",
+            type = "number",
+            default = 2,
+            min = -24,
+            max = 24,
+            decimals = 1,
+            section = "position",
+            sectionKey = "section.origin",
+            labelKey = "control.attached_side_offset"
+        },
+        {
+            id = 6,
+            order = 6,
+            name = "betterlights_flashlight_fallback_offset",
+            type = "number",
+            default = 8,
+            min = -24,
+            max = 24,
+            decimals = 1,
+            section = "position",
+            sectionKey = "section.origin",
+            labelKey = "control.view_origin_side_offset"
+        },
+        {
+            id = 7,
+            order = 7,
+            name = "betterlights_flashlight_shadows",
+            type = "bool",
+            default = true,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.cast_shadows"
+        },
+        {
+            id = 8,
+            order = 8,
+            name = "betterlights_flashlight_flicker",
+            type = "bool",
+            default = false,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.flicker"
+        },
+        {
+            id = 9,
+            order = 9,
+            name = "betterlights_flashlight_flicker_amount",
+            type = "number",
+            default = 0.05,
+            min = 0,
+            max = 0.3,
+            decimals = 2,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.flicker_amount"
+        },
+        {
+            id = 10,
+            order = 10,
+            name = "betterlights_flashlight_sway",
+            type = "bool",
+            default = true,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.flashlight_sway"
+        },
+        {
+            id = 11,
+            order = 11,
+            name = "betterlights_flashlight_sway_intensity",
+            type = "number",
+            default = 1,
+            min = 0,
+            max = 3,
+            decimals = 2,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.sway_intensity"
+        },
+        {
+            id = 12,
+            order = 12,
+            name = "betterlights_flashlight_brightness",
+            type = "number",
+            default = 1.35,
+            min = 0.1,
+            max = 5,
+            decimals = 2,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.brightness"
+        },
+        {
+            id = 13,
+            order = 13,
+            name = "betterlights_flashlight_fov",
+            type = "number",
+            default = 45,
+            min = 10,
+            max = 120,
+            decimals = 0,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.fov"
+        },
+        {
+            id = 14,
+            order = 14,
+            name = "betterlights_flashlight_distance",
+            type = "number",
+            default = 1200,
+            min = 128,
+            max = 4096,
+            decimals = 0,
+            section = "beam",
+            sectionKey = "section.beam",
+            labelKey = "control.beam_length"
+        },
+        {
+            id = 15,
+            order = 15,
+            name = "betterlights_flashlight_shadow_depth_bias",
+            type = "number",
+            default = 0.001,
+            min = 0,
+            max = 0.005,
+            decimals = 5,
+            section = "advanced_shadows",
+            sectionKey = "section.advanced_shadows",
+            labelKey = "control.shadow_depth_bias"
+        },
+        {
+            id = 16,
+            order = 16,
+            name = "betterlights_flashlight_shadow_slope_scale_depth_bias",
+            type = "number",
+            default = 4,
+            min = 0,
+            max = 8,
+            decimals = 2,
+            section = "advanced_shadows",
+            sectionKey = "section.advanced_shadows",
+            labelKey = "control.shadow_slope_scale_depth_bias"
+        },
+        {
+            id = 17,
+            order = 17,
+            name = "betterlights_flashlight_shadow_filter",
+            type = "number",
+            default = 1.25,
+            min = 0,
+            max = 4,
+            decimals = 2,
+            section = "advanced_shadows",
+            sectionKey = "section.advanced_shadows",
+            labelKey = "control.shadow_filter"
+        },
+        {
+            id = 18,
+            order = 18,
+            name = "betterlights_flashlight_flare_enable",
+            type = "bool",
+            default = true,
+            section = "flare",
+            sectionKey = "section.flare",
+            labelKey = "control.flashlight_flare"
+        },
+        {
+            id = 19,
+            order = 19,
+            name = "betterlights_flashlight_flare_others",
+            type = "bool",
+            default = true,
+            section = "flare",
+            sectionKey = "section.flare",
+            labelKey = "control.show_other_flashlight_flares"
+        },
+        {
+            id = 20,
+            order = 20,
+            name = "betterlights_flashlight_flare_size",
+            type = "number",
+            default = 1,
+            min = 0.25,
+            max = 3,
+            decimals = 2,
+            section = "flare",
+            sectionKey = "section.flare",
+            labelKey = "control.flare_size"
+        },
+        {
+            id = 21,
+            order = 21,
+            name = "betterlights_flashlight_flare_opacity",
+            type = "number",
+            default = 90,
+            min = 0,
+            max = 255,
+            decimals = 0,
+            section = "flare",
+            sectionKey = "section.flare",
+            labelKey = "control.flare_opacity"
+        },
+        {
+            id = 22,
+            order = 22,
+            name = "betterlights_flashlight_color_r",
+            type = "number",
+            default = 255,
+            min = 0,
+            max = 255,
+            decimals = 0,
+            section = "color",
+            sectionKey = "section.color",
+            labelKey = "control.flashlight_color",
+            colorChannel = "r"
+        },
+        {
+            id = 23,
+            order = 23,
+            name = "betterlights_flashlight_color_g",
+            type = "number",
+            default = 245,
+            min = 0,
+            max = 255,
+            decimals = 0,
+            section = "color",
+            sectionKey = "section.color",
+            labelKey = "control.flashlight_color",
+            colorChannel = "g"
+        },
+        {
+            id = 24,
+            order = 24,
+            name = "betterlights_flashlight_color_b",
+            type = "number",
+            default = 225,
+            min = 0,
+            max = 255,
+            decimals = 0,
+            section = "color",
+            sectionKey = "section.color",
+            labelKey = "control.flashlight_color",
+            colorChannel = "b"
+        },
+        {
+            id = 25,
+            order = 25,
+            name = "betterlights_flashlight_texture",
+            type = "string",
+            default = "effects/flashlight001",
+            maxLength = 128,
+            section = "texture",
+            sectionKey = "section.texture",
+            labelKey = "section.texture",
+            texture = true
+        }
+    }
+
+    local byName = {}
+
+    for i = 1, #schema do
+        local def = schema[i]
+        local serverName = string.gsub(def.name, "^betterlights_flashlight_", "")
+        def.cvar = def.name
+        def.serverForceCvar = "betterlights_sv_fl_" .. serverName .. "_force"
+        def.serverValueCvar = "betterlights_sv_fl_" .. serverName .. "_value"
+        byName[def.name] = def
+    end
+
+    BL.SERVER_FLASHLIGHT_SCHEMA = schema
+    BL.SERVER_FLASHLIGHT_SETTINGS = schema
+    BL.SERVER_FLASHLIGHT_SCHEMA_BY_NAME = byName
+    BL.SERVER_FLASHLIGHT_SETTINGS_BY_NAME = byName
+    BL.FLASHLIGHT_SETTING_DEFS = schema
+    BL.FLASHLIGHT_SETTING_BY_NAME = byName
+
+    local function normalizeTexturePath(value)
+        value = string.Trim(tostring(value or ""))
+        value = string.Replace(value, "\\", "/")
+        value = string.gsub(value, "/+", "/")
+
+        if string.lower(string.sub(value, 1, 10)) == "materials/" then
+            value = string.sub(value, 11)
+        end
+
+        value = string.gsub(value, "^/+", "")
+
+        local extension = string.lower(string.sub(value, -4))
+        if extension == ".vmt" or extension == ".vtf" then
+            value = string.sub(value, 1, -5)
+        end
+
+        return value
+    end
+
+    local function isPrintable(value)
+        for i = 1, #value do
+            local byte = string.byte(value, i)
+            if byte < 32 or byte > 126 then return false end
+        end
+
+        return true
+    end
+
+    local function validateTexturePath(value, def)
+        if #value > (def.maxLength or 128) then return nil, "texture path is too long" end
+        if not isPrintable(value) then return nil, "texture path contains non-printable characters" end
+
+        value = normalizeTexturePath(value)
+        if value == "" then return nil, "empty texture path" end
+        if #value > (def.maxLength or 128) then return nil, "texture path is too long" end
+        if string.find(value, ":", 1, true) then return nil, "texture path must be relative" end
+
+        for segment in string.gmatch(value, "[^/]+") do
+            if segment == "." or segment == ".." then
+                return nil, "texture path contains a relative segment"
+            end
+        end
+
+        return value
+    end
+
+    local function roundNumber(value, decimals)
+        if decimals == nil then return value end
+        return math.Round(value, decimals)
+    end
+
+    local function validateValue(def, value)
+        if def.type == "bool" then
+            if type(value) ~= "boolean" then return nil, "expected boolean" end
+            return value
+        end
+
+        if def.type == "number" then
+            if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
+                return nil, "expected finite number"
+            end
+
+            if def.min ~= nil and value < def.min - NUMBER_EPSILON then return nil, "number is below minimum" end
+            if def.max ~= nil and value > def.max + NUMBER_EPSILON then return nil, "number is above maximum" end
+
+            if def.min ~= nil and value < def.min then value = def.min end
+            if def.max ~= nil and value > def.max then value = def.max end
+            value = roundNumber(value, def.decimals)
+
+            return value
+        end
+
+        if def.type == "string" then
+            if type(value) ~= "string" then return nil, "expected string" end
+            if def.texture then return validateTexturePath(value, def) end
+            return value
+        end
+
+        return nil, "unknown setting type"
+    end
+
+    function BL.NormalizeServerFlashlightTexturePath(value)
+        return normalizeTexturePath(value)
+    end
+
+    function BL.ValidateServerFlashlightSettingValue(name, value)
+        local def = byName[name]
+        if not def then return nil, "unknown flashlight setting" end
+
+        return validateValue(def, value)
+    end
+
+    function BL.ValidateServerSettingsState(state)
+        if type(state) ~= "table" then return nil, "expected settings table" end
+
+        local mode = state.mode
+        if type(mode) ~= "number" or mode % 1 ~= 0 or mode < BL.SERVER_MODE_DISABLED or mode > BL.SERVER_MODE_PLAYER_CHOICE then
+            return nil, "invalid server mode"
+        end
+
+        if type(state.overrides) ~= "table" or type(state.values) ~= "table" then
+            return nil, "incomplete settings state"
+        end
+
+        local validated = {
+            mode = mode,
+            overrides = {},
+            values = {}
+        }
+
+        for i = 1, #schema do
+            local def = schema[i]
+            local forced = state.overrides[def.name]
+            if type(forced) ~= "boolean" then
+                return nil, "invalid force flag for " .. def.name
+            end
+
+            local value, err = validateValue(def, state.values[def.name])
+            if value == nil then
+                return nil, (err or "invalid value") .. " for " .. def.name
+            end
+
+            validated.overrides[def.name] = forced
+            validated.values[def.name] = value
+        end
+
+        return validated
+    end
+
+    local function writeValue(def, value)
+        if def.type == "bool" then
+            net.WriteBool(value)
+        elseif def.type == "number" then
+            net.WriteFloat(value)
+        else
+            net.WriteString(value)
+        end
+    end
+
+    local function readValue(def)
+        if def.type == "bool" then return net.ReadBool() end
+        if def.type == "number" then return net.ReadFloat() end
+        return net.ReadString()
+    end
+
+    function BL.WriteServerSettingsState(state)
+        local validated, err = BL.ValidateServerSettingsState(state)
+        if not validated then return false, err end
+
+        net.WriteUInt(BL.SERVER_SETTINGS_PROTOCOL_VERSION, 4)
+        net.WriteUInt(validated.mode, 2)
+        net.WriteUInt(#schema, 6)
+
+        for i = 1, #schema do
+            local def = schema[i]
+            net.WriteUInt(def.id, 6)
+            net.WriteBool(validated.overrides[def.name])
+            writeValue(def, validated.values[def.name])
+        end
+
+        return true
+    end
+
+    function BL.ReadServerSettingsState()
+        local version = net.ReadUInt(4)
+        if version ~= BL.SERVER_SETTINGS_PROTOCOL_VERSION then return nil, "unsupported protocol version" end
+
+        local mode = net.ReadUInt(2)
+        local count = net.ReadUInt(6)
+        if count ~= #schema then return nil, "unexpected schema count" end
+
+        local state = {
+            mode = mode,
+            overrides = {},
+            values = {}
+        }
+
+        for i = 1, #schema do
+            local def = schema[i]
+            if net.ReadUInt(6) ~= def.id then return nil, "unexpected setting id" end
+
+            state.overrides[def.name] = net.ReadBool()
+            state.values[def.name] = readValue(def)
+        end
+
+        return BL.ValidateServerSettingsState(state)
+    end
+end
 
 do
     local FL = BL.Flashlight

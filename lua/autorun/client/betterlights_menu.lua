@@ -10,6 +10,7 @@ if CLIENT then
 
     local CATEGORY_DEFS = {
         { "General", "category.general" },
+        { "Admin", "category.admin" },
         { "Profiles", "category.profiles" },
         { "Flashlight", "category.flashlight" },
         { "Weapons", "category.weapons" },
@@ -109,15 +110,6 @@ if CLIENT then
 
     MENU.AddHelpText = addHelpText
 
-    local function resetRegisteredClientSettings()
-        return BetterLights.ResetRegisteredClientSettings()
-    end
-
-    local function resetFlashlightTextureLists()
-        BetterLights.ClearFlashlightRecentTextures()
-        BetterLights.ClearFlashlightKnownTextureCache()
-    end
-
     local function addResetButton(panel, defaults, label)
         local btn = addStyledButton(panel, label or phrase("button.reset_defaults"), phrase("tooltip.reset_defaults"))
         btn.DoClick = function()
@@ -127,41 +119,6 @@ if CLIENT then
     end
 
     MENU.AddResetButton = addResetButton
-
-    local function addBrightnessResetButton(panel)
-        local resetBrightness = addStyledButton(panel, phrase("button.reset_brightness"))
-        resetBrightness.DoClick = function()
-            BetterLights.ApplyClientSetting("betterlights_flashlight_brightness", getClientDefault("betterlights_flashlight_brightness", "1.35"))
-        end
-    end
-
-    local function addFovResetButton(panel)
-        local resetFov = addStyledButton(panel, phrase("button.reset_fov"))
-        resetFov.DoClick = function()
-            BetterLights.ApplyClientSetting("betterlights_flashlight_fov", getClientDefault("betterlights_flashlight_fov", "45"))
-        end
-    end
-
-    local function addBeamLengthResetButton(panel)
-        local resetBeamLength = addStyledButton(panel, phrase("button.reset_beam_length"))
-        resetBeamLength.DoClick = function()
-            BetterLights.ApplyClientSetting("betterlights_flashlight_distance", getClientDefault("betterlights_flashlight_distance", "1200"))
-        end
-    end
-
-    local function addFlickerAmountResetButton(panel)
-        local resetFlickerAmount = addStyledButton(panel, phrase("button.reset_flicker_amount"))
-        resetFlickerAmount.DoClick = function()
-            BetterLights.ApplyClientSetting("betterlights_flashlight_flicker_amount", getClientDefault("betterlights_flashlight_flicker_amount", "0.05"))
-        end
-    end
-
-    local function addSwayIntensityResetButton(panel)
-        local resetSwayIntensity = addStyledButton(panel, phrase("button.reset_sway_intensity"))
-        resetSwayIntensity.DoClick = function()
-            BetterLights.ApplyClientSetting("betterlights_flashlight_sway_intensity", getClientDefault("betterlights_flashlight_sway_intensity", "1"))
-        end
-    end
 
     local function setupPage(panel, titleKey, subtitleKey)
         panel:ClearControls()
@@ -285,7 +242,7 @@ if CLIENT then
         surface.PlaySound("buttons/button14.wav")
     end
 
-    local function addCurrentTexturePreview(panel, path)
+    local function addCurrentTexturePreview(panel, path, titleKey)
         local preview = vgui.Create("DPanel")
         preview:SetTall(118)
         preview.Paint = nil
@@ -311,7 +268,7 @@ if CLIENT then
         local title = vgui.Create("DLabel", details)
         title:Dock(TOP)
         title:SetTall(20)
-        title:SetText(phrase("label.current_texture"))
+        title:SetText(phrase(titleKey or "label.current_texture"))
         title:SetDark(true)
 
         local value = vgui.Create("DLabel", details)
@@ -329,9 +286,12 @@ if CLIENT then
         end
 
         panel:AddItem(preview)
+        return preview
     end
 
-    local function addTextureTile(layout, path, refresh)
+    MENU.AddCurrentTexturePreview = addCurrentTexturePreview
+
+    local function addTextureTile(layout, path, allowUse)
         local tile = vgui.Create("DPanel")
         tile:SetSize(132, 164)
         tile.Paint = nil
@@ -360,6 +320,7 @@ if CLIENT then
         preview.DoRightClick = function()
             copyText(path)
         end
+        preview:SetEnabled(allowUse ~= false)
 
         local label = vgui.Create("DLabel", tile)
         label:Dock(TOP)
@@ -378,6 +339,7 @@ if CLIENT then
         use:SetWide(64)
         use:SetText(phrase("button.use"))
         use.DoClick = preview.DoClick
+        use:SetEnabled(allowUse ~= false)
 
         local copy = styleButton(vgui.Create("DButton", buttons))
         copy:Dock(RIGHT)
@@ -390,111 +352,157 @@ if CLIENT then
         layout:Add(tile)
     end
 
-    local function addTextureGrid(parent, paths, refresh)
+    local function addTextureGrid(parent, paths, allowUse)
         local layout = vgui.Create("DIconLayout")
         layout:SetSpaceX(8)
         layout:SetSpaceY(8)
-        layout:SetTall(math.max(172, #paths * 172))
+        layout:SetTall(172)
+        layout:SetStretchHeight(true)
 
         for _, path in ipairs(paths) do
-            addTextureTile(layout, path, refresh)
+            addTextureTile(layout, path, allowUse)
         end
 
         parent:AddItem(layout)
     end
 
+    MENU.AddTextureGrid = addTextureGrid
+
     local populateFlashlightVisualPanel
     local activeFlashlightVisualPanel
     local activeFlashlightVisualFilter
 
-    local function requestServerBool(cvarName, value)
-        net.Start(BetterLights.NET_SET_SERVER_BOOL)
-            net.WriteString(cvarName)
-            net.WriteBool(value)
-        net.SendToServer()
+    local function isFlashlightSettingForced(cvarName)
+        return BetterLights.IsFlashlightSettingForced and BetterLights.IsFlashlightSettingForced(cvarName) or false
     end
 
-    local function canChangeServerSettings()
-        return game.SinglePlayer() or (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin())
-    end
-
-    concommand.Add("betterlights_toggle", function()
-        if not canChangeServerSettings() then
-            notification.AddLegacy(phrase("notice.admin_toggle_only"), NOTIFY_ERROR, 4)
-            surface.PlaySound("buttons/button10.wav")
-            return
-        end
-
-        local cvar = GetConVar("betterlights_enable")
-        requestServerBool("betterlights_enable", not (cvar and cvar:GetBool()))
-    end)
-
-    local function addServerBoolCheckbox(panel, label, cvarName)
-        local row = vgui.Create("DCheckBoxLabel")
+    local function getEffectiveFlashlightBool(cvarName)
         local cvar = GetConVar(cvarName)
-        row:SetText(label)
-        row:SetValue((not cvar or cvar:GetBool()) and 1 or 0)
-        row:SizeToContents()
+        local fallback = cvar and cvar:GetBool() or false
 
-        row.OnChange = function(_, value)
-            if canChangeServerSettings() then
-                requestServerBool(cvarName, value)
-                return
-            end
-
-            notification.AddLegacy(phrase("notice.admin_change_server_only"), NOTIFY_ERROR, 4)
-            surface.PlaySound("buttons/button10.wav")
-            timer.Simple(0, function()
-                if not IsValid(row) then return end
-                local current = GetConVar(cvarName)
-                row:SetValue((not current or current:GetBool()) and 1 or 0)
-            end)
+        if BetterLights.GetEffectiveFlashlightBool then
+            return BetterLights.GetEffectiveFlashlightBool(cvarName, fallback)
         end
 
+        return fallback
+    end
+
+    local function getEffectiveFlashlightNumber(cvarName)
+        local cvar = GetConVar(cvarName)
+        local fallback = cvar and cvar:GetFloat() or 0
+
+        if BetterLights.GetEffectiveFlashlightNumber then
+            return BetterLights.GetEffectiveFlashlightNumber(cvarName, fallback)
+        end
+
+        return fallback
+    end
+
+    local function getEffectiveFlashlightString(cvarName)
+        local cvar = GetConVar(cvarName)
+        local fallback = cvar and cvar:GetString() or ""
+
+        if BetterLights.GetEffectiveFlashlightString then
+            return BetterLights.GetEffectiveFlashlightString(cvarName, fallback)
+        end
+
+        return fallback
+    end
+
+    local function addServerControlledHelp(panel)
+        if panel.BetterLightsHasServerControlledHelp then return end
+
+        panel.BetterLightsHasServerControlledHelp = true
+        return addHelpText(panel, phrase("help.controlled_by_server"))
+    end
+
+    local function addFlashlightCheckbox(panel, label, cvarName)
+        if not isFlashlightSettingForced(cvarName) then
+            return panel:CheckBox(label, cvarName)
+        end
+
+        local row = vgui.Create("DCheckBoxLabel")
+        row:SetText(label)
+        row:SetValue(getEffectiveFlashlightBool(cvarName) and 1 or 0)
+        row:SizeToContents()
+        row:SetEnabled(false)
         panel:AddItem(row)
+        addServerControlledHelp(panel)
         return row
     end
 
-    local function addServerBoolResetButton(panel, defaults)
-        local btn = addStyledButton(panel, phrase("button.reset_server_settings"))
+    local function addFlashlightSlider(panel, label, cvarName, minimum, maximum, decimals)
+        if not isFlashlightSettingForced(cvarName) then
+            return panel:NumSlider(label, cvarName, minimum, maximum, decimals)
+        end
+
+        local slider = vgui.Create("DNumSlider")
+        slider:SetText(label)
+        slider:SetMinMax(minimum, maximum)
+        slider:SetDecimals(decimals)
+        slider:SetValue(getEffectiveFlashlightNumber(cvarName))
+        slider:SetEnabled(false)
+        panel:AddItem(slider)
+        addServerControlledHelp(panel)
+        return slider
+    end
+
+    local function addFlashlightColorMixer(panel, labelKey, rCvar, gCvar, bCvar)
+        local forced = isFlashlightSettingForced(rCvar)
+            or isFlashlightSettingForced(gCvar)
+            or isFlashlightSettingForced(bCvar)
+
+        if not forced then
+            return addColorMixerControl(panel, labelKey, rCvar, gCvar, bCvar, 255, 245, 225)
+        end
+
+        local mixer = vgui.Create("DColorMixer")
+        mixer:SetTall(220)
+        mixer:SetLabel(phrase(labelKey))
+        mixer:SetPalette(true)
+        mixer:SetAlphaBar(false)
+        mixer:SetWangs(true)
+        mixer:SetColor(Color(
+            getEffectiveFlashlightNumber(rCvar),
+            getEffectiveFlashlightNumber(gCvar),
+            getEffectiveFlashlightNumber(bCvar)
+        ))
+        mixer:SetEnabled(false)
+        panel:AddItem(mixer)
+        addServerControlledHelp(panel)
+        return mixer
+    end
+
+    local function addFlashlightResetButton(panel, defaults, label)
+        local resettable = {}
+        local colorForced = isFlashlightSettingForced("betterlights_flashlight_color_r")
+            or isFlashlightSettingForced("betterlights_flashlight_color_g")
+            or isFlashlightSettingForced("betterlights_flashlight_color_b")
+
+        for cvarName, value in pairs(defaults) do
+            local colorSetting = cvarName == "betterlights_flashlight_color_r"
+                or cvarName == "betterlights_flashlight_color_g"
+                or cvarName == "betterlights_flashlight_color_b"
+
+            if not isFlashlightSettingForced(cvarName) and not (colorSetting and colorForced) then
+                resettable[cvarName] = value
+            end
+        end
+
+        local btn = addStyledButton(panel, label or phrase("button.reset_defaults"), phrase("tooltip.reset_defaults"))
+        btn:SetEnabled(next(resettable) ~= nil)
         btn.DoClick = function()
-            if not canChangeServerSettings() then
-                notification.AddLegacy(phrase("notice.admin_reset_server_only"), NOTIFY_ERROR, 4)
-                surface.PlaySound("buttons/button10.wav")
-                return
-            end
-
-            for cvarName, value in pairs(defaults) do
-                requestServerBool(cvarName, value ~= 0 and value ~= false)
-            end
+            BetterLights.ApplyClientSettings(BetterLights.ResolveClientResetDefaults(resettable))
         end
+        return btn
     end
 
-    local function resetAllSettings()
-        if not canChangeServerSettings() then
-            notification.AddLegacy(phrase("notice.admin_reset_all_only"), NOTIFY_ERROR, 4)
-            surface.PlaySound("buttons/button10.wav")
-            return
-        end
-
-        Derma_Query(
-            phrase("dialog.reset_all.message"),
-            phrase("dialog.reset_all.title"),
-            phrase("button.reset_all"),
-            function()
-                resetRegisteredClientSettings()
-                resetFlashlightTextureLists()
-                requestServerBool("betterlights_enable", true)
-                notification.AddLegacy(phrase("notice.settings_reset"), NOTIFY_GENERIC, 4)
-                surface.PlaySound("buttons/button14.wav")
-            end,
-            phrase("button.cancel")
-        )
-    end
-
-    MENU.AddServerBoolCheckbox = addServerBoolCheckbox
-    MENU.AddServerBoolResetButton = addServerBoolResetButton
-    MENU.ResetAllSettings = resetAllSettings
+    MENU.IsFlashlightSettingForced = isFlashlightSettingForced
+    MENU.GetEffectiveFlashlightString = getEffectiveFlashlightString
+    MENU.AddFlashlightCheckbox = addFlashlightCheckbox
+    MENU.AddFlashlightSlider = addFlashlightSlider
+    MENU.AddFlashlightColorMixer = addFlashlightColorMixer
+    MENU.AddFlashlightResetButton = addFlashlightResetButton
 
     populateFlashlightVisualPanel = function(panel, filterText)
         setupPage(panel, "page.flashlight_visuals.title", "page.flashlight_visuals.desc")
@@ -502,48 +510,49 @@ if CLIENT then
         activeFlashlightVisualFilter = filterText
 
         local beam = addSection(panel, "section.beam", "section.beam.desc", true)
-        beam:CheckBox(phrase("control.cast_shadows"), "betterlights_flashlight_shadows")
-        beam:CheckBox(phrase("control.flicker"), "betterlights_flashlight_flicker")
-        beam:NumSlider(phrase("control.flicker_amount"), "betterlights_flashlight_flicker_amount", 0, 0.3, 2)
-        addFlickerAmountResetButton(beam)
-        beam:CheckBox(phrase("control.flashlight_sway"), "betterlights_flashlight_sway")
-        beam:NumSlider(phrase("control.sway_intensity"), "betterlights_flashlight_sway_intensity", 0, 3, 2)
-        addSwayIntensityResetButton(beam)
-        beam:NumSlider(phrase("control.brightness"), "betterlights_flashlight_brightness", 0.1, 5, 2)
-        addBrightnessResetButton(beam)
-        beam:NumSlider(phrase("control.fov"), "betterlights_flashlight_fov", 10, 120, 0)
-        addFovResetButton(beam)
-        beam:NumSlider(phrase("control.beam_length"), "betterlights_flashlight_distance", 128, 4096, 0)
-        addBeamLengthResetButton(beam)
+        addFlashlightCheckbox(beam, phrase("control.cast_shadows"), "betterlights_flashlight_shadows")
+        addFlashlightCheckbox(beam, phrase("control.flicker"), "betterlights_flashlight_flicker")
+        addFlashlightSlider(beam, phrase("control.flicker_amount"), "betterlights_flashlight_flicker_amount", 0, 0.3, 2)
+        addFlashlightCheckbox(beam, phrase("control.flashlight_sway"), "betterlights_flashlight_sway")
+        addFlashlightSlider(beam, phrase("control.sway_intensity"), "betterlights_flashlight_sway_intensity", 0, 3, 2)
+        addFlashlightSlider(beam, phrase("control.brightness"), "betterlights_flashlight_brightness", 0.1, 5, 2)
+        addFlashlightSlider(beam, phrase("control.fov"), "betterlights_flashlight_fov", 10, 120, 0)
+        addFlashlightSlider(beam, phrase("control.beam_length"), "betterlights_flashlight_distance", 128, 4096, 0)
 
         local advancedShadows = addSection(panel, "section.advanced_shadows", "section.advanced_shadows.desc", false)
         addHelpText(advancedShadows, phrase("help.advanced_shadow_settings"))
-        advancedShadows:NumSlider(phrase("control.shadow_depth_bias"), "betterlights_flashlight_shadow_depth_bias", 0, 0.005, 5)
-        advancedShadows:NumSlider(phrase("control.shadow_slope_scale_depth_bias"), "betterlights_flashlight_shadow_slope_scale_depth_bias", 0, 8, 2)
-        advancedShadows:NumSlider(phrase("control.shadow_filter"), "betterlights_flashlight_shadow_filter", 0, 4, 2)
+        addFlashlightSlider(advancedShadows, phrase("control.shadow_depth_bias"), "betterlights_flashlight_shadow_depth_bias", 0, 0.005, 5)
+        addFlashlightSlider(advancedShadows, phrase("control.shadow_slope_scale_depth_bias"), "betterlights_flashlight_shadow_slope_scale_depth_bias", 0, 8, 2)
+        addFlashlightSlider(advancedShadows, phrase("control.shadow_filter"), "betterlights_flashlight_shadow_filter", 0, 4, 2)
 
         local flare = addSection(panel, "section.flare", "section.flare.desc", true)
-        flare:CheckBox(phrase("control.flashlight_flare"), "betterlights_flashlight_flare_enable")
-        flare:CheckBox(phrase("control.show_other_flashlight_flares"), "betterlights_flashlight_flare_others")
+        addFlashlightCheckbox(flare, phrase("control.flashlight_flare"), "betterlights_flashlight_flare_enable")
+        addFlashlightCheckbox(flare, phrase("control.show_other_flashlight_flares"), "betterlights_flashlight_flare_others")
         addHelpText(flare, phrase("help.show_other_flashlight_flares"))
-        flare:NumSlider(phrase("control.flare_size"), "betterlights_flashlight_flare_size", 0.25, 3, 2)
-        flare:NumSlider(phrase("control.flare_opacity"), "betterlights_flashlight_flare_opacity", 0, 255, 0)
+        addFlashlightSlider(flare, phrase("control.flare_size"), "betterlights_flashlight_flare_size", 0.25, 3, 2)
+        addFlashlightSlider(flare, phrase("control.flare_opacity"), "betterlights_flashlight_flare_opacity", 0, 255, 0)
 
         local colorSection = addSection(panel, "section.color", "section.color.desc", true)
-        addColorMixerControl(colorSection, "control.flashlight_color", "betterlights_flashlight_color_r", "betterlights_flashlight_color_g", "betterlights_flashlight_color_b", 255, 245, 225)
+        addFlashlightColorMixer(colorSection, "control.flashlight_color", "betterlights_flashlight_color_r", "betterlights_flashlight_color_g", "betterlights_flashlight_color_b")
 
         local texture = addSection(panel, "section.texture", "section.texture.desc", true)
 
         local currentCvar = GetConVar("betterlights_flashlight_texture")
-        local typedPath = currentCvar and currentCvar:GetString() or "effects/flashlight001"
+        local textureForced = isFlashlightSettingForced("betterlights_flashlight_texture")
+        local typedPath = textureForced and getEffectiveFlashlightString("betterlights_flashlight_texture")
+            or (currentCvar and currentCvar:GetString() or "effects/flashlight001")
         local currentPath = BetterLights.GetFlashlightTexturePath()
 
         addHelpText(texture, phraseFormat("help.current_texture", currentPath))
+        if textureForced then
+            addServerControlledHelp(texture)
+        end
         addCurrentTexturePreview(texture, currentPath)
 
         local manualEntry = vgui.Create("DTextEntry")
         manualEntry:SetText(typedPath)
         manualEntry:SetUpdateOnType(false)
+        manualEntry:SetEnabled(not textureForced)
         texture:AddItem(manualEntry)
 
         local manualButtons = vgui.Create("DPanel")
@@ -554,6 +563,7 @@ if CLIENT then
         useManual:Dock(LEFT)
         useManual:SetWide(76)
         useManual:SetText(phrase("button.use"))
+        useManual:SetEnabled(not textureForced)
         useManual.DoClick = function()
             local path = BetterLights.NormalizeFlashlightTexturePath(manualEntry:GetText())
             if BetterLights.SetFlashlightTexturePath(path) then
@@ -580,6 +590,7 @@ if CLIENT then
         useDefault:DockMargin(6, 0, 0, 0)
         useDefault:SetWide(76)
         useDefault:SetText(phrase("button.default"))
+        useDefault:SetEnabled(not textureForced)
         useDefault.DoClick = function()
             BetterLights.SetFlashlightTexturePath("effects/flashlight001")
         end
@@ -589,9 +600,7 @@ if CLIENT then
         local recent = BetterLights.GetFlashlightRecentTextures()
         if #recent > 0 then
             local recentSection = addSection(panel, "section.recent_textures", nil, false)
-            addTextureGrid(recentSection, recent, function()
-                populateFlashlightVisualPanel(panel, filterText)
-            end)
+            addTextureGrid(recentSection, recent, not textureForced)
 
             local clearRecent = addStyledButton(recentSection, phrase("button.clear_recent_textures"))
             clearRecent.DoClick = function()
@@ -641,14 +650,12 @@ if CLIENT then
         end
 
         if #filtered > 0 then
-        addTextureGrid(knownSection, filtered, function()
-            populateFlashlightVisualPanel(panel, filterText)
-        end)
+            addTextureGrid(knownSection, filtered, not textureForced)
         else
-            addHelpText(panel, phrase("help.no_matching_textures"))
+            addHelpText(knownSection, phrase("help.no_matching_textures"))
         end
 
-        addResetButton(panel, {
+        addFlashlightResetButton(panel, {
             betterlights_flashlight_brightness = 1.35,
             betterlights_flashlight_fov = 45,
             betterlights_flashlight_distance = 1200,
@@ -677,6 +684,15 @@ if CLIENT then
             populateFlashlightVisualPanel(activeFlashlightVisualPanel, activeFlashlightVisualFilter)
         end)
     end, "BetterLights_FlashlightVisualRefresh")
+
+    hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_RefreshForcedSettingsMenu", function()
+        MENU.RefreshSettingsPanel()
+    end)
+
+    hook.Add("BetterLights_ClientEnabledChangeBlocked", "BetterLights_NotifyClientEnableBlocked", function()
+        notification.AddLegacy(phrase("notice.client_enable_controlled_by_server"), NOTIFY_ERROR, 4)
+        surface.PlaySound("buttons/button10.wav")
+    end)
 
     local function addWorldWeaponPanel(panel)
         setupPage(panel, "page.world_weapons.title", "page.world_weapons.desc")
@@ -1316,11 +1332,11 @@ if CLIENT then
     registerPage("Flashlight", "BL_FlashlightGeneral", "menu.general", function(panel)
             setupPage(panel, "page.player_flashlight.title", "page.player_flashlight.desc")
             local behavior = addSection(panel, "section.behavior", nil, true)
-            behavior:CheckBox(phrase("control.replace_flashlight"), "betterlights_flashlight_player_enable")
-            behavior:CheckBox(phrase("control.use_flashlight_sounds"), "betterlights_flashlight_custom_sounds")
+            addFlashlightCheckbox(behavior, phrase("control.replace_flashlight"), "betterlights_flashlight_player_enable")
+            addFlashlightCheckbox(behavior, phrase("control.use_flashlight_sounds"), "betterlights_flashlight_custom_sounds")
             addHelpText(behavior, phrase("help.default_flashlight_sounds"))
 
-            addResetButton(panel, {
+            addFlashlightResetButton(panel, {
                 betterlights_flashlight_player_enable = 0,
                 betterlights_flashlight_custom_sounds = 1,
             })
@@ -1329,15 +1345,15 @@ if CLIENT then
     registerPage("Flashlight", "BL_FlashlightPosition", "menu.position", function(panel)
             setupPage(panel, "page.flashlight_position.title", "page.flashlight_position.desc")
             local origin = addSection(panel, "section.origin", nil, true)
-            origin:CheckBox(phrase("control.attach_beam_to_weapon"), "betterlights_flashlight_weapon_attachment")
+            addFlashlightCheckbox(origin, phrase("control.attach_beam_to_weapon"), "betterlights_flashlight_weapon_attachment")
             addHelpText(origin, phrase("help.attach_beam_to_weapon"))
-            origin:NumSlider(phrase("control.forward_offset"), "betterlights_flashlight_forward_offset", -32, 96, 1)
+            addFlashlightSlider(origin, phrase("control.forward_offset"), "betterlights_flashlight_forward_offset", -32, 96, 1)
             addHelpText(origin, phrase("help.forward_offset"))
-            origin:NumSlider(phrase("control.attached_side_offset"), "betterlights_flashlight_attachment_offset", -24, 24, 1)
+            addFlashlightSlider(origin, phrase("control.attached_side_offset"), "betterlights_flashlight_attachment_offset", -24, 24, 1)
             addHelpText(origin, phrase("help.attached_side_offset"))
-            origin:NumSlider(phrase("control.view_origin_side_offset"), "betterlights_flashlight_fallback_offset", -24, 24, 1)
+            addFlashlightSlider(origin, phrase("control.view_origin_side_offset"), "betterlights_flashlight_fallback_offset", -24, 24, 1)
             addHelpText(origin, phrase("help.view_origin_side_offset"))
-            addResetButton(panel, {
+            addFlashlightResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
                 betterlights_flashlight_forward_offset = 0,
                 betterlights_flashlight_attachment_offset = 2,

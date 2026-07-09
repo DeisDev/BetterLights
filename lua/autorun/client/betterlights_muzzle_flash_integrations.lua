@@ -98,8 +98,7 @@ if CLIENT then
     end
 
     local function shouldReplaceArcCWMuzzleLight()
-        local globalCvar = GetConVar("betterlights_enable")
-        if globalCvar and not globalCvar:GetBool() then return false end
+        if not BL.IsEnabled() then return false end
 
         local muzzleCvar = GetConVar("betterlights_muzzle_enable")
         return not muzzleCvar or muzzleCvar:GetBool()
@@ -382,8 +381,9 @@ if CLIENT then
         end)
     end)
 
-    cvars.AddChangeCallback("betterlights_enable", scanAdapterWeapons, "BetterLights_ArcCWMuzzleLightReplacementGlobal")
     cvars.AddChangeCallback("betterlights_muzzle_enable", scanAdapterWeapons, "BetterLights_ArcCWMuzzleLightReplacementMuzzle")
+
+    hook.Add("BetterLights_EffectiveEnabledChanged", "BetterLights_ArcCWMuzzleLightReplacementGlobal", scanAdapterWeapons)
 
     hook.Add("InitPostEntity", "BetterLights_MuzzleFlash_Adapters_Init_Client", scanAdapterWeapons)
     timer.Create("BetterLights_MuzzleFlash_Adapters_Scan_Client", 2, 0, scanAdapterWeapons)

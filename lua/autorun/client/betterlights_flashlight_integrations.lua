@@ -210,12 +210,7 @@ if CLIENT then
     local function shouldReplaceArcCWFlashlights()
         if not ProjectedTexture then return false end
         if isIntegrationFlashlightOverrideDisabled("arccw") then return false end
-
-        local globalCvar = GetConVar("betterlights_enable")
-        if globalCvar and not globalCvar:GetBool() then return false end
-
-        local flashlightCvar = GetConVar("betterlights_flashlight_player_enable")
-        return flashlightCvar and flashlightCvar:GetBool()
+        return BL.IsEnabled() and BL.GetEffectiveFlashlightBool("betterlights_flashlight_player_enable")
     end
 
     local function removeProjectedTexture(light)
@@ -409,9 +404,11 @@ if CLIENT then
         end)
     end)
 
-    cvars.AddChangeCallback("betterlights_enable", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsGlobal")
     cvars.AddChangeCallback("betterlights_flashlight_player_enable", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsPlayer")
     cvars.AddChangeCallback("betterlights_integration_arccw_disable_flashlight_override", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsIntegration")
+
+    hook.Add("BetterLights_EffectiveEnabledChanged", "BetterLights_ArcCWFlashlightsGlobal", scanArcCWFlashlightWeapons)
+    hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_ArcCWFlashlightsServerSettings", scanArcCWFlashlightWeapons)
 
     hook.Add("InitPostEntity", "BetterLights_Flashlight_ArcCW_Init_Client", scanArcCWFlashlightWeapons)
     timer.Create("BetterLights_Flashlight_ArcCW_Scan_Client", 2, 0, scanArcCWFlashlightWeapons)

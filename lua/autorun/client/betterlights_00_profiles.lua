@@ -14,7 +14,10 @@ if CLIENT then
         local out = {}
 
         for cvarName, value in pairs(settings or {}) do
-            out[tostring(cvarName)] = tostring(value)
+            cvarName = tostring(cvarName)
+            if BL.IsClientConVarProfileSetting(cvarName) then
+                out[cvarName] = tostring(value)
+            end
         end
 
         return out
@@ -161,7 +164,7 @@ if CLIENT then
         local settings = {}
 
         for cvarName, cvar in pairs(BL.GetRegisteredClientConVars()) do
-            if cvar and cvar.GetString then
+            if cvar and cvar.GetString and BL.IsClientConVarProfileSetting(cvarName) then
                 settings[cvarName] = cvar:GetString()
             end
         end
@@ -297,7 +300,7 @@ if CLIENT then
             return nil, "notice.profile_missing"
         end
 
-        return BL.ApplyClientSettings(profile.settings)
+        return BL.ApplyClientSettings(copySettings(profile.settings))
     end
 
     function PROFILES.Export(name, settings, addonVersion)

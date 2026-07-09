@@ -11,11 +11,6 @@ if SERVER then
     local recentExplosions = {}
     local damageRemovalCandidates = {}
 
-    local function isBetterLightsEnabled()
-        local cvar = GetConVar("betterlights_enable")
-        return not cvar or cvar:GetBool()
-    end
-
     local function isUsableVector(pos)
         return pos and pos ~= vector_origin
     end
@@ -84,7 +79,7 @@ if SERVER then
     end
 
     function EXP.Emit(profileId, pos, source)
-        if not isBetterLightsEnabled() then return false end
+        if not BL.IsServerEnabled() then return false end
         if not isUsableVector(pos) then return false end
         if shouldSuppress(pos) then return false end
 
@@ -163,7 +158,7 @@ if SERVER then
     end
 
     hook.Add("EntityTakeDamage", "BetterLights_ExplosionDamage_Server", function(target, dmginfo)
-        if not isBetterLightsEnabled() then return end
+        if not BL.IsServerEnabled() then return end
         if not (dmginfo and dmginfo.IsExplosionDamage) then return end
         if not dmginfo:IsExplosionDamage() then
             maybeMarkDamageRemovalCandidate(target)

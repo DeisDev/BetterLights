@@ -28,6 +28,8 @@ Most lights have controls for enable, radius, brightness, color, and placement. 
 
 Use [b]Profiles > Settings Profiles[/b] to save, load, import, and export your personal settings.
 
+Servers can let players choose whether to use Better Lights or enforce shared flashlight settings.
+
 [img]https://files.catbox.moe/okwsv1.gif[/img]
 
 [hr][/hr]
