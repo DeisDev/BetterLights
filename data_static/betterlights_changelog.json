@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.6.0-beta8",
+    "title": "Better Lights v1.6.0-beta8",
+    "items": [
+      "Added server-wide flashlight settings.",
+      "Added a personal option to disable Better Lights.",
+      "Added a muzzle flash blacklist.",
+      "Improved the server and personal settings menus.",
+      "Improved flashlight lens flare placement and color.",
+      "Fixed gunfire lights appearing for some non-gun weapons."
+    ]
+  },
+  {
     "version": "v1.6.0-beta7",
     "title": "Better Lights v1.6.0-beta7",
     "items": [

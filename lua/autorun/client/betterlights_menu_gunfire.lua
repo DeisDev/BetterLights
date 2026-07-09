@@ -71,6 +71,9 @@ if CLIENT then
             })
             addColorMixerControl(ar2, "control.color", "betterlights_muzzle_ar2_color_r", "betterlights_muzzle_ar2_color_g", "betterlights_muzzle_ar2_color_b")
 
+            local blacklist = addSection(panel, "section.muzzle_blacklist", "section.muzzle_blacklist.desc", false)
+            BetterLights.MuzzleFlash.BuildWeaponBlacklistEditor(blacklist)
+
             if MENU.IsDeveloperMode() then
                 local advanced = addSection(panel, "section.muzzle_advanced", "section.muzzle_advanced.desc", false)
                 advanced:CheckBox(MENU.Phrase("control.show_advanced_editor"), "betterlights_muzzle_advanced")

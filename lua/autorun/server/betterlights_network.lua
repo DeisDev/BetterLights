@@ -15,13 +15,40 @@ if SERVER then
         [STRIDER_CLASS] = BL.NET_STRIDER_BULLET_IMPACT,
         [HUNTER_CHOPPER_CLASS] = BL.NET_HUNTER_CHOPPER_BULLET_IMPACT
     }
-    local WRAPPER_VERSION = 2
+    local WRAPPER_VERSION = 3
     local recentMuzzleShots = {}
     local recentStunstickImpacts = {}
+
+    MF.IgnoredSourceClasses = MF.IgnoredSourceClasses or {}
 
     local function getEntityClass(ent)
         if not (IsValid(ent) and ent.GetClass) then return "" end
         return string.lower(ent:GetClass() or "")
+    end
+
+    local function normalizeClassName(className)
+        return string.lower(string.Trim(tostring(className or "")))
+    end
+
+    function MF.RegisterIgnoredSourceClass(className)
+        className = normalizeClassName(className)
+        if className == "" then return false end
+
+        MF.IgnoredSourceClasses[className] = true
+        return true
+    end
+
+    function MF.UnregisterIgnoredSourceClass(className)
+        className = normalizeClassName(className)
+        if className == "" then return false end
+
+        MF.IgnoredSourceClasses[className] = nil
+        return true
+    end
+
+    function MF.IsIgnoredSourceClass(value)
+        local className = type(value) == "string" and normalizeClassName(value) or getEntityClass(value)
+        return className ~= "" and MF.IgnoredSourceClasses[className] == true
     end
 
     local function getWeaponBase(ent)
@@ -77,6 +104,10 @@ if SERVER then
         return resolveShooterAndWeapon(ent)
     end
 
+    local function isIgnoredSource(shooter, weapon)
+        return MF.IsIgnoredSourceClass(shooter) or MF.IsIgnoredSourceClass(weapon)
+    end
+
     local function isUsableVector(pos)
         return pos and pos ~= vector_origin
     end
@@ -121,6 +152,10 @@ if SERVER then
         return IsValid(weapon)
     end
 
+    local function shouldSendStandaloneMuzzleRule(rule, weapon)
+        return not isBuiltinDefaultMuzzleRule(rule) and shouldSendMuzzleRule(rule, weapon)
+    end
+
     local function isAR2Shot(shooter, bullet)
         local weapon = resolveWeapon(shooter)
         local rule = MF.MatchWeaponRule(shooter, weapon, bullet)
@@ -162,6 +197,7 @@ if SERVER then
             net.WriteUInt(sourceKind or BL.MUZZLE_SOURCE_FIREBULLETS, 3)
             net.WriteEntity(IsValid(shooter) and shooter or NULL)
             net.WriteEntity(IsValid(weapon) and weapon or NULL)
+            net.WriteString(getEntityClass(weapon))
             net.WriteString(profileId or "default")
             net.WriteUInt(flags or 0, 8)
             net.WriteString(adapterId or "")
@@ -238,6 +274,8 @@ if SERVER then
         if not bullet then return end
 
         local shooter, weapon = resolveShooterAndWeapon(ent)
+        if isIgnoredSource(shooter, weapon) then return end
+
         local adapterId = getAdapterIdForWeapon(weapon)
         local rule = MF.MatchWeaponRule(shooter, weapon, bullet, adapterId)
         if not rule then return end
@@ -257,10 +295,12 @@ if SERVER then
         if not IsValid(ent) then return end
 
         local shooter, weapon = resolveMuzzleFlashShooterAndWeapon(ent)
+        if isIgnoredSource(shooter, weapon) then return end
+
         local adapterId = getAdapterIdForWeapon(weapon)
         local rule = MF.MatchWeaponRule(shooter, weapon, nil, adapterId)
         if not rule then return end
-        if not shouldSendMuzzleRule(rule, weapon) then return end
+        if not shouldSendStandaloneMuzzleRule(rule, weapon) then return end
 
         local origin = getSendOrigin(shooter, weapon)
         if not origin then return end
@@ -307,6 +347,7 @@ if SERVER then
 
         local shooter = weapon.GetOwner and weapon:GetOwner() or nil
         if not IsValid(shooter) then shooter = weapon end
+        if isIgnoredSource(shooter, weapon) then return end
 
         local rule = MF.MatchWeaponRule(shooter, weapon, nil, adapterId)
         if not rule then return end
@@ -324,11 +365,16 @@ if SERVER then
         if not IsValid(ent) then return end
         if not bullet then return end
 
+        local shooter, weapon = resolveShooterAndWeapon(ent)
+        if isIgnoredSource(shooter, weapon) then return end
+
         local prev = bullet.Callback
         bullet.Callback = function(att, tr, dmginfo)
             local ret
             if isfunction(prev) then ret = prev(att, tr, dmginfo) end
             if not BL.IsServerEnabled() then return ret end
+            if type(ret) == "table" and ret.effects == false then return ret end
+            if not (dmginfo and dmginfo.GetDamage and dmginfo:GetDamage() > 0) then return ret end
             if not tr or not tr.Hit or not tr.HitPos then return ret end
 
             local pos = tr.HitPos

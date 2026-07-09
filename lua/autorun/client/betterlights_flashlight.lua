@@ -170,6 +170,7 @@ if CLIENT then
     local VEHICLE_OFFSET_DOWN = 1
     -- Common SWEP attachment conventions. This list is intentionally broad for flashlight compatibility.
     local ATTACHMENT_NAMES = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
+    local PLAYER_EYE_ATTACHMENT_NAMES = { "eyes" }
     local VIEW_ORIGIN_WEAPONS = {
         weapon_crowbar = true
     }
@@ -438,6 +439,11 @@ if CLIENT then
             ang = ang + ply:GetViewPunchAngles()
         end
 
+        local eyeAttachment = BL.GetAttachmentTransform(ply, PLAYER_EYE_ATTACHMENT_NAMES)
+        if eyeAttachment and eyeAttachment.Pos then
+            return pos, ang, eyeAttachment.Pos, eyeAttachment.Ang or ang
+        end
+
         return pos, ang, pos, ang
     end
 
@@ -518,6 +524,8 @@ if CLIENT then
 
         local wallDist = getWallDistance(ply, pos, ang)
         local distance = math.Clamp(getEffectiveNumber(cvar_distance), MIN_DISTANCE, MAX_DISTANCE)
+        local flashlightColor = getFlashlightColor()
+        data.flashlightColor = flashlightColor
 
         BL.UpdateProjectedTexture(lamp, {
             texture = getTexturePath(),
@@ -527,7 +535,7 @@ if CLIENT then
             farZ = distance,
             fov = getFOV(wallDist),
             brightness = getBrightness(ply, wallDist),
-            color = getFlashlightColor(),
+            color = flashlightColor,
             shadows = getEffectiveBool(cvar_shadows),
             shadowDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_depth_bias)),
             shadowSlopeScaleDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_slope_scale_depth_bias)),
@@ -596,8 +604,10 @@ if CLIENT then
         local spriteAlpha = math.Clamp(getEffectiveNumber(cvar_flare_opacity) * visible * facing * distanceFade, 0, 255)
         if spriteAlpha <= 0 then return end
 
-        local spriteColor = getFlashlightColor()
-        spriteColor.a = spriteAlpha
+        local flashlightColor = data.flashlightColor
+        if not flashlightColor then return end
+
+        local spriteColor = Color(flashlightColor.r, flashlightColor.g, flashlightColor.b, spriteAlpha)
 
         render.DrawSprite(pos, spriteSize, spriteSize, spriteColor)
 

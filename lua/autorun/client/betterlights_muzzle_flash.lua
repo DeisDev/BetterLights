@@ -8,7 +8,7 @@ if CLIENT then
     local LOCAL_ECHO_WINDOW = 0.2
     local MAX_RESOLVE_ATTEMPTS = 2
     local MAX_FIRST_PERSON_MUZZLE_DIST_SQ = 192 * 192
-    local WRAPPER_VERSION = 2
+    local WRAPPER_VERSION = 3
 
     local cvar_enable = BL.CreateClientConVar("betterlights_muzzle_enable", "1", true, false, "Enable muzzle flash light on firing")
     BL.CreateClientConVar("betterlights_muzzle_size", "250", true, false, "Muzzle flash radius")
@@ -410,6 +410,12 @@ if CLIENT then
 
         if not cvar_enable:GetBool() then return end
         if not payload.shooterIsLocal and not cvar_show_others:GetBool() then return end
+
+        local weaponClass = MF.NormalizeWeaponClass(payload.weaponClass)
+            or MF.NormalizeWeaponClass(payload.weapon)
+        payload.weaponClass = weaponClass
+        if MF.IsWeaponClassBlacklisted(weaponClass) then return end
+
         if shouldSuppressByAdapter(payload) then return end
 
         local rule = MF.MatchWeaponRule(payload.shooter, payload.weapon, payload.bullet, payload.adapterId)
@@ -464,6 +470,7 @@ if CLIENT then
         local sourceKind = net.ReadUInt(3)
         local shooter = net.ReadEntity()
         local weapon = net.ReadEntity()
+        local weaponClass = net.ReadString()
         local profileId = net.ReadString()
         local flags = net.ReadUInt(8)
         local adapterId = net.ReadString()
@@ -476,6 +483,7 @@ if CLIENT then
             sourceKind = sourceKind,
             shooter = shooter,
             weapon = weapon,
+            weaponClass = weaponClass,
             profileId = profileId,
             flags = flags,
             adapter = adapter,
@@ -520,6 +528,7 @@ if CLIENT then
         local adapter, adapterId = getAdapterForWeapon(weapon)
         local rule = MF.MatchWeaponRule(shooter, weapon, nil, adapterId)
         if not rule then return end
+        if isBuiltinDefaultMuzzleRule(rule) then return end
         if not shouldSendLocalFrame(shooter, weapon, rule.profile, adapterId) then return end
 
         emitMuzzleFlash({

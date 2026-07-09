@@ -500,6 +500,12 @@ if CLIENT then
                 phrase("dialog.reset_personal_settings.title"),
                 phrase("button.reset_personal_settings"),
                 function()
+                    local cleared = BetterLights.MuzzleFlash.ClearWeaponBlacklist()
+                    if not cleared then
+                        notify("notice.muzzle_blacklist_save_failed", NOTIFY_ERROR, 4)
+                        return
+                    end
+
                     BetterLights.ResetRegisteredClientSettings()
                     BetterLights.ClearFlashlightRecentTextures()
                     BetterLights.ClearFlashlightKnownTextureCache()
