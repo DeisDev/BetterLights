@@ -33,6 +33,21 @@ if CLIENT then
         return false
     end
 
+    local function isArc9Weapon(weapon)
+        if not IsValid(weapon) then return false end
+        if weapon.ARC9 == true then return true end
+
+        local base = getWeaponBase(weapon)
+        if base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil then return true end
+
+        if weapons and weapons.IsBasedOn and weapon.GetClass then
+            local className = weapon:GetClass()
+            if className ~= "" and weapons.IsBasedOn(className, "arc9_base") then return true end
+        end
+
+        return false
+    end
+
     local function isMwBaseWeapon(weapon)
         if not IsValid(weapon) then return false end
         if getWeaponBase(weapon) == "mg_base" then return true end
@@ -102,6 +117,106 @@ if CLIENT then
         if aim then return aim:Angle() end
 
         return ply:EyeAngles()
+    end
+
+    local function isArc9Throwable(weapon)
+        if not (isArc9Weapon(weapon) and isfunction(weapon.GetProcessedValue)) then return false end
+
+        local ok, throwable = pcall(weapon.GetProcessedValue, weapon, "Throwable", true)
+        return ok and throwable == true
+    end
+
+    local function getArc9SubSlots(weapon)
+        if not (isArc9Weapon(weapon) and isfunction(weapon.GetSubSlotList)) then return nil end
+
+        local ok, slots = pcall(weapon.GetSubSlotList, weapon)
+        if ok and type(slots) == "table" then return slots end
+        return nil
+    end
+
+    local function getArc9FinalAttachmentTable(weapon, slot)
+        if not isfunction(weapon.GetFinalAttTable) then return nil end
+
+        local ok, attachment = pcall(weapon.GetFinalAttTable, weapon, slot)
+        if ok and type(attachment) == "table" then return attachment end
+        return nil
+    end
+
+    local function isVisibleArc9Flashlight(attachment)
+        if not attachment or attachment.Flashlight ~= true then return false end
+
+        local brightness = tonumber(attachment.FlashlightBrightness)
+        return brightness == nil or brightness > 0
+    end
+
+    local function getActiveArc9FlashlightSlot(weapon)
+        local slots = getArc9SubSlots(weapon)
+        if not slots then return nil, nil, false end
+
+        local hasFlashlight = false
+
+        for i = 1, #slots do
+            local slot = slots[i]
+            if not slot.Installed then continue end
+
+            local attachment = getArc9FinalAttachmentTable(weapon, slot)
+            if isVisibleArc9Flashlight(attachment) then
+                return slot, attachment, true
+            end
+            if not attachment then continue end
+            if attachment.Flashlight == true then
+                hasFlashlight = true
+                continue
+            end
+
+            for _, toggle in ipairs(attachment.ToggleStats or {}) do
+                if toggle.Flashlight == true then
+                    hasFlashlight = true
+                    break
+                end
+            end
+        end
+
+        return nil, nil, hasFlashlight
+    end
+
+    local function getArc9FlashlightAttachmentTransform(ply, localPlayer, activeWeapon)
+        if not isArc9Weapon(activeWeapon) or isArc9Throwable(activeWeapon) then return nil end
+
+        local slot, attachmentTable = getActiveArc9FlashlightSlot(activeWeapon)
+        if not slot then return nil end
+
+        local useViewModel = ply == localPlayer and not ply:ShouldDrawLocalPlayer()
+        local model = useViewModel and slot.VModel or slot.WModel
+        if not IsValid(model) then return nil end
+
+        local attachmentId = tonumber(attachmentTable.FlashlightAttachment)
+        local attachment = BL.GetAttachmentTransformById(model, attachmentId)
+        if not attachment then
+            return {
+                Pos = model:GetPos(),
+                Ang = model:GetAngles()
+            }
+        end
+
+        local ang = Angle(attachment.Ang.p, attachment.Ang.y, attachment.Ang.r)
+        ang:RotateAroundAxis(ang:Up(), 90)
+
+        return {
+            Pos = attachment.Pos,
+            Ang = ang,
+            Bone = attachment.Bone
+        }
+    end
+
+    local function getArc9FlashlightState(_, activeWeapon)
+        if isIntegrationFlashlightOverrideDisabled("arc9") then return nil end
+        if not isArc9Weapon(activeWeapon) or isArc9Throwable(activeWeapon) then return nil end
+
+        local slot, _, hasFlashlight = getActiveArc9FlashlightSlot(activeWeapon)
+        if not hasFlashlight then return nil end
+
+        return slot ~= nil
     end
 
     local function readArcCWBuffOverride(weapon, key, fallback)
@@ -284,9 +399,81 @@ if CLIENT then
         end
     end
 
-    local function scanArcCWFlashlightWeapons()
+    local function shouldReplaceArc9Flashlights()
+        if not ProjectedTexture then return false end
+        if isIntegrationFlashlightOverrideDisabled("arc9") then return false end
+        return BL.IsEnabled() and BL.GetEffectiveFlashlightBool("betterlights_flashlight_player_enable")
+    end
+
+    local function pruneArc9FlashlightPile(weapon)
+        if not (ARC9 and type(ARC9.FlashlightPile) == "table") then return end
+
+        local kept = {}
+        for _, data in pairs(ARC9.FlashlightPile) do
+            if type(data) == "table" and data.Weapon == weapon then
+                removeProjectedTexture(data.ProjectedTexture)
+            else
+                kept[#kept + 1] = data
+            end
+        end
+
+        ARC9.FlashlightPile = kept
+    end
+
+    local function clearArc9Flashlights(weapon)
+        if not isArc9Weapon(weapon) then return end
+
+        if isfunction(weapon.KillFlashlights) then
+            pcall(weapon.KillFlashlights, weapon)
+        elseif type(weapon.Flashlights) == "table" then
+            for _, data in pairs(weapon.Flashlights) do
+                if type(data) == "table" then
+                    removeProjectedTexture(data.light)
+                end
+            end
+
+            weapon.Flashlights = nil
+        end
+
+        pruneArc9FlashlightPile(weapon)
+    end
+
+    local function wrapArc9FlashlightFunction(weapon, name)
+        local original = weapon[name]
+        if not isfunction(original) then return end
+
+        local marker = "BetterLightsArc9" .. name .. "Wrapped"
+        local store = "BetterLightsArc9" .. name .. "Original"
+        if weapon[marker] then return end
+
+        weapon[marker] = true
+        weapon[store] = original
+        weapon[name] = function(self, ...)
+            if shouldReplaceArc9Flashlights() then
+                clearArc9Flashlights(self)
+                return
+            end
+
+            return original(self, ...)
+        end
+    end
+
+    local function wrapArc9Flashlights(weapon)
+        if not isArc9Weapon(weapon) then return end
+
+        wrapArc9FlashlightFunction(weapon, "CreateFlashlights")
+        wrapArc9FlashlightFunction(weapon, "DrawFlashlightsVM")
+        wrapArc9FlashlightFunction(weapon, "DrawFlashlightsWM")
+
+        if shouldReplaceArc9Flashlights() then
+            clearArc9Flashlights(weapon)
+        end
+    end
+
+    local function scanFlashlightWeapons()
         for _, ent in ipairs(ents.GetAll()) do
             wrapArcCWFlashlights(ent)
+            wrapArc9Flashlights(ent)
         end
     end
 
@@ -379,6 +566,16 @@ if CLIENT then
     end
 
     FL.RegisterIntegration({
+        id = "arc9",
+        priority = 120,
+        GetAttachmentTransform = getArc9FlashlightAttachmentTransform,
+        GetFlashlightState = getArc9FlashlightState,
+        UsesViewOrigin = function(_, _, activeWeapon)
+            return isArc9Throwable(activeWeapon)
+        end
+    })
+
+    FL.RegisterIntegration({
         id = "arccw",
         priority = 110,
         GetAttachmentTransform = getArcCWAttachmentTransform
@@ -400,16 +597,18 @@ if CLIENT then
         timer.Simple(0, function()
             if IsValid(ent) then
                 wrapArcCWFlashlights(ent)
+                wrapArc9Flashlights(ent)
             end
         end)
     end)
 
-    cvars.AddChangeCallback("betterlights_flashlight_player_enable", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsPlayer")
-    cvars.AddChangeCallback("betterlights_integration_arccw_disable_flashlight_override", scanArcCWFlashlightWeapons, "BetterLights_ArcCWFlashlightsIntegration")
+    cvars.AddChangeCallback("betterlights_flashlight_player_enable", scanFlashlightWeapons, "BetterLights_ArcCWFlashlightsPlayer")
+    cvars.AddChangeCallback("betterlights_integration_arccw_disable_flashlight_override", scanFlashlightWeapons, "BetterLights_ArcCWFlashlightsIntegration")
+    cvars.AddChangeCallback("betterlights_integration_arc9_disable_flashlight_override", scanFlashlightWeapons, "BetterLights_ARC9FlashlightsIntegration")
 
-    hook.Add("BetterLights_EffectiveEnabledChanged", "BetterLights_ArcCWFlashlightsGlobal", scanArcCWFlashlightWeapons)
-    hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_ArcCWFlashlightsServerSettings", scanArcCWFlashlightWeapons)
+    hook.Add("BetterLights_EffectiveEnabledChanged", "BetterLights_ArcCWFlashlightsGlobal", scanFlashlightWeapons)
+    hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_ArcCWFlashlightsServerSettings", scanFlashlightWeapons)
 
-    hook.Add("InitPostEntity", "BetterLights_Flashlight_ArcCW_Init_Client", scanArcCWFlashlightWeapons)
-    timer.Create("BetterLights_Flashlight_ArcCW_Scan_Client", 2, 0, scanArcCWFlashlightWeapons)
+    hook.Add("InitPostEntity", "BetterLights_Flashlight_ArcCW_Init_Client", scanFlashlightWeapons)
+    timer.Create("BetterLights_Flashlight_ArcCW_Scan_Client", 2, 0, scanFlashlightWeapons)
 end

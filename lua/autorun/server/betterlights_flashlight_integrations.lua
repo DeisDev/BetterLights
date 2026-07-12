@@ -73,6 +73,24 @@ if SERVER then
         return playerDisablesIntegrationFlashlight(ply, "BetterLights_ARC9FlashlightOverrideDisabled", isArc9Weapon)
     end
 
+    local function arc9HandlesFlashlightImpulse(ply)
+        if playerDisablesArc9Flashlight(ply) then return false end
+
+        local weapon = getActiveWeapon(ply)
+        if not isArc9Weapon(weapon) then return false end
+
+        if isfunction(weapon.GetCustomize) then
+            local ok, customizing = pcall(weapon.GetCustomize, weapon)
+            if ok and customizing == true then return true end
+        end
+
+        if not isfunction(weapon.CanToggleAllStatsOnF) then return false end
+
+        local ok, count = pcall(weapon.CanToggleAllStatsOnF, weapon)
+        count = ok and tonumber(count) or nil
+        return count ~= nil and count > 0
+    end
+
     local function hasMwBaseFlashlightAttachment(weapon)
         if not isMwBaseWeapon(weapon) then return false end
         if not isfunction(weapon.GetFlashlightAttachment) then return false end
@@ -131,6 +149,7 @@ if SERVER then
     FL.RegisterIntegration({
         id = "arc9",
         priority = 80,
+        HandlesFlashlightImpulse = arc9HandlesFlashlightImpulse,
         IsFlashlightOverrideDisabled = function(ply)
             return playerDisablesArc9Flashlight(ply)
         end

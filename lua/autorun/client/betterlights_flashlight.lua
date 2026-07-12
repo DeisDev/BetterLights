@@ -401,6 +401,17 @@ if CLIENT then
         return nil
     end
 
+    local function integrationUsesViewOrigin(ply, localPlayer, activeWeapon)
+        for _, integration in ipairs(FL.GetIntegrations()) do
+            local usesViewOrigin = integration.UsesViewOrigin
+            if isfunction(usesViewOrigin) and usesViewOrigin(ply, localPlayer, activeWeapon) == true then
+                return true
+            end
+        end
+
+        return false
+    end
+
     local function getWeaponAttachmentTransform(ply, localPlayer)
         if not getEffectiveBool(cvar_attachment) then return end
         if ply.InVehicle and ply:InVehicle() then return end
@@ -409,6 +420,7 @@ if CLIENT then
         local activeWeapon = ply:GetActiveWeapon()
         if not IsValid(activeWeapon) then return end
         if VIEW_ORIGIN_WEAPONS[activeWeapon:GetClass()] then return end
+        if integrationUsesViewOrigin(ply, localPlayer, activeWeapon) then return end
 
         local attachment = getIntegrationAttachmentTransform(ply, localPlayer, activeWeapon)
         if not attachment then
@@ -547,10 +559,26 @@ if CLIENT then
         return BL.IsEnabled() and getEffectiveBool(cvar_player_enable)
     end
 
+    local function isPlayerFlashlightActive(ply)
+        local activeWeapon = ply:GetActiveWeapon()
+
+        if IsValid(activeWeapon) then
+            for _, integration in ipairs(FL.GetIntegrations()) do
+                local getFlashlightState = integration.GetFlashlightState
+                if isfunction(getFlashlightState) then
+                    local state = getFlashlightState(ply, activeWeapon)
+                    if state ~= nil then return state == true end
+                end
+            end
+        end
+
+        return ply:GetNWBool("BetterLights_Flashlight", false)
+    end
+
     local function shouldDrawFlare(ply, localPlayer)
         if not getEffectiveBool(cvar_flare) then return false end
         if not IsValid(ply) or not ply:Alive() then return false end
-        if not ply:GetNWBool("BetterLights_Flashlight", false) then return false end
+        if not isPlayerFlashlightActive(ply) then return false end
 
         if ply ~= localPlayer then
             return getEffectiveBool(cvar_flare_others)
@@ -636,7 +664,7 @@ if CLIENT then
         local localPlayer = LocalPlayer()
 
         for _, ply in ipairs(player.GetAll()) do
-            if IsValid(ply) and ply:Alive() and ply:GetNWBool("BetterLights_Flashlight", false) then
+            if IsValid(ply) and ply:Alive() and isPlayerFlashlightActive(ply) then
                 seen[ply] = true
                 updateProjector(ply, localPlayer)
             end

@@ -159,6 +159,17 @@ if SERVER then
         ply.BetterLights_LastFlashlightInput = CurTime()
     end
 
+    local function integrationHandlesFlashlightImpulse(ply)
+        for _, integration in ipairs(FL.GetIntegrations()) do
+            local handlesFlashlightImpulse = integration.HandlesFlashlightImpulse
+            if isfunction(handlesFlashlightImpulse) and handlesFlashlightImpulse(ply) == true then
+                return true
+            end
+        end
+
+        return false
+    end
+
     local function isVanillaFlashlightOn(ply)
         local oldIsOn = PLAYER and PLAYER.BetterLights_OldFlashlightIsOn
         if not oldIsOn then return false end
@@ -266,6 +277,7 @@ if SERVER then
         end
 
         if cmd:GetImpulse() ~= 100 then return end
+        if integrationHandlesFlashlightImpulse(ply) then return end
 
         cmd:SetImpulse(0)
         if recentlyHandledInput(ply) then return false end
