@@ -798,6 +798,12 @@ do
     end
 
     function MF.MatchWeaponRule(shooter, weapon, bullet, adapterId)
+        local adapter = adapterId and MF.Adapters[adapterId] or nil
+        if bullet and adapter and isfunction(adapter.shouldHandleBullet) then
+            local ok, shouldHandle = pcall(adapter.shouldHandleBullet, shooter, weapon, bullet)
+            if ok and shouldHandle == false then return nil end
+        end
+
         for i = 1, #MF.WeaponRules do
             local rule = MF.WeaponRules[i]
             local classOk = classMatches(rule.class, weapon) or classMatches(rule.class, shooter)

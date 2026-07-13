@@ -219,6 +219,7 @@ if SERVER then
         if not IsValid(ply) then return false end
 
         state = state and true or false
+        if state == false and IsValid(ply.BetterLights_TFADeployPreserveFlashlight) then return true end
         if not skipPermission and not canSwitchFlashlight(ply, state) then return false end
         if isModuleEnabledFor(ply) then
             turnOffVanillaFlashlight(ply)
@@ -266,6 +267,7 @@ if SERVER then
         ply.BetterLights_MWBaseFlashlightOverrideDisabled = net.ReadBool()
         ply.BetterLights_ArcCWFlashlightOverrideDisabled = net.ReadBool()
         ply.BetterLights_ARC9FlashlightOverrideDisabled = net.ReadBool()
+        ply.BetterLights_TFAFlashlightOverrideDisabled = len >= 7 and net.ReadBool() or false
 
         reconcileFlashlightEligibility(ply)
     end)

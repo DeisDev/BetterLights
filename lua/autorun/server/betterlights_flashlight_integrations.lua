@@ -3,6 +3,8 @@ if SERVER then
     local FL = BL.Flashlight
 
     local MWBASE_FLASHLIGHT_HOOK = "MW19_PlayerSwitchFlashlight"
+    local TFA_FLASHLIGHT_HOOK = "tfa_toggleflashlight"
+    local TFA_TOGGLE_WRAPPER_VERSION = 1
     local getWeaponBase = FL.GetWeaponBase
 
     local function getActiveWeapon(ply)
@@ -55,6 +57,23 @@ if SERVER then
             and isfunction(weapon.GetAllAttachmentsInUse)
     end
 
+    local function isTFAWeapon(weapon)
+        if not IsValid(weapon) then return false end
+        if weapon.IsTFAWeapon == true then return true end
+
+        local base = getWeaponBase(weapon)
+        if base == "tfa_gun_base" or base == "tfa_melee_base" then return true end
+
+        if weapons and weapons.IsBasedOn and weapon.GetClass then
+            local className = weapon:GetClass()
+            if className ~= "" and (weapons.IsBasedOn(className, "tfa_gun_base") or weapons.IsBasedOn(className, "tfa_melee_base")) then
+                return true
+            end
+        end
+
+        return false
+    end
+
     local function playerDisablesIntegrationFlashlight(ply, fieldName, matcher)
         if not (IsValid(ply) and ply[fieldName] == true) then return false end
 
@@ -71,6 +90,10 @@ if SERVER then
 
     local function playerDisablesArc9Flashlight(ply)
         return playerDisablesIntegrationFlashlight(ply, "BetterLights_ARC9FlashlightOverrideDisabled", isArc9Weapon)
+    end
+
+    local function playerDisablesTFAFlashlight(ply)
+        return playerDisablesIntegrationFlashlight(ply, "BetterLights_TFAFlashlightOverrideDisabled", isTFAWeapon)
     end
 
     local function arc9HandlesFlashlightImpulse(ply)
@@ -119,6 +142,117 @@ if SERVER then
 
         return hasMwBaseFlashlightAttachment(ply:GetActiveWeapon())
     end
+
+    local function readTFAStat(weapon, key, fallback)
+        if not (IsValid(weapon) and isfunction(weapon.GetStatL)) then return fallback end
+
+        local ok, value = pcall(weapon.GetStatL, weapon, key, fallback)
+        if ok and value ~= nil then return value end
+        return fallback
+    end
+
+    local function hasTFAFlashlightAttachment(weapon)
+        if not isTFAWeapon(weapon) then return false end
+
+        local attachmentName = readTFAStat(weapon, "FlashlightAttachmentName", nil)
+        if attachmentName ~= nil and attachmentName ~= "" then return true end
+
+        return (tonumber(readTFAStat(weapon, "FlashlightAttachment", 0)) or 0) > 0
+    end
+
+    local function shouldSuppressTFAFlashlightHook(ply, state)
+        if playerDisablesTFAFlashlight(ply) then return false end
+        if state ~= true then return false end
+        if not (IsValid(ply) and ply.GetActiveWeapon) then return false end
+
+        return hasTFAFlashlightAttachment(ply:GetActiveWeapon())
+    end
+
+    local function clearActiveTFAFlashlightFlag(ply)
+        if playerDisablesTFAFlashlight(ply) then return end
+        if not (IsValid(ply) and ply.GetActiveWeapon) then return end
+
+        local weapon = ply:GetActiveWeapon()
+        if not hasTFAFlashlightAttachment(weapon) then return end
+        if not isfunction(weapon.SetFlashlightEnabled) then return end
+
+        pcall(weapon.SetFlashlightEnabled, weapon, false)
+    end
+
+    local function betterLightsOwnsTFAFlashlight(ply)
+        return IsValid(ply)
+            and BL.IsEnabledForPlayer(ply)
+            and BL.GetEffectiveServerFlashlightBool("betterlights_flashlight_player_enable", ply.BetterLights_FlashlightEnabled)
+            and not playerDisablesTFAFlashlight(ply)
+    end
+
+    local function finishTFADeployFlashlightGuard(weapon, ply)
+        if not IsValid(ply) then return end
+        if ply.BetterLights_TFADeployPreserveFlashlight ~= weapon then return end
+
+        ply.BetterLights_TFADeployPreserveFlashlight = nil
+        if IsValid(weapon) and isfunction(weapon.SetFlashlightEnabled) then
+            pcall(weapon.SetFlashlightEnabled, weapon, false)
+        end
+    end
+
+    local function wrapTFAToggleFlashlight(weapon)
+        local current = IsValid(weapon) and weapon.ToggleFlashlight or nil
+        if not isfunction(current) then return end
+
+        local previousWrapper = weapon.BetterLightsTFAToggleFlashlightWrapper
+        if weapon.BetterLightsTFAToggleFlashlightVersion == TFA_TOGGLE_WRAPPER_VERSION and current == previousWrapper then return end
+
+        local original = current
+        if current == previousWrapper and isfunction(weapon.BetterLightsTFAToggleFlashlightOriginal) then
+            original = weapon.BetterLightsTFAToggleFlashlightOriginal
+        end
+
+        local wrapper = function(self, state, ...)
+            local owner = self.GetOwner and self:GetOwner() or nil
+            if state == true and IsValid(owner) and owner.BetterLights_TFADeployPreserveFlashlight == self then return end
+
+            return original(self, state, ...)
+        end
+
+        weapon.BetterLightsTFAToggleFlashlightVersion = TFA_TOGGLE_WRAPPER_VERSION
+        weapon.BetterLightsTFAToggleFlashlightOriginal = original
+        weapon.BetterLightsTFAToggleFlashlightWrapper = wrapper
+        weapon.ToggleFlashlight = wrapper
+    end
+
+    hook.Add("TFA_PreDeploy", "BetterLights_TFAFlashlightDeploy_Pre", function(weapon)
+        if not hasTFAFlashlightAttachment(weapon) then return end
+
+        local ply = weapon.GetOwner and weapon:GetOwner() or nil
+        if not betterLightsOwnsTFAFlashlight(ply) then return end
+        if not ply:GetNWBool("BetterLights_Flashlight", false) then return end
+
+        wrapTFAToggleFlashlight(weapon)
+        ply.BetterLights_TFADeployPreserveFlashlight = weapon
+        timer.Simple(0, function()
+            finishTFADeployFlashlightGuard(weapon, ply)
+        end)
+    end)
+
+    hook.Add("TFA_Deploy", "BetterLights_TFAFlashlightDeploy_Post", function(weapon)
+        local ply = IsValid(weapon) and weapon.GetOwner and weapon:GetOwner() or nil
+        finishTFADeployFlashlightGuard(weapon, ply)
+    end)
+
+    FL.RegisterIntegration({
+        id = "tfa",
+        priority = 110,
+        GetSuppressedPlayerSwitchFlashlightHooks = function(ply, state)
+            if not shouldSuppressTFAFlashlightHook(ply, state) then return nil end
+
+            return TFA_FLASHLIGHT_HOOK
+        end,
+        OnSetPlayerFlashlight = clearActiveTFAFlashlightFlag,
+        IsFlashlightOverrideDisabled = function(ply)
+            return playerDisablesTFAFlashlight(ply)
+        end
+    })
 
     FL.RegisterIntegration({
         id = "mwbase",

@@ -63,6 +63,16 @@ if CLIENT then
         )
     end, 100)
 
+    registerIntegrationPage("BL_Integration_TFA", "menu.integration_tfa", function(panel)
+        addFlashlightOverridePage(
+            panel,
+            "page.integration_tfa.title",
+            "page.integration_tfa.desc",
+            "betterlights_integration_tfa_disable_flashlight_override",
+            "control.use_tfa_flashlight"
+        )
+    end, 50)
+
     function MENU.RegisterIntegrationPanels()
         local pages = {}
 

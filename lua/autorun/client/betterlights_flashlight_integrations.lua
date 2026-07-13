@@ -6,6 +6,9 @@ if CLIENT then
     local ARCCW_MUZZLE_ATTACHMENT_NAMES = { "muzzle", "1" }
     local MWBASE_ATTACHMENT_NAMES = { "muzzle", "tag_flash", "tag_muzzle", "tag_barrel", "tag_tip", "tip" }
     local M9K_ATTACHMENT_NAMES = { "1", "muzzle", "Muzzle" }
+    local CW2_ATTACHMENT_NAMES = { "muzzle", "1" }
+    local TFA_ATTACHMENT_NAMES = { "muzzle", "1" }
+    local TFA_FLASHLIGHT_WRAPPER_VERSION = 1
     local M9K_BASES = {
         bobs_gun_base = true,
         bobs_scoped_base = true,
@@ -80,6 +83,58 @@ if CLIENT then
         return false
     end
 
+    local function isBasedOn(weapon, base)
+        if not (IsValid(weapon) and weapons and weapons.IsBasedOn and weapon.GetClass) then return false end
+
+        local className = weapon:GetClass()
+        return className ~= "" and weapons.IsBasedOn(className, base)
+    end
+
+    local function isCW2Weapon(weapon)
+        if not IsValid(weapon) then return false end
+        if weapon.CW20Weapon == true then return true end
+
+        return getWeaponBase(weapon) == "cw_base" or isBasedOn(weapon, "cw_base")
+    end
+
+    local function isCW2MeleeWeapon(weapon)
+        if not isCW2Weapon(weapon) then return false end
+
+        return getWeaponBase(weapon) == "cw_melee_base" or isBasedOn(weapon, "cw_melee_base")
+    end
+
+    local function isCW2ViewOriginWeapon(weapon)
+        return isCW2MeleeWeapon(weapon)
+            or (isCW2Weapon(weapon) and (getWeaponBase(weapon) == "cw_grenade_base" or isBasedOn(weapon, "cw_grenade_base")))
+    end
+
+    local function isTFAWeapon(weapon)
+        if not IsValid(weapon) then return false end
+        if weapon.IsTFAWeapon == true then return true end
+
+        local base = getWeaponBase(weapon)
+        return base == "tfa_gun_base"
+            or base == "tfa_melee_base"
+            or isBasedOn(weapon, "tfa_gun_base")
+            or isBasedOn(weapon, "tfa_melee_base")
+    end
+
+    local function isTFAMeleeWeapon(weapon)
+        if not isTFAWeapon(weapon) then return false end
+        if weapon.IsMelee == true or weapon.IsKnife == true then return true end
+
+        local base = getWeaponBase(weapon)
+        return base == "tfa_melee_base"
+            or string.find(base, "tfa_melee", 1, true) ~= nil
+            or string.find(base, "tfa_knife", 1, true) ~= nil
+            or isBasedOn(weapon, "tfa_melee_base")
+    end
+
+    local function isTFAViewOriginWeapon(weapon)
+        return isTFAMeleeWeapon(weapon)
+            or (IsValid(weapon) and (weapon.IsGrenade == true or weapon.IsBow == true))
+    end
+
     local function getMwBaseViewModel(weapon)
         if not (IsValid(weapon) and isfunction(weapon.GetViewModel)) then return nil end
 
@@ -117,6 +172,132 @@ if CLIENT then
         if aim then return aim:Angle() end
 
         return ply:EyeAngles()
+    end
+
+    local function readTFAStat(weapon, key, fallback)
+        if not (IsValid(weapon) and isfunction(weapon.GetStatL)) then return fallback end
+
+        local ok, value = pcall(weapon.GetStatL, weapon, key, fallback)
+        if ok and value ~= nil then return value end
+        return fallback
+    end
+
+    local function readTFARawStat(weapon, key)
+        if not (IsValid(weapon) and isfunction(weapon.GetStatRaw)) then return nil end
+
+        local ok, value = pcall(weapon.GetStatRaw, weapon, key, TFA and TFA.LatestDataVersion or nil)
+        if ok then return value end
+        return nil
+    end
+
+    local function getTFAElementModel(weapon, useViewModel)
+        local commonName = readTFAStat(weapon, "Flashlight_Element", nil)
+        local elementName = readTFAStat(weapon, useViewModel and "Flashlight_VElement" or "Flashlight_WElement", commonName)
+        if not elementName then return nil end
+
+        local elements = readTFARawStat(weapon, useViewModel and "ViewModelElements" or "WorldModelElements")
+        local element = type(elements) == "table" and elements[elementName] or nil
+        local model = type(element) == "table" and element.curmodel or nil
+        if IsValid(model) then return model end
+        return nil
+    end
+
+    local function getTFAFlashlightSource(ply, weapon, useViewModel)
+        local elementModel = getTFAElementModel(weapon, useViewModel)
+        if IsValid(elementModel) then return elementModel end
+
+        if useViewModel then
+            if IsValid(weapon.OwnerViewModel) then return weapon.OwnerViewModel end
+
+            local viewModel = ply.GetViewModel and ply:GetViewModel() or nil
+            if IsValid(viewModel) then return viewModel end
+        end
+
+        return weapon
+    end
+
+    local function reprojectTFAViewModelAngle(ply, weapon, attachment)
+        if not (attachment and attachment.Ang) then return nil end
+
+        local ang = Angle(attachment.Ang.p, attachment.Ang.y, attachment.Ang.r)
+        local ironProgress = tonumber(weapon.CLIronSightsProgress) or 0
+        if weapon.FlashlightISMovement and ironProgress > 0 then
+            local ironAngle = readTFAStat(weapon, "IronSightsAngle", nil)
+            if ironAngle then
+                ang:RotateAroundAxis(ang:Right(), ironAngle.y * (weapon.ViewModelFlip and -1 or 1) * ironProgress)
+                ang:RotateAroundAxis(ang:Up(), -ironAngle.x * ironProgress)
+            end
+        end
+
+        local eyeAngles = EyeAngles()
+        local _, localAngle = WorldToLocal(vector_origin, ang, vector_origin, eyeAngles)
+        local viewModelFov = tonumber(weapon.ViewModelFOV) or 54
+        local factor = viewModelFov ~= 0 and ply:GetFOV() / viewModelFov or 1
+        localAngle.p = localAngle.p * factor
+        localAngle.y = localAngle.y * factor
+        local _, worldAngle = LocalToWorld(vector_origin, localAngle, vector_origin, eyeAngles)
+        return worldAngle
+    end
+
+    local function getTFAAttachmentTransform(ply, localPlayer, activeWeapon)
+        if not isTFAWeapon(activeWeapon) or isTFAViewOriginWeapon(activeWeapon) then return nil end
+
+        local useViewModel = ply == localPlayer and not ply:ShouldDrawLocalPlayer()
+        local source = getTFAFlashlightSource(ply, activeWeapon, useViewModel)
+        local attachmentId
+        local attachmentName
+
+        if useViewModel then
+            attachmentId = tonumber(readTFAStat(activeWeapon, "FlashlightAttachment", nil))
+            attachmentName = readTFAStat(activeWeapon, "FlashlightAttachmentName", nil)
+        else
+            attachmentId = tonumber(readTFAStat(activeWeapon, "FlashlightAttachmentWorld", readTFAStat(activeWeapon, "FlashlightAttachment", nil)))
+            attachmentName = readTFAStat(activeWeapon, "FlashlightAttachmentNameWorld", readTFAStat(activeWeapon, "FlashlightAttachmentName", nil))
+        end
+
+        local attachment = attachmentName and getAttachmentTransformByName(source, attachmentName) or nil
+        attachment = attachment or BL.GetAttachmentTransformById(source, attachmentId)
+
+        if not attachment and isfunction(activeWeapon.GetMuzzleAttachment) then
+            local ok, muzzleId = pcall(activeWeapon.GetMuzzleAttachment, activeWeapon)
+            if ok then attachment = BL.GetAttachmentTransformById(source, tonumber(muzzleId)) end
+        end
+
+        attachment = attachment or resolveAttachmentTransform(source, TFA_ATTACHMENT_NAMES)
+        if not attachment then return nil end
+
+        return {
+            Pos = attachment.Pos,
+            Ang = useViewModel and reprojectTFAViewModelAngle(ply, activeWeapon, attachment) or attachment.Ang,
+            Bone = attachment.Bone
+        }
+    end
+
+    local function getCW2AttachmentTransform(ply, localPlayer, activeWeapon)
+        if not isCW2Weapon(activeWeapon) or isCW2ViewOriginWeapon(activeWeapon) then return nil end
+
+        local useViewModel = ply == localPlayer and not ply:ShouldDrawLocalPlayer()
+        local source
+        local attachment
+
+        if useViewModel then
+            source = IsValid(activeWeapon.CW_VM) and activeWeapon.CW_VM or ply:GetViewModel()
+            local attachmentName = activeWeapon.MuzzleAttachmentName or activeWeapon.MuzzleAttachment or "muzzle"
+            attachment = getAttachmentTransformByName(source, attachmentName)
+                or BL.GetAttachmentTransformById(source, tonumber(attachmentName))
+        else
+            source = IsValid(activeWeapon.WMEnt) and activeWeapon.WMEnt or activeWeapon
+            attachment = BL.GetAttachmentTransformById(source, tonumber(activeWeapon.WorldMuzzleAttachmentID))
+                or resolveAttachmentTransform(source, CW2_ATTACHMENT_NAMES)
+        end
+
+        if not attachment then return nil end
+
+        return {
+            Pos = attachment.Pos,
+            Ang = getPlayerAimAngle(ply),
+            Bone = attachment.Bone
+        }
     end
 
     local function isArc9Throwable(weapon)
@@ -470,10 +651,93 @@ if CLIENT then
         end
     end
 
+    local function shouldReplaceTFAFlashlights(weapon)
+        if not ProjectedTexture then return false end
+        local owner = IsValid(weapon) and weapon.GetOwner and weapon:GetOwner() or nil
+        if IsValid(owner) and owner ~= LocalPlayer() then return false end
+        if isIntegrationFlashlightOverrideDisabled("tfa") then return false end
+        return BL.IsEnabled() and BL.GetEffectiveFlashlightBool("betterlights_flashlight_player_enable")
+    end
+
+    local function clearTFAFlashlight(weapon)
+        if not isTFAWeapon(weapon) then return end
+
+        if isfunction(weapon.CleanFlashlight) then
+            pcall(weapon.CleanFlashlight, weapon)
+            return
+        end
+
+        local owner = weapon.GetOwner and weapon:GetOwner() or nil
+        if IsValid(owner) and IsValid(owner.TFAFlashlightGun) then
+            owner.TFAFlashlightGun:Remove()
+        end
+    end
+
+    local function wrapTFAToggleFlashlight(weapon)
+        local current = weapon.ToggleFlashlight
+        if not isfunction(current) then return end
+
+        local previousWrapper = weapon.BetterLightsTFAToggleFlashlightWrapper
+        if weapon.BetterLightsTFAToggleFlashlightVersion == TFA_FLASHLIGHT_WRAPPER_VERSION and current == previousWrapper then return end
+
+        local original = current
+        if current == previousWrapper and isfunction(weapon.BetterLightsTFAToggleFlashlightOriginal) then
+            original = weapon.BetterLightsTFAToggleFlashlightOriginal
+        end
+
+        local wrapper = function(self, ...)
+            if shouldReplaceTFAFlashlights(self) then return end
+
+            return original(self, ...)
+        end
+
+        weapon.BetterLightsTFAToggleFlashlightVersion = TFA_FLASHLIGHT_WRAPPER_VERSION
+        weapon.BetterLightsTFAToggleFlashlightOriginal = original
+        weapon.BetterLightsTFAToggleFlashlightWrapper = wrapper
+        weapon.ToggleFlashlight = wrapper
+    end
+
+    local function wrapTFAFlashlight(weapon)
+        if not isTFAWeapon(weapon) then return end
+
+        wrapTFAToggleFlashlight(weapon)
+
+        local current = weapon.DrawFlashlight
+        if not isfunction(current) then return end
+
+        local previousWrapper = weapon.BetterLightsTFADrawFlashlightWrapper
+        if weapon.BetterLightsTFADrawFlashlightVersion == TFA_FLASHLIGHT_WRAPPER_VERSION and current == previousWrapper then
+            if shouldReplaceTFAFlashlights(weapon) then clearTFAFlashlight(weapon) end
+            return
+        end
+
+        local original = current
+        if current == previousWrapper and isfunction(weapon.BetterLightsTFADrawFlashlightOriginal) then
+            original = weapon.BetterLightsTFADrawFlashlightOriginal
+        end
+
+        local wrapper = function(self, ...)
+            if shouldReplaceTFAFlashlights(self) then
+                clearTFAFlashlight(self)
+                return
+            end
+
+            return original(self, ...)
+        end
+
+        weapon.BetterLightsTFADrawFlashlightVersion = TFA_FLASHLIGHT_WRAPPER_VERSION
+        weapon.BetterLightsTFADrawFlashlightOriginal = original
+        weapon.BetterLightsTFADrawFlashlightWrapper = wrapper
+        weapon.DrawFlashlight = wrapper
+
+        if shouldReplaceTFAFlashlights(weapon) then clearTFAFlashlight(weapon) end
+    end
+
     local function scanFlashlightWeapons()
         for _, ent in ipairs(ents.GetAll()) do
             wrapArcCWFlashlights(ent)
             wrapArc9Flashlights(ent)
+            wrapTFAFlashlight(ent)
         end
     end
 
@@ -566,6 +830,15 @@ if CLIENT then
     end
 
     FL.RegisterIntegration({
+        id = "tfa",
+        priority = 130,
+        GetAttachmentTransform = getTFAAttachmentTransform,
+        UsesViewOrigin = function(_, _, activeWeapon)
+            return isTFAViewOriginWeapon(activeWeapon)
+        end
+    })
+
+    FL.RegisterIntegration({
         id = "arc9",
         priority = 120,
         GetAttachmentTransform = getArc9FlashlightAttachmentTransform,
@@ -588,6 +861,15 @@ if CLIENT then
     })
 
     FL.RegisterIntegration({
+        id = "cw2",
+        priority = 95,
+        GetAttachmentTransform = getCW2AttachmentTransform,
+        UsesViewOrigin = function(_, _, activeWeapon)
+            return isCW2ViewOriginWeapon(activeWeapon)
+        end
+    })
+
+    FL.RegisterIntegration({
         id = "m9k",
         priority = 90,
         GetAttachmentTransform = getM9KAttachmentTransform
@@ -598,6 +880,7 @@ if CLIENT then
             if IsValid(ent) then
                 wrapArcCWFlashlights(ent)
                 wrapArc9Flashlights(ent)
+                wrapTFAFlashlight(ent)
             end
         end)
     end)
@@ -605,6 +888,7 @@ if CLIENT then
     cvars.AddChangeCallback("betterlights_flashlight_player_enable", scanFlashlightWeapons, "BetterLights_ArcCWFlashlightsPlayer")
     cvars.AddChangeCallback("betterlights_integration_arccw_disable_flashlight_override", scanFlashlightWeapons, "BetterLights_ArcCWFlashlightsIntegration")
     cvars.AddChangeCallback("betterlights_integration_arc9_disable_flashlight_override", scanFlashlightWeapons, "BetterLights_ARC9FlashlightsIntegration")
+    cvars.AddChangeCallback("betterlights_integration_tfa_disable_flashlight_override", scanFlashlightWeapons, "BetterLights_TFAFlashlightsIntegration")
 
     hook.Add("BetterLights_EffectiveEnabledChanged", "BetterLights_ArcCWFlashlightsGlobal", scanFlashlightWeapons)
     hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_ArcCWFlashlightsServerSettings", scanFlashlightWeapons)

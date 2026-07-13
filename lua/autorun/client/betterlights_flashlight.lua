@@ -7,6 +7,7 @@ if CLIENT then
     local cvar_mwbase_flashlight_override_disabled = BL.CreateClientConVar("betterlights_integration_mwbase_disable_flashlight_override", "0", true, false, "Use MW Base flashlight handling while MW Base weapons are active")
     local cvar_arccw_flashlight_override_disabled = BL.CreateClientConVar("betterlights_integration_arccw_disable_flashlight_override", "0", true, false, "Use ArcCW flashlight handling while ArcCW weapons are active")
     local cvar_arc9_flashlight_override_disabled = BL.CreateClientConVar("betterlights_integration_arc9_disable_flashlight_override", "0", true, false, "Use ARC9 flashlight handling while ARC9 weapons are active")
+    local cvar_tfa_flashlight_override_disabled = BL.CreateClientConVar("betterlights_integration_tfa_disable_flashlight_override", "0", true, false, "Use TFA flashlight handling while TFA weapons are active")
     local refreshThinkRegistration
     local ONBOARDING_COOKIE = "betterlights_flashlight_onboarding_seen"
 
@@ -24,6 +25,7 @@ if CLIENT then
             net.WriteBool(cvar_mwbase_flashlight_override_disabled:GetBool())
             net.WriteBool(cvar_arccw_flashlight_override_disabled:GetBool())
             net.WriteBool(cvar_arc9_flashlight_override_disabled:GetBool())
+            net.WriteBool(cvar_tfa_flashlight_override_disabled:GetBool())
         net.SendToServer()
     end
 
@@ -81,6 +83,7 @@ if CLIENT then
     cvars.AddChangeCallback("betterlights_integration_mwbase_disable_flashlight_override", queueIntegrationFlashlightSettingsSync, "BetterLights_MWBaseFlashlightOverride")
     cvars.AddChangeCallback("betterlights_integration_arccw_disable_flashlight_override", queueIntegrationFlashlightSettingsSync, "BetterLights_ArcCWFlashlightOverride")
     cvars.AddChangeCallback("betterlights_integration_arc9_disable_flashlight_override", queueIntegrationFlashlightSettingsSync, "BetterLights_ARC9FlashlightOverride")
+    cvars.AddChangeCallback("betterlights_integration_tfa_disable_flashlight_override", queueIntegrationFlashlightSettingsSync, "BetterLights_TFAFlashlightOverride")
 
     hook.Add("OnReloaded", "BetterLights_FlashlightSyncSettingsReload", function()
         queueFlashlightSettingsSync()

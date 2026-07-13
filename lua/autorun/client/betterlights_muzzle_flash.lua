@@ -424,11 +424,20 @@ if CLIENT then
         end
 
         local profileId = rule and rule.profile or payload.profileId or "default"
+        local colorTag = rule and rule.colorTag or nil
+        if payload.adapter and isfunction(payload.adapter.selectProfile) then
+            local ok, selection = pcall(payload.adapter.selectProfile, payload, rule)
+            if ok and type(selection) == "table" then
+                profileId = selection.profile or profileId
+                colorTag = selection.colorTag or colorTag
+            end
+        end
+
         if shouldSuppressServerEcho(payload.shooter, payload.weapon, profileId, payload.adapterId) then return end
         if isBuiltinDefaultMuzzleRule(rule) and not IsValid(payload.weapon) then return end
 
         local profile = MF.GetProfile(profileId)
-        local settings = getProfileSettings(profile, rule and rule.colorTag or nil)
+        local settings = getProfileSettings(profile, colorTag)
         if not settings then return end
 
         local attachments = rule and rule.attachments or payload.attachments
