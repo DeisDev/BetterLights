@@ -8,6 +8,9 @@ if CLIENT then
     local PROFILE_PATH = PROFILE_DIR .. "/profiles.json"
     local SCHEMA_VERSION = 1
     local EXPORT_TYPE = "betterlights" .. ".settings_profile"
+    local SHARE_CODE_PREFIX = "BLP1:"
+    local MAX_EXPORT_JSON_BYTES = 256 * 1024
+    local MAX_SHARE_TEXT_BYTES = 384 * 1024
     local MAX_NAME_LENGTH = 48
 
     local function copySettings(settings)
@@ -48,6 +51,61 @@ if CLIENT then
 
     local function namesMatch(a, b)
         return string.lower(tostring(a or "")) == string.lower(tostring(b or ""))
+    end
+
+    local function encodeShareCode(json)
+        if type(json) ~= "string" or json == "" then
+            return nil, "notice.profile_export_failed"
+        end
+
+        if string.len(json) > MAX_EXPORT_JSON_BYTES then
+            return nil, "notice.profile_export_too_large"
+        end
+
+        local compressed = util.Compress(json)
+        if not compressed or compressed == "" then
+            return nil, "notice.profile_export_failed"
+        end
+
+        local encoded = util.Base64Encode(compressed, true)
+        if not encoded or encoded == "" then
+            return nil, "notice.profile_export_failed"
+        end
+
+        return SHARE_CODE_PREFIX .. encoded
+    end
+
+    local function decodeShareSource(source)
+        source = tostring(source or "")
+        if string.len(source) > MAX_SHARE_TEXT_BYTES then
+            return nil, "notice.profile_import_too_large"
+        end
+
+        source = string.Trim(source)
+        if string.sub(source, 1, string.len(SHARE_CODE_PREFIX)) ~= SHARE_CODE_PREFIX then
+            if string.len(source) > MAX_EXPORT_JSON_BYTES then
+                return nil, "notice.profile_import_too_large"
+            end
+
+            return source
+        end
+
+        local encoded = string.sub(source, string.len(SHARE_CODE_PREFIX) + 1)
+        if encoded == "" then
+            return nil, "notice.profile_import_malformed"
+        end
+
+        local compressed = util.Base64Decode(encoded)
+        if not compressed or compressed == "" then
+            return nil, "notice.profile_import_malformed"
+        end
+
+        local json = util.Decompress(compressed, MAX_EXPORT_JSON_BYTES)
+        if not json or json == "" then
+            return nil, "notice.profile_import_malformed"
+        end
+
+        return json
     end
 
     local function normalizeProfile(profile)
@@ -112,7 +170,7 @@ if CLIENT then
         file.Write(PROFILE_PATH, util.TableToJSON({
             schemaVersion = SCHEMA_VERSION,
             profiles = store.profiles
-        }, true))
+        }, false))
 
         return true
     end
@@ -330,8 +388,30 @@ if CLIENT then
         return PROFILES.Export(profile.name, profile.settings, profile.addonVersion)
     end
 
+    function PROFILES.ExportShareCode(name, settings, addonVersion)
+        local json, errorKey = PROFILES.Export(name, settings, addonVersion)
+        if not json then return nil, errorKey end
+
+        local code
+        code, errorKey = encodeShareCode(json)
+        if not code then return nil, errorKey end
+
+        return code, json
+    end
+
+    function PROFILES.ExportProfileShareCode(profile)
+        if not profile then
+            return nil, "notice.profile_missing"
+        end
+
+        return PROFILES.ExportShareCode(profile.name, profile.settings, profile.addonVersion)
+    end
+
     function PROFILES.DecodeExport(source)
-        source = string.Trim(tostring(source or ""))
+        local errorKey
+        source, errorKey = decodeShareSource(source)
+        if not source then return nil, errorKey end
+
         if source == "" then
             return nil, "notice.profile_import_malformed"
         end

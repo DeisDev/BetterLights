@@ -96,18 +96,18 @@ if CLIENT then
         notifyProfileLoadResult(result)
     end
 
-    local function copyProfileJson(json)
+    local function copyProfileText(text, successKey)
         if SetClipboardText then
-            SetClipboardText(json)
-            notify("notice.profile_export_copied", NOTIFY_GENERIC, 3)
+            SetClipboardText(text)
+            notify(successKey, NOTIFY_GENERIC, 3)
             return
         end
 
         notify("notice.profile_clipboard_unavailable", NOTIFY_ERROR, 4)
     end
 
-    local function openProfileTextWindow(title, json)
-        copyProfileJson(json)
+    local function openProfileTextWindow(title, shareCode, rawJson)
+        copyProfileText(shareCode, "notice.profile_export_code_copied")
 
         local frame = vgui.Create("DFrame")
         frame:SetTitle(title)
@@ -119,7 +119,7 @@ if CLIENT then
         entry:Dock(FILL)
         entry:DockMargin(10, 10, 10, 8)
         entry:SetMultiline(true)
-        entry:SetText(json)
+        entry:SetText(shareCode)
 
         local footer = vgui.Create("DPanel", frame)
         footer:Dock(BOTTOM)
@@ -139,31 +139,70 @@ if CLIENT then
         copy:Dock(RIGHT)
         copy:DockMargin(0, 0, 8, 0)
         copy:SetWide(110)
-        copy:SetText(MENU.Phrase("button.copy_profile_json"))
+        copy:SetText(MENU.Phrase("button.copy_profile_code"))
+
+        local showingRawJson = false
         copy.DoClick = function()
-            copyProfileJson(json)
+            if showingRawJson then
+                copyProfileText(rawJson, "notice.profile_export_copied")
+                return
+            end
+
+            copyProfileText(shareCode, "notice.profile_export_code_copied")
+        end
+
+        local toggleFormat = MENU.StyleButton(vgui.Create("DButton", footer))
+        toggleFormat:Dock(RIGHT)
+        toggleFormat:DockMargin(0, 0, 8, 0)
+        toggleFormat:SetWide(110)
+        toggleFormat:SetText(MENU.Phrase("button.show_profile_json"))
+        toggleFormat.DoClick = function()
+            showingRawJson = not showingRawJson
+
+            if showingRawJson then
+                entry:SetText(rawJson)
+                copy:SetText(MENU.Phrase("button.copy_profile_json"))
+                toggleFormat:SetText(MENU.Phrase("button.show_profile_code"))
+                return
+            end
+
+            entry:SetText(shareCode)
+            copy:SetText(MENU.Phrase("button.copy_profile_code"))
+            toggleFormat:SetText(MENU.Phrase("button.show_profile_json"))
         end
     end
 
     local function exportProfile(profile)
-        local json, errorKey = BetterLights.Profiles.ExportProfile(profile)
-        if not json then
-            notify(errorKey, NOTIFY_ERROR, 4)
+        local shareCode, rawJsonOrError = BetterLights.Profiles.ExportProfileShareCode(profile)
+        if not shareCode then
+            notify(rawJsonOrError, NOTIFY_ERROR, 4)
             return
         end
 
-        openProfileTextWindow(MENU.PhraseFormat("window.profile_export_title", profile.name), json)
+        openProfileTextWindow(
+            MENU.PhraseFormat("window.profile_export_title", profile.name),
+            shareCode,
+            rawJsonOrError
+        )
     end
 
     local function exportCurrentSettings()
         requestProfileName("dialog.profile_export_current.title", "dialog.profile_export_current.message", "", function(name)
-            local json, errorKey = BetterLights.Profiles.Export(name, BetterLights.Profiles.CaptureSettings(), BetterLights.VERSION)
-            if not json then
-                notify(errorKey, NOTIFY_ERROR, 4)
+            local shareCode, rawJsonOrError = BetterLights.Profiles.ExportShareCode(
+                name,
+                BetterLights.Profiles.CaptureSettings(),
+                BetterLights.VERSION
+            )
+            if not shareCode then
+                notify(rawJsonOrError, NOTIFY_ERROR, 4)
                 return
             end
 
-            openProfileTextWindow(MENU.PhraseFormat("window.profile_export_title", name), json)
+            openProfileTextWindow(
+                MENU.PhraseFormat("window.profile_export_title", name),
+                shareCode,
+                rawJsonOrError
+            )
         end)
     end
 
