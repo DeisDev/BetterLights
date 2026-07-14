@@ -4,7 +4,7 @@ if CLIENT then
     local WRAPPER_VERSION = 1
 
     local function isUsableVector(pos)
-        return pos and pos ~= vector_origin
+        return isvector(pos) and pos ~= vector_origin
     end
 
     local function cvarBool(cvar, fallback)
@@ -44,6 +44,7 @@ if CLIENT then
     function EXP.EmitProfileFlash(profileId, pos, options)
         if not BL.IsEnabled() then return nil end
         if not isUsableVector(pos) then return nil end
+        if options ~= nil and type(options) ~= "table" then return nil end
 
         options = options or {}
 

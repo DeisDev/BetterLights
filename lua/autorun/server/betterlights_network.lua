@@ -15,8 +15,10 @@ if SERVER then
         [STRIDER_CLASS] = BL.NET_STRIDER_BULLET_IMPACT,
         [HUNTER_CHOPPER_CLASS] = BL.NET_HUNTER_CHOPPER_BULLET_IMPACT
     }
-    local WRAPPER_VERSION = 3
+    local FIRE_BULLETS_WRAPPER_VERSION = 4
+    local MUZZLE_FLASH_WRAPPER_VERSION = 3
     local recentMuzzleShots = {}
+    local recentMuzzleFrame
     local recentStunstickImpacts = {}
 
     MF.IgnoredSourceClasses = MF.IgnoredSourceClasses or {}
@@ -109,7 +111,7 @@ if SERVER then
     end
 
     local function isUsableVector(pos)
-        return pos and pos ~= vector_origin
+        return isvector(pos) and pos ~= vector_origin
     end
 
     local function getSendOrigin(shooter, weapon, bullet)
@@ -127,6 +129,14 @@ if SERVER then
 
     local function shouldSendMuzzleShot(shooter, weapon, profileId, adapterId)
         local frame = getFrameKey()
+        if recentMuzzleFrame ~= frame then
+            for key in pairs(recentMuzzleShots) do
+                recentMuzzleShots[key] = nil
+            end
+
+            recentMuzzleFrame = frame
+        end
+
         local shooterIndex = IsValid(shooter) and shooter:EntIndex() or 0
         local weaponIndex = IsValid(weapon) and weapon:EntIndex() or 0
         local key = tostring(shooterIndex) .. ":" .. tostring(weaponIndex) .. ":" .. tostring(profileId or "") .. ":" .. tostring(adapterId or "")
@@ -308,28 +318,97 @@ if SERVER then
         sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, adapterId, rule.attachments)
     end
 
+    local function installBulletImpactCallback(ent, bullet, replaceOwnWrapper)
+        if type(bullet) ~= "table" then return false end
+
+        local previous = bullet.Callback
+        if previous == bullet.BetterLightsBulletImpactWrapper then
+            if not replaceOwnWrapper then return false end
+
+            previous = bullet.BetterLightsBulletImpactOriginal
+            bullet.Callback = previous
+        end
+
+        if not IsValid(ent) then return false end
+        if not BL.IsServerEnabled() then return false end
+
+        local shooter, weapon = resolveShooterAndWeapon(ent)
+        if isIgnoredSource(shooter, weapon) then return false end
+
+        local generation = (tonumber(bullet.BetterLightsBulletImpactGeneration) or 0) + 1
+
+        local wrapper = function(att, tr, dmginfo)
+            local ret
+            if isfunction(previous) then ret = previous(att, tr, dmginfo) end
+            if bullet.BetterLightsBulletImpactGeneration ~= generation then return ret end
+            if not BL.IsServerEnabled() then return ret end
+            if type(ret) == "table" and ret.effects == false then return ret end
+            if not (dmginfo and dmginfo.GetDamage and dmginfo:GetDamage() > 0) then return ret end
+            if not tr or not tr.Hit or tr.HitSky or not tr.HitPos then return ret end
+
+            local pos = tr.HitPos
+            if tr.HitNormal then
+                pos = pos + tr.HitNormal * 2
+            end
+
+            net.Start(BL.NET_EVENT_MESSAGE)
+                local specialMessage = getSpecialImpactMessage(ent)
+                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
+                net.WriteVector(pos)
+                if not specialMessage then
+                    net.WriteBool(isAR2Shot(att, bullet))
+                end
+            net.SendPVS(pos)
+
+            return ret
+        end
+
+        bullet.BetterLightsBulletImpactOriginal = previous
+        bullet.BetterLightsBulletImpactWrapper = wrapper
+        bullet.BetterLightsBulletImpactGeneration = generation
+        bullet.Callback = wrapper
+        return true
+    end
+
+    hook.Remove("EntityFireBullets", "BetterLights_BulletImpact_Server")
+
+    -- Lua-fired bullets can be wrapped before dispatch below. Engine-native
+    -- bullets cannot be changed here without ending EntityFireBullets dispatch.
+
     local function wrapEntityFireBullets()
         local meta = FindMetaTable("Entity")
         if not (meta and isfunction(meta.FireBullets)) then return end
-        if meta.BetterLightsFireBulletsWrapperVersion == WRAPPER_VERSION then return end
+        if meta.BetterLightsFireBulletsWrapperVersion == FIRE_BULLETS_WRAPPER_VERSION
+            and meta.FireBullets == meta.BetterLightsFireBulletsWrapper then return end
 
-        local original = meta.BetterLightsFireBulletsOriginal or meta.FireBullets
-        meta.BetterLightsFireBulletsWrapperVersion = WRAPPER_VERSION
-        meta.BetterLightsFireBulletsOriginal = original
-        meta.FireBullets = function(self, bullet, suppressHostEvents)
-            local ret = original(self, bullet, suppressHostEvents)
+        local downstream = meta.FireBullets
+        local previousWrapper = meta.BetterLightsFireBulletsWrapper
+        if downstream == previousWrapper and isfunction(meta.BetterLightsFireBulletsDownstream) then
+            downstream = meta.BetterLightsFireBulletsDownstream
+        end
+
+        local original = meta.BetterLightsFireBulletsOriginal or downstream
+        local wrapper = function(self, bullet, suppressHostEvents)
+            installBulletImpactCallback(self, bullet, true)
+            local ret = downstream(self, bullet, suppressHostEvents)
             handleMuzzleFireBullets(self, bullet)
             return ret
         end
+
+        meta.BetterLightsFireBulletsWrapperVersion = FIRE_BULLETS_WRAPPER_VERSION
+        meta.BetterLightsFireBulletsOriginal = original
+        meta.BetterLightsFireBulletsDownstream = downstream
+        meta.BetterLightsFireBulletsWrapper = wrapper
+        meta.FireBullets = wrapper
     end
 
     local function wrapEntityMuzzleFlash()
         local meta = FindMetaTable("Entity")
         if not (meta and isfunction(meta.MuzzleFlash)) then return end
-        if meta.BetterLightsMuzzleFlashWrapperVersion == WRAPPER_VERSION then return end
+        if meta.BetterLightsMuzzleFlashWrapperVersion == MUZZLE_FLASH_WRAPPER_VERSION then return end
 
         local original = meta.BetterLightsMuzzleFlashOriginal or meta.MuzzleFlash
-        meta.BetterLightsMuzzleFlashWrapperVersion = WRAPPER_VERSION
+        meta.BetterLightsMuzzleFlashWrapperVersion = MUZZLE_FLASH_WRAPPER_VERSION
         meta.BetterLightsMuzzleFlashOriginal = original
         meta.MuzzleFlash = function(self, ...)
             local ret = original(self, ...)
@@ -359,41 +438,6 @@ if SERVER then
     end
 
     MF.SendAdapterMuzzleFlash = sendAdapterMuzzleFlash
-
-    hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
-        if not BL.IsServerEnabled() then return end
-        if not IsValid(ent) then return end
-        if not bullet then return end
-
-        local shooter, weapon = resolveShooterAndWeapon(ent)
-        if isIgnoredSource(shooter, weapon) then return end
-
-        local prev = bullet.Callback
-        bullet.Callback = function(att, tr, dmginfo)
-            local ret
-            if isfunction(prev) then ret = prev(att, tr, dmginfo) end
-            if not BL.IsServerEnabled() then return ret end
-            if type(ret) == "table" and ret.effects == false then return ret end
-            if not (dmginfo and dmginfo.GetDamage and dmginfo:GetDamage() > 0) then return ret end
-            if not tr or not tr.Hit or not tr.HitPos then return ret end
-
-            local pos = tr.HitPos
-            if tr.HitNormal then
-                pos = pos + tr.HitNormal * 2
-            end
-
-            net.Start(BL.NET_EVENT_MESSAGE)
-                local specialMessage = getSpecialImpactMessage(ent)
-                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
-                net.WriteVector(pos)
-                if not specialMessage then
-                    net.WriteBool(isAR2Shot(att, bullet))
-                end
-            net.SendPVS(pos)
-
-            return ret
-        end
-    end)
 
     local function isStunstickDamage(attacker, inflictor)
         if IsValid(inflictor) and inflictor.GetClass and inflictor:GetClass() == STUNSTICK_CLASS then

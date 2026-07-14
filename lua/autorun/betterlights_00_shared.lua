@@ -630,6 +630,7 @@ do
 
     local sourceRank = {
         builtin = 1,
+        integration = 1,
         addon = 2,
         user = 3
     }
@@ -719,6 +720,15 @@ do
     function MF.RegisterWeaponRule(def)
         local rule = normalizeRule(def)
         if not rule then return nil end
+
+        if rule.id then
+            for i = #MF.WeaponRules, 1, -1 do
+                local existing = MF.WeaponRules[i]
+                if existing.id == rule.id and existing.source == rule.source then
+                    table.remove(MF.WeaponRules, i)
+                end
+            end
+        end
 
         MF.WeaponRules[#MF.WeaponRules + 1] = rule
         sortRules()

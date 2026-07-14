@@ -15,6 +15,7 @@ if CLIENT then
 
     hook.Add("PostDrawTranslucentRenderables", "BetterLights_DebugDLightOrigins", function(drawingDepth, drawingSkybox)
         if drawingDepth or drawingSkybox then return end
+        if not BL.IsEnabled() then return end
         if not cvar_enable:GetBool() then return end
         if not isDeveloperMode() then return end
         if not BL.GetActiveDLightRecords then return end

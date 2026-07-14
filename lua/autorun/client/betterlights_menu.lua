@@ -988,11 +988,22 @@ if CLIENT then
             panel:NumSlider(phrase("control.brightness"), "betterlights_combineball_brightness", 0, 10, 2)
             panel:NumSlider(phrase("control.decay"), "betterlights_combineball_decay", 0, 5000, 0)
             addColorMixerControl(panel, "control.color", "betterlights_combineball_color_r", "betterlights_combineball_color_g", "betterlights_combineball_color_b")
+
+            local targets = addSection(panel, "section.lighting_targets", "section.lighting_targets.desc", false)
+            targets:CheckBox(phrase("control.light_world"), "betterlights_combineball_world_light_enable")
+            targets:CheckBox(phrase("control.light_models"), "betterlights_combineball_model_light_enable")
+            targets:CheckBox(phrase("control.use_entity_light_for_models"), "betterlights_combineball_models_elight")
+            targets:NumSlider(phrase("control.model_elight_radius"), "betterlights_combineball_models_elight_size_mult", 0, 3, 2)
+
             addResetButton(panel, {
                 betterlights_combineball_enable = 1,
                 betterlights_combineball_size = 320,
                 betterlights_combineball_brightness = 2.5,
                 betterlights_combineball_decay = 2000,
+                betterlights_combineball_world_light_enable = 1,
+                betterlights_combineball_model_light_enable = 1,
+                betterlights_combineball_models_elight = 0,
+                betterlights_combineball_models_elight_size_mult = 1.0,
                 betterlights_combineball_color_r = 80,
                 betterlights_combineball_color_g = 180,
                 betterlights_combineball_color_b = 255,
@@ -1032,6 +1043,14 @@ if CLIENT then
             panel:NumSlider(phrase("control.brightness"), "betterlights_rpg_brightness", 0, 10, 2)
             panel:NumSlider(phrase("control.decay"), "betterlights_rpg_decay", 0, 5000, 0)
             addColorMixerControl(panel, "control.color", "betterlights_rpg_color_r", "betterlights_rpg_color_g", "betterlights_rpg_color_b")
+
+            local flash = addSection(panel, "section.explosion_flash", nil, true)
+            flash:CheckBox(phrase("control.flash_on_explosion"), "betterlights_rpg_flash_enable")
+            flash:NumSlider(phrase("control.radius"), "betterlights_rpg_flash_size", 0, 800, 0)
+            flash:NumSlider(phrase("control.brightness"), "betterlights_rpg_flash_brightness", 0, 10, 2)
+            flash:NumSlider(phrase("control.duration"), "betterlights_rpg_flash_time", 0, 1, 2)
+            addColorMixerControl(flash, "control.flash_color", "betterlights_rpg_flash_color_r", "betterlights_rpg_flash_color_g", "betterlights_rpg_flash_color_b")
+
             addResetButton(panel, {
                 betterlights_rpg_enable = 1,
                 betterlights_rpg_size = 280,
@@ -1040,6 +1059,13 @@ if CLIENT then
                 betterlights_rpg_color_r = 255,
                 betterlights_rpg_color_g = 170,
                 betterlights_rpg_color_b = 60,
+                betterlights_rpg_flash_enable = 1,
+                betterlights_rpg_flash_size = 340,
+                betterlights_rpg_flash_brightness = 4.8,
+                betterlights_rpg_flash_time = 0.18,
+                betterlights_rpg_flash_color_r = 255,
+                betterlights_rpg_flash_color_g = 210,
+                betterlights_rpg_flash_color_b = 120,
             })
         end)
 

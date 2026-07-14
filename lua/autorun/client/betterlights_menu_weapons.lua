@@ -15,12 +15,14 @@ if CLIENT then
             panel:NumSlider(phrase("control.radius"), "betterlights_crossbow_hold_size", 0, 300, 0)
             panel:NumSlider(phrase("control.brightness"), "betterlights_crossbow_hold_brightness", 0, 5, 2)
             panel:NumSlider(phrase("control.decay"), "betterlights_crossbow_hold_decay", 0, 5000, 0)
+            panel:CheckBox(phrase("control.only_when_crossbow_loaded"), "betterlights_crossbow_hold_require_loaded")
             addColorMixerControl(panel, "control.color", "betterlights_crossbow_hold_color_r", "betterlights_crossbow_hold_color_g", "betterlights_crossbow_hold_color_b")
             addResetButton(panel, {
                 betterlights_crossbow_hold_enable = 1,
                 betterlights_crossbow_hold_size = 30,
                 betterlights_crossbow_hold_brightness = 0.32,
                 betterlights_crossbow_hold_decay = 2000,
+                betterlights_crossbow_hold_require_loaded = 1,
                 betterlights_crossbow_hold_color_r = 255,
                 betterlights_crossbow_hold_color_g = 140,
                 betterlights_crossbow_hold_color_b = 40,

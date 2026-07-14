@@ -12,7 +12,7 @@ if SERVER then
     local damageRemovalCandidates = {}
 
     local function isUsableVector(pos)
-        return pos and pos ~= vector_origin
+        return isvector(pos) and pos ~= vector_origin
     end
 
     local function getEntityCenter(ent)
@@ -100,6 +100,8 @@ if SERVER then
     end
 
     local function emitFallback(profileId, pos, source)
+        if not BL.IsServerEnabled() then return end
+
         local sendPos = copyVector(pos)
         if not sendPos then return end
 

@@ -33,6 +33,7 @@ if CLIENT then
     MF.UserColorTags = MF.UserColorTags or {}
     MF._localPredictedShots = MF._localPredictedShots or {}
     MF._lastLocalFrame = MF._lastLocalFrame or {}
+    MF._lastLocalFrameNumber = MF._lastLocalFrameNumber or -1
 
     local function isVector(value)
         if isvector then return isvector(value) end
@@ -105,6 +106,14 @@ if CLIENT then
     local function shouldSendLocalFrame(shooter, weapon, profileId, adapterId)
         local key = getRuleKey(shooter, weapon, profileId, adapterId)
         local frame = currentFrameKey()
+        if MF._lastLocalFrameNumber ~= frame then
+            for previousKey in pairs(MF._lastLocalFrame) do
+                MF._lastLocalFrame[previousKey] = nil
+            end
+
+            MF._lastLocalFrameNumber = frame
+        end
+
         if MF._lastLocalFrame[key] == frame then return false end
 
         MF._lastLocalFrame[key] = frame
@@ -114,6 +123,18 @@ if CLIENT then
     local function recordLocalPrediction(shooter, weapon, profileId, adapterId)
         MF._localPredictedShots[getRuleKey(shooter, weapon, profileId, adapterId)] = CurTime()
     end
+
+    local function pruneLocalPredictedShots()
+        local now = CurTime()
+
+        for key, when in pairs(MF._localPredictedShots) do
+            if type(when) ~= "number" or when > now or now - when > LOCAL_ECHO_WINDOW then
+                MF._localPredictedShots[key] = nil
+            end
+        end
+    end
+
+    timer.Create("BetterLights_MuzzleFlash_LocalPredictionPrune_Client", 1, 0, pruneLocalPredictedShots)
 
     local function shouldSuppressServerEcho(shooter, weapon, profileId, adapterId)
         if shooter ~= LocalPlayer() then return false end
@@ -304,7 +325,8 @@ if CLIENT then
     end
 
     function MF.EmitProfileFlash(profileId, pos, options)
-        if not pos then return false end
+        if not isVector(pos) then return false end
+        if options ~= nil and type(options) ~= "table" then return false end
 
         options = options or {}
         if not cvar_enable:GetBool() then return false end
@@ -618,6 +640,7 @@ if CLIENT then
         local owner = IsValid(weapon) and weapon.GetOwner and weapon:GetOwner() or nil
         if not IsValid(owner) then owner = weapon end
         if not IsValid(owner) then return end
+        if owner == LocalPlayer() and IsFirstTimePredicted and not IsFirstTimePredicted() then return end
 
         local adapter = MF.Adapters[adapterId]
         local rule = MF.MatchWeaponRule(owner, weapon, nil, adapterId)
@@ -862,18 +885,32 @@ if CLIENT then
     end
 
     function MF.SaveUserRules()
-        file.CreateDir("betterlights")
-        file.Write(RULES_PATH, util.TableToJSON({
+        local encoded = util.TableToJSON({
             colorTags = MF.UserColorTags,
             rules = MF.UserRules
-        }, true))
+        }, true)
+        if not encoded then return false end
+
+        file.CreateDir("betterlights")
+        return file.Write(RULES_PATH, encoded) == true
     end
 
     function MF.ResetUserRules()
+        local oldRules = MF.UserRules
+        local oldColorTags = MF.UserColorTags
+
         MF.UserRules = {}
         MF.UserColorTags = {}
         registerUserData()
-        MF.SaveUserRules()
+
+        if not MF.SaveUserRules() then
+            MF.UserRules = oldRules
+            MF.UserColorTags = oldColorTags
+            registerUserData()
+            return false
+        end
+
+        return true
     end
 
     registerBuiltIns()
@@ -1015,8 +1052,11 @@ if CLIENT then
 
         local save = addButton(actions, phrase("button.save_rules"))
         save.DoClick = function()
-            MF.SaveUserRules()
-            notification.AddLegacy(phrase("notice.muzzle_rules_saved"), NOTIFY_GENERIC, 3)
+            if MF.SaveUserRules() then
+                notification.AddLegacy(phrase("notice.muzzle_rules_saved"), NOTIFY_GENERIC, 3)
+            else
+                notification.AddLegacy(phrase("notice.muzzle_rules_save_failed"), NOTIFY_ERROR, 4)
+            end
         end
 
         local reload = addButton(actions, phrase("button.reload_rules"))
@@ -1028,7 +1068,9 @@ if CLIENT then
 
         local reset = addButton(actions, phrase("button.reset_rules"))
         reset.DoClick = function()
-            MF.ResetUserRules()
+            if not MF.ResetUserRules() then
+                notification.AddLegacy(phrase("notice.muzzle_rules_save_failed"), NOTIFY_ERROR, 4)
+            end
             refreshColorList(colorList)
             refreshRuleList(ruleList)
         end

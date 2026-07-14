@@ -50,7 +50,9 @@ if CLIENT then
         end)
     end)
 
-    hook.Add("EntityRemoved", "BetterLights_AntlionGrub_SquashedRemove", function(ent)
+    hook.Add("EntityRemoved", "BetterLights_AntlionGrub_SquashedRemove", function(ent, fullUpdate)
+        if fullUpdate then return end
+
         squashedGrubs[ent] = nil
         squashedLightIds[ent] = nil
     end)

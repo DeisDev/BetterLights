@@ -6,7 +6,7 @@ if SERVER then
     local MWBASE_ATTACHMENTS = { "muzzle", "tag_flash", "tag_muzzle", "tag_barrel", "tag_tip", "tip" }
     local CW2_ATTACHMENTS = { "muzzle", "1" }
     local TFA_ATTACHMENTS = { "muzzle", "1" }
-    local WEAPON_WRAPPER_VERSION = 1
+    local WEAPON_WRAPPER_VERSION = 2
     local getWeaponBase = MF.GetWeaponBase
 
     local function isArc9Weapon(weapon)
@@ -14,7 +14,14 @@ if SERVER then
         if weapon.ARC9 == true then return true end
 
         local base = getWeaponBase(weapon)
-        return base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil
+        if base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil then return true end
+
+        if weapons and weapons.IsBasedOn and weapon.GetClass then
+            local className = weapon:GetClass()
+            if className ~= "" and weapons.IsBasedOn(className, "arc9_base") then return true end
+        end
+
+        return false
     end
 
     local function isArcCWWeapon(weapon)
@@ -82,6 +89,8 @@ if SERVER then
             or isBasedOn(weapon, "tfa_melee_base")
     end
 
+    MF.ClearRulesBySource("integration")
+
     MF.RegisterAdapter("arc9", {
         matches = isArc9Weapon
     })
@@ -114,7 +123,7 @@ if SERVER then
         profile = "default",
         priority = -900,
         attachments = MWBASE_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
 
     MF.RegisterWeaponRule({
@@ -123,7 +132,7 @@ if SERVER then
         profile = "default",
         priority = -875,
         attachments = ARCCW_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
 
     MF.RegisterWeaponRule({
@@ -132,7 +141,7 @@ if SERVER then
         profile = "default",
         priority = -850,
         attachments = CW2_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
 
     MF.RegisterWeaponRule({
@@ -141,97 +150,99 @@ if SERVER then
         profile = "default",
         priority = -825,
         attachments = TFA_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
+
+    local function installWeaponWrapper(weapon, prefix, methodName, callback)
+        local current = weapon[methodName]
+        if not isfunction(current) then return end
+
+        local versionKey = prefix .. "Version"
+        local originalKey = prefix .. "Original"
+        local downstreamKey = prefix .. "Downstream"
+        local wrapperKey = prefix .. "Wrapper"
+        local previousWrapper = weapon[wrapperKey]
+        if weapon[versionKey] == WEAPON_WRAPPER_VERSION and current == previousWrapper then return end
+
+        local downstream = current
+        if current == previousWrapper then
+            if isfunction(weapon[downstreamKey]) then
+                downstream = weapon[downstreamKey]
+            elseif isfunction(weapon[originalKey]) then
+                downstream = weapon[originalKey]
+            end
+        end
+
+        local original = isfunction(weapon[originalKey]) and weapon[originalKey] or downstream
+        local wrapper = function(self, ...)
+            return callback(downstream, self, ...)
+        end
+
+        weapon[versionKey] = WEAPON_WRAPPER_VERSION
+        weapon[originalKey] = original
+        weapon[downstreamKey] = downstream
+        weapon[wrapperKey] = wrapper
+        weapon[methodName] = wrapper
+    end
 
     local function wrapArc9DoEffects(weapon)
         if not isArc9Weapon(weapon) then return end
-        if weapon.BetterLightsArc9DoEffectsWrapped then return end
-        if not isfunction(weapon.DoEffects) then return end
 
-        local original = weapon.DoEffects
-        weapon.BetterLightsArc9DoEffectsWrapped = true
-        weapon.BetterLightsArc9DoEffectsOriginal = original
-        weapon.DoEffects = function(self, ...)
-            local ret = original(self, ...)
-            MF.SendAdapterMuzzleFlash(self, "arc9")
+        installWeaponWrapper(weapon, "BetterLightsArc9DoEffects", "DoEffects", function(original, instance, ...)
+            local ret = original(instance, ...)
+            MF.SendAdapterMuzzleFlash(instance, "arc9")
             return ret
-        end
+        end)
     end
 
     local function wrapArcCWDoEffects(weapon)
         if not isArcCWWeapon(weapon) then return end
-        if weapon.BetterLightsArcCWDoEffectsWrapped then return end
-        if not isfunction(weapon.DoEffects) then return end
 
-        local original = weapon.DoEffects
-        weapon.BetterLightsArcCWDoEffectsWrapped = true
-        weapon.BetterLightsArcCWDoEffectsOriginal = original
-        weapon.DoEffects = function(self, ...)
-            local ret = original(self, ...)
-            MF.SendAdapterMuzzleFlash(self, "arccw")
+        installWeaponWrapper(weapon, "BetterLightsArcCWDoEffects", "DoEffects", function(original, instance, ...)
+            local ret = original(instance, ...)
+            MF.SendAdapterMuzzleFlash(instance, "arccw")
             return ret
-        end
+        end)
     end
 
     local function wrapMwBaseProjectiles(weapon)
         if not isMwBaseWeapon(weapon) then return end
-        if weapon.BetterLightsMwBaseProjectilesWrapped then return end
-        if not isfunction(weapon.Projectiles) then return end
 
-        local original = weapon.Projectiles
-        weapon.BetterLightsMwBaseProjectilesWrapped = true
-        weapon.BetterLightsMwBaseProjectilesOriginal = original
-        weapon.Projectiles = function(self, ...)
-            local ret = original(self, ...)
-            MF.SendAdapterMuzzleFlash(self, "mwbase")
+        installWeaponWrapper(weapon, "BetterLightsMwBaseProjectiles", "Projectiles", function(original, instance, ...)
+            local ret = original(instance, ...)
+            MF.SendAdapterMuzzleFlash(instance, "mwbase")
             return ret
-        end
+        end)
     end
 
     local function wrapCW2M203(weapon)
         if not isCW2Weapon(weapon) then return end
 
-        local current = weapon.fireM203
-        if not isfunction(current) then return end
-
-        local previousWrapper = weapon.BetterLightsCW2FireM203Wrapper
-        if weapon.BetterLightsCW2FireM203Version == WEAPON_WRAPPER_VERSION and current == previousWrapper then return end
-
-        local original = current
-        if current == previousWrapper and isfunction(weapon.BetterLightsCW2FireM203Original) then
-            original = weapon.BetterLightsCW2FireM203Original
-        end
-
-        local wrapper = function(self, ...)
-            local ret = original(self, ...)
-            MF.SendAdapterMuzzleFlash(self, "cw2")
+        installWeaponWrapper(weapon, "BetterLightsCW2FireM203", "fireM203", function(original, instance, ...)
+            local ret = original(instance, ...)
+            MF.SendAdapterMuzzleFlash(instance, "cw2")
             return ret
-        end
+        end)
+    end
 
-        weapon.BetterLightsCW2FireM203Version = WEAPON_WRAPPER_VERSION
-        weapon.BetterLightsCW2FireM203Original = original
-        weapon.BetterLightsCW2FireM203Wrapper = wrapper
-        weapon.fireM203 = wrapper
+    local function wrapAdapterWeapon(weapon)
+        if not (IsValid(weapon) and weapon.IsWeapon and weapon:IsWeapon()) then return end
+
+        wrapArc9DoEffects(weapon)
+        wrapArcCWDoEffects(weapon)
+        wrapMwBaseProjectiles(weapon)
+        wrapCW2M203(weapon)
     end
 
     local function scanAdapterWeapons()
-        for _, ent in ipairs(ents.GetAll()) do
-            wrapArc9DoEffects(ent)
-            wrapArcCWDoEffects(ent)
-            wrapMwBaseProjectiles(ent)
-            wrapCW2M203(ent)
+        for _, ent in ents.Iterator() do
+            wrapAdapterWeapon(ent)
         end
     end
 
     hook.Add("OnEntityCreated", "BetterLights_MuzzleFlash_Adapters_Server", function(ent)
         timer.Simple(0, function()
-            if IsValid(ent) then
-                wrapArc9DoEffects(ent)
-                wrapArcCWDoEffects(ent)
-                wrapMwBaseProjectiles(ent)
-                wrapCW2M203(ent)
-            end
+            wrapAdapterWeapon(ent)
         end)
     end)
 

@@ -2,6 +2,7 @@ if CLIENT then
     local BL = BetterLights
     local CurTime = CurTime
     local IsValid = IsValid
+    local FIRE_LIGHT_ID_OFFSET = 70000
     -- Note: DynamicLight is NOT localized to ensure compatibility with wrappers like GShader Library
     local cvar_enable = BL.CreateClientConVar("betterlights_fire_enable", "1", true, false, "Enable dynamic light for entities that are on fire")
     local cvar_size = BL.CreateClientConVar("betterlights_fire_size", "160", true, false, "Dynamic light radius for burning entities")
@@ -65,10 +66,11 @@ if CLIENT then
                     s_eff = BL.CreateFlickerEffect(size, t, flickerSpeed, flickerSizeAmt, phase)
                 end
 
-                BL.CreateDLight(lightIndex, pos, cr, cg, cb, b_eff, decay, s_eff, false, { dietime = 0.16 })
+                local lightId = FIRE_LIGHT_ID_OFFSET + lightIndex
+                BL.CreateDLight(lightId, pos, cr, cg, cb, b_eff, decay, s_eff, false, { dietime = 0.16 })
 
                 if doElight then
-                    BL.CreateDLight(lightIndex, pos, cr, cg, cb, b_eff, decay, s_eff * elMult, true, { dietime = 0.16 })
+                    BL.CreateDLight(lightId, pos, cr, cg, cb, b_eff, decay, s_eff * elMult, true, { dietime = 0.16 })
                 end
             end
         end

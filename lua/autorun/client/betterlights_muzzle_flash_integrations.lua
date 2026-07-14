@@ -6,7 +6,7 @@ if CLIENT then
     local MWBASE_ATTACHMENTS = { "muzzle", "tag_flash", "tag_muzzle", "tag_barrel", "tag_tip", "tip" }
     local CW2_ATTACHMENTS = { "muzzle", "1" }
     local TFA_ATTACHMENTS = { "muzzle", "1" }
-    local WEAPON_WRAPPER_VERSION = 1
+    local WEAPON_WRAPPER_VERSION = 2
     local TFA_MUZZLE_COLORS = {
         tfa_muzzleflash_cryo = "tfa_cryo",
         tfa_muzzleflash_energy = "tfa_energy",
@@ -36,12 +36,22 @@ if CLIENT then
     local buildAttachmentCandidates = MF.BuildAttachmentCandidates
     local getWeaponBase = MF.GetWeaponBase
 
+    MF.ClearRulesBySource("integration")
+    MF.ClearColorTagsBySource("integration")
+
     local function isArc9Weapon(weapon)
         if not IsValid(weapon) then return false end
         if weapon.ARC9 == true then return true end
 
         local base = getWeaponBase(weapon)
-        return base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil
+        if base == "arc9_base" or string.find(base, "arc9", 1, true) ~= nil then return true end
+
+        if weapons and weapons.IsBasedOn and weapon.GetClass then
+            local className = weapon:GetClass()
+            if className ~= "" and weapons.IsBasedOn(className, "arc9_base") then return true end
+        end
+
+        return false
     end
 
     local function isArcCWWeapon(weapon)
@@ -236,22 +246,41 @@ if CLIENT then
         weapon.BetterLightsArcCWMuzzleLightReplaced = nil
     end
 
-    local function readArc9MuzzleDevice(weapon, isLocal)
+    local function readArc9MuzzleDevice(weapon, worldModel)
         if not (IsValid(weapon) and isfunction(weapon.GetMuzzleDevice)) then return nil end
 
         local ok, device = pcall(function()
-            return weapon:GetMuzzleDevice(not isLocal, 1)
+            return weapon:GetMuzzleDevice(worldModel)
         end)
 
         if ok then return device end
         return nil
     end
 
+    local function useArc9WorldModel(isLocal)
+        if not isLocal then return true end
+
+        local localPlayer = LocalPlayer()
+        return IsValid(localPlayer)
+            and localPlayer.ShouldDrawLocalPlayer
+            and localPlayer:ShouldDrawLocalPlayer()
+    end
+
+    local function readArc9ProcessedValue(weapon, key, fallback)
+        if not (IsValid(weapon) and isfunction(weapon.GetProcessedValue)) then return fallback end
+
+        local ok, value = pcall(weapon.GetProcessedValue, weapon, key, true)
+        if ok and value ~= nil then return value end
+        return fallback
+    end
+
     local function arc9HasNoFlash(weapon, isLocal)
         if not IsValid(weapon) then return false end
-        if weapon.NoMuzzleEffect == true or weapon.NoFlash == true then return true end
+        if readArc9ProcessedValue(weapon, "NoMuzzleEffect", weapon.NoMuzzleEffect) == true then return true end
+        if readArc9ProcessedValue(weapon, "NoFlash", weapon.NoFlash) == true then return true end
+        if readArc9ProcessedValue(weapon, "Silencer", false) == true then return true end
 
-        local device = readArc9MuzzleDevice(weapon, isLocal)
+        local device = readArc9MuzzleDevice(weapon, useArc9WorldModel(isLocal))
         if type(device) == "table" then
             return device.NoMuzzleEffect == true or device.NoFlash == true or device.Silencer == true
         end
@@ -262,24 +291,35 @@ if CLIENT then
     local function resolveArc9Muzzle(weapon, isLocal)
         if not IsValid(weapon) then return nil end
 
-        if isLocal and isfunction(weapon.GetQCAMuzzle) then
-            local ok, pos = pcall(function()
+        local worldModel = useArc9WorldModel(isLocal)
+        local attachmentId
+        if isfunction(weapon.GetQCAMuzzle) then
+            local ok, attachment = pcall(function()
                 return weapon:GetQCAMuzzle()
             end)
 
-            if ok and isVector(pos) then return pos end
-            if ok and type(pos) == "table" and isVector(pos.Pos) then return pos.Pos end
+            if ok and isVector(attachment) then return attachment end
+            if ok and type(attachment) == "table" and isVector(attachment.Pos) then return attachment.Pos end
+            if ok then attachmentId = tonumber(attachment) end
         end
 
-        local device = readArc9MuzzleDevice(weapon, isLocal)
-        if type(device) == "table" then
-            if isVector(device.Pos) then return device.Pos end
-            if IsValid(device) and device.GetPos then return device:GetPos() end
-        elseif IsValid(device) and device.GetPos then
-            return device:GetPos()
+        if worldModel and isfunction(weapon.ShouldTPIK) then
+            local ok, shouldTPIK = pcall(weapon.ShouldTPIK, weapon)
+            if ok and shouldTPIK == false then attachmentId = 1 end
         end
 
-        return nil
+        local device = readArc9MuzzleDevice(weapon, worldModel)
+        local pos = getAttachmentById(device, attachmentId or 1)
+        if not pos and IsValid(device) and device.GetPos then
+            pos = device:GetPos()
+        elseif not pos and type(device) == "table" and isVector(device.Pos) then
+            pos = device.Pos
+        end
+
+        pos = pos or getAttachmentById(weapon, attachmentId or 1)
+        local firstPersonFallback = not worldModel and getFirstPersonAttachmentFallback(LocalPlayer()) or nil
+        if firstPersonFallback and pos then return firstPersonFallback end
+        return pos
     end
 
     local function resolveArcCWMuzzle(weapon, shooter)
@@ -393,11 +433,10 @@ if CLIENT then
         if not IsValid(weapon) then return nil end
 
         local firstPersonFallback = getFirstPersonAttachmentFallback(payload.shooter)
+        local isM203Shot = payload.sourceKind == BL.MUZZLE_SOURCE_ADAPTER
+        local m203Muzzle = isM203Shot and firstPersonFallback and getCW2M203Muzzle(weapon) or nil
         if firstPersonFallback then
-            local m203Muzzle = getCW2M203Muzzle(weapon)
-            if weapon.BetterLightsCW2M203ShotFrame == FrameNumber() and m203Muzzle then
-                return firstPersonFallback
-            end
+            if m203Muzzle then return firstPersonFallback end
 
             if isfunction(weapon.getMuzzlePosition) then
                 local ok, attachment = pcall(weapon.getMuzzlePosition, weapon)
@@ -478,12 +517,13 @@ if CLIENT then
         local light = DynamicLight(id)
         if not light then return end
 
+        local dieTime = CurTime() + 0.001
         light.brightness = 0
         light.size = 0
-        light.dietime = CurTime()
+        light.dietime = dieTime
         light.Brightness = 0
         light.Size = 0
-        light.DieTime = CurTime()
+        light.DieTime = dieTime
     end
 
     local function clearCW2MuzzleLight(weapon)
@@ -528,21 +568,28 @@ if CLIENT then
 
         local versionKey = prefix .. "Version"
         local originalKey = prefix .. "Original"
+        local downstreamKey = prefix .. "Downstream"
         local wrapperKey = prefix .. "Wrapper"
         local previousWrapper = weapon[wrapperKey]
         if weapon[versionKey] == WEAPON_WRAPPER_VERSION and current == previousWrapper then return end
 
-        local original = current
-        if current == previousWrapper and isfunction(weapon[originalKey]) then
-            original = weapon[originalKey]
+        local downstream = current
+        if current == previousWrapper then
+            if isfunction(weapon[downstreamKey]) then
+                downstream = weapon[downstreamKey]
+            elseif isfunction(weapon[originalKey]) then
+                downstream = weapon[originalKey]
+            end
         end
 
+        local original = isfunction(weapon[originalKey]) and weapon[originalKey] or downstream
         local wrapper = function(self, ...)
-            return callback(original, self, ...)
+            return callback(downstream, self, ...)
         end
 
         weapon[versionKey] = WEAPON_WRAPPER_VERSION
         weapon[originalKey] = original
+        weapon[downstreamKey] = downstream
         weapon[wrapperKey] = wrapper
         weapon[methodName] = wrapper
     end
@@ -561,7 +608,6 @@ if CLIENT then
             if firstTimePrediction == false then return ret end
             if IsFirstTimePredicted and not IsFirstTimePredicted() then return ret end
 
-            instance.BetterLightsCW2M203ShotFrame = FrameNumber()
             MF.HandleAdapterShot(instance, "cw2")
             return ret
         end)
@@ -616,6 +662,7 @@ if CLIENT then
             local weapon = payload.weapon
             if not IsValid(weapon) then return false end
             if isCW2NonFirearm(weapon) then return true end
+            if payload.sourceKind == BL.MUZZLE_SOURCE_ADAPTER then return false end
             if weapon.MuzzleEffect == nil or weapon.MuzzleEffect == false or weapon.MuzzleEffect == "" then return true end
 
             return type(weapon.dt) == "table" and weapon.dt.Suppressed == true
@@ -685,7 +732,7 @@ if CLIENT then
         profile = "default",
         priority = -900,
         attachments = MWBASE_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
 
     MF.RegisterWeaponRule({
@@ -694,7 +741,7 @@ if CLIENT then
         profile = "default",
         priority = -875,
         attachments = ARCCW_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
 
     MF.RegisterWeaponRule({
@@ -703,7 +750,7 @@ if CLIENT then
         profile = "default",
         priority = -850,
         attachments = CW2_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
 
     MF.RegisterWeaponRule({
@@ -712,78 +759,66 @@ if CLIENT then
         profile = "default",
         priority = -825,
         attachments = TFA_ATTACHMENTS,
-        source = "builtin"
+        source = "integration"
     })
 
     local function wrapArc9DoEffects(weapon)
         if not isArc9Weapon(weapon) then return end
-        if weapon.BetterLightsArc9DoEffectsWrapped then return end
-        if not isfunction(weapon.DoEffects) then return end
 
-        local original = weapon.DoEffects
-        weapon.BetterLightsArc9DoEffectsWrapped = true
-        weapon.BetterLightsArc9DoEffectsOriginal = original
-        weapon.DoEffects = function(self, ...)
-            local ret = original(self, ...)
-            MF.HandleAdapterShot(self, "arc9")
+        installWeaponWrapper(weapon, "BetterLightsArc9DoEffects", "DoEffects", function(original, instance, ...)
+            local ret = original(instance, ...)
+            if IsFirstTimePredicted and not IsFirstTimePredicted() then return ret end
+
+            MF.HandleAdapterShot(instance, "arc9")
             return ret
-        end
+        end)
     end
 
     local function wrapArcCWDoEffects(weapon)
         if not isArcCWWeapon(weapon) then return end
-        if weapon.BetterLightsArcCWDoEffectsWrapped then return end
-        if not isfunction(weapon.DoEffects) then return end
 
-        local original = weapon.DoEffects
-        weapon.BetterLightsArcCWDoEffectsWrapped = true
-        weapon.BetterLightsArcCWDoEffectsOriginal = original
-        weapon.DoEffects = function(self, ...)
-            refreshArcCWMuzzleLightReplacement(self)
-            local ret = original(self, ...)
+        installWeaponWrapper(weapon, "BetterLightsArcCWDoEffects", "DoEffects", function(original, instance, ...)
+            refreshArcCWMuzzleLightReplacement(instance)
+            local ret = original(instance, ...)
             if IsFirstTimePredicted and not IsFirstTimePredicted() then return ret end
-            MF.HandleAdapterShot(self, "arccw")
+
+            MF.HandleAdapterShot(instance, "arccw")
             return ret
-        end
+        end)
     end
 
     local function wrapMwBaseProjectiles(weapon)
         if not isMwBaseWeapon(weapon) then return end
-        if weapon.BetterLightsMwBaseProjectilesWrapped then return end
-        if not isfunction(weapon.Projectiles) then return end
 
-        local original = weapon.Projectiles
-        weapon.BetterLightsMwBaseProjectilesWrapped = true
-        weapon.BetterLightsMwBaseProjectilesOriginal = original
-        weapon.Projectiles = function(self, ...)
-            local ret = original(self, ...)
+        installWeaponWrapper(weapon, "BetterLightsMwBaseProjectiles", "Projectiles", function(original, instance, ...)
+            local ret = original(instance, ...)
             if IsFirstTimePredicted and not IsFirstTimePredicted() then return ret end
-            MF.HandleAdapterShot(self, "mwbase")
+
+            MF.HandleAdapterShot(instance, "mwbase")
             return ret
-        end
+        end)
+    end
+
+    local function handleAdapterWeapon(weapon)
+        if not (IsValid(weapon) and weapon.IsWeapon and weapon:IsWeapon()) then return end
+
+        wrapArc9DoEffects(weapon)
+        wrapArcCWDoEffects(weapon)
+        refreshArcCWMuzzleLightReplacement(weapon)
+        wrapMwBaseProjectiles(weapon)
+        wrapCW2MuzzleEffects(weapon)
+        wrapTFAMuzzleEffects(weapon)
     end
 
     local function scanAdapterWeapons()
-        for _, ent in ipairs(ents.GetAll()) do
-            wrapArc9DoEffects(ent)
-            wrapArcCWDoEffects(ent)
-            refreshArcCWMuzzleLightReplacement(ent)
-            wrapMwBaseProjectiles(ent)
-            wrapCW2MuzzleEffects(ent)
-            wrapTFAMuzzleEffects(ent)
+        for _, ent in ents.Iterator() do
+            handleAdapterWeapon(ent)
         end
     end
 
     hook.Add("OnEntityCreated", "BetterLights_MuzzleFlash_Adapters_Client", function(ent)
         timer.Simple(0, function()
-            if IsValid(ent) then
-                wrapArc9DoEffects(ent)
-                wrapArcCWDoEffects(ent)
-                refreshArcCWMuzzleLightReplacement(ent)
-                wrapMwBaseProjectiles(ent)
-                wrapCW2MuzzleEffects(ent)
-                wrapTFAMuzzleEffects(ent)
-            end
+            handleAdapterWeapon(ent)
         end)
     end)
 

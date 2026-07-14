@@ -10,10 +10,34 @@ if CLIENT then
     BL._flashPoolMax = 100
     BL._suppressionRecords = BL._suppressionRecords or {}
     BL._activeFlashes = BL._activeFlashes or {}
+    BL._activeFlashByKey = BL._activeFlashByKey or {}
+    BL._activeFlashIds = BL._activeFlashIds or {}
     BL._activeDLightRecords = BL._activeDLightRecords or {}
     BL._flashKeyIds = BL._flashKeyIds or {}
     BL._flashIdCounter = BL._flashIdCounter or 0
     BL._idCounter = BL._idCounter or 0
+    BL._nextDLightRecordPrune = BL._nextDLightRecordPrune or 0
+
+    for key in pairs(BL._activeFlashByKey) do
+        BL._activeFlashByKey[key] = nil
+    end
+    for id in pairs(BL._activeFlashIds) do
+        BL._activeFlashIds[id] = nil
+    end
+    for key in pairs(BL._flashKeyIds) do
+        BL._flashKeyIds[key] = nil
+    end
+
+    for _, flash in ipairs(BL._activeFlashes) do
+        if flash and flash.id then
+            BL._activeFlashIds[flash.id] = flash
+        end
+
+        if flash and flash.key then
+            BL._activeFlashByKey[flash.key] = flash
+            BL._flashKeyIds[flash.key] = flash.id
+        end
+    end
 
     local THINK_ERROR_DISABLE_COUNT = 3
 
@@ -34,6 +58,12 @@ if CLIENT then
     local function recordDLight(index, pos, r, g, b, size, isElight, dieTime)
         if not index or not pos then return nil end
 
+        local now = CurTime()
+        if now >= BL._nextDLightRecordPrune then
+            pruneDLightRecords(now)
+            BL._nextDLightRecordPrune = now + 1
+        end
+
         local key = getDLightRecordKey(index, isElight)
         local record = BL._activeDLightRecords[key]
         if not record then
@@ -48,7 +78,7 @@ if CLIENT then
         record.b = b or 255
         record.size = size or 0
         record.elight = isElight == true
-        record.die = dieTime or CurTime()
+        record.die = dieTime or now
 
         return record
     end
@@ -115,24 +145,47 @@ if CLIENT then
     local function getFlashId(baseId, key)
         if key then
             local id = BL._flashKeyIds[key]
-            if not id then
-                BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
-                id = (baseId or 60000) + BL._flashIdCounter
-                BL._flashKeyIds[key] = id
+            if id and not BL._activeFlashIds[id] then
+                return id
             end
-
-            return id
         end
 
-        BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
-        return (baseId or 60000) + BL._flashIdCounter
+        local id
+        for _ = 1, 4096 do
+            BL._flashIdCounter = (BL._flashIdCounter + 1) % 4096
+            id = (baseId or 60000) + BL._flashIdCounter
+            if not BL._activeFlashIds[id] then break end
+        end
+
+        if key then
+            BL._flashKeyIds[key] = id
+        end
+
+        return id
     end
 
     function BL.CreateFlash(pos, r, g, b, size, brightness, duration, baseId, key)
         if not BL.IsEnabled() then return nil end
 
         local now = CurTime()
-        local flash = BL.GetFlashTable()
+        local flash = key and BL._activeFlashByKey[key] or nil
+        if flash and flash.key ~= key then
+            BL._activeFlashByKey[key] = nil
+            flash = nil
+        end
+
+        if not flash then
+            flash = BL.GetFlashTable()
+            flash.id = getFlashId(baseId, key)
+            flash.key = key
+            table.insert(BL._activeFlashes, flash)
+            BL._activeFlashIds[flash.id] = flash
+
+            if key then
+                BL._activeFlashByKey[key] = flash
+            end
+        end
+
         flash.pos = pos
         flash.r = r
         flash.g = g
@@ -141,8 +194,6 @@ if CLIENT then
         flash.baseBrightness = brightness
         flash.start = now
         flash.die = now + duration
-        flash.id = getFlashId(baseId, key)
-        table.insert(BL._activeFlashes, flash)
         return flash
     end
 
@@ -153,7 +204,18 @@ if CLIENT then
         for i = #BL._activeFlashes, 1, -1 do
             local f = BL._activeFlashes[i]
             if not f or now >= f.die then
-                if f then BL.RecycleFlashTable(f) end
+                if f then
+                    if f.key and BL._activeFlashByKey[f.key] == f then
+                        BL._activeFlashByKey[f.key] = nil
+                        BL._flashKeyIds[f.key] = nil
+                    end
+
+                    if BL._activeFlashIds[f.id] == f then
+                        BL._activeFlashIds[f.id] = nil
+                    end
+
+                    BL.RecycleFlashTable(f)
+                end
                 BL._activeFlashes[i] = BL._activeFlashes[#BL._activeFlashes]
                 BL._activeFlashes[#BL._activeFlashes] = nil
             else
@@ -252,7 +314,7 @@ if CLIENT then
     function BL.CreateFlickerEffect(baseValue, time, speed, amount, phase)
         phase = phase or 0
         local osc = 0.65 * math.sin(time * speed + phase) + 0.35 * math.sin(time * (speed * 1.7) + phase * 1.13)
-        return math.max(0.1, baseValue * (1 + amount * osc))
+        return math.max(0, baseValue * (1 + amount * osc))
     end
 
     hook.Add("Think", "BetterLights_CoreThink", function()

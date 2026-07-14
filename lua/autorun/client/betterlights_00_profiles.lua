@@ -165,12 +165,18 @@ if CLIENT then
 
     local function writeStore()
         local store = ensureStore()
-
-        file.CreateDir(PROFILE_DIR)
-        file.Write(PROFILE_PATH, util.TableToJSON({
+        local json = util.TableToJSON({
             schemaVersion = SCHEMA_VERSION,
             profiles = store.profiles
-        }, false))
+        }, false)
+        if not json then
+            return false, "notice.profile_save_failed"
+        end
+
+        file.CreateDir(PROFILE_DIR)
+        if not file.Write(PROFILE_PATH, json) then
+            return false, "notice.profile_save_failed"
+        end
 
         return true
     end
@@ -295,7 +301,11 @@ if CLIENT then
 
         local store = ensureStore()
         store.profiles[#store.profiles + 1] = profile
-        writeStore()
+        local written, writeError = writeStore()
+        if not written then
+            store.profiles[#store.profiles] = nil
+            return nil, writeError
+        end
 
         return profile
     end
@@ -315,11 +325,24 @@ if CLIENT then
             return nil, "notice.profile_import_empty_settings"
         end
 
+        local oldName = profile.name
+        local oldUpdatedAt = profile.updatedAt
+        local oldAddonVersion = profile.addonVersion
+        local oldSettings = profile.settings
+
         profile.name = name
         profile.updatedAt = os.time()
         profile.addonVersion = tostring(addonVersion or BL.VERSION or "")
         profile.settings = settings
-        writeStore()
+
+        local written, writeError = writeStore()
+        if not written then
+            profile.name = oldName
+            profile.updatedAt = oldUpdatedAt
+            profile.addonVersion = oldAddonVersion
+            profile.settings = oldSettings
+            return nil, writeError
+        end
 
         return profile
     end
@@ -334,9 +357,18 @@ if CLIENT then
         newName, nameError = normalizeName(newName)
         if not newName then return nil, nameError end
 
+        local oldName = profile.name
+        local oldUpdatedAt = profile.updatedAt
+
         profile.name = newName
         profile.updatedAt = os.time()
-        writeStore()
+
+        local written, writeError = writeStore()
+        if not written then
+            profile.name = oldName
+            profile.updatedAt = oldUpdatedAt
+            return nil, writeError
+        end
 
         return profile
     end
@@ -347,8 +379,13 @@ if CLIENT then
             return false, "notice.profile_missing"
         end
 
-        table.remove(ensureStore().profiles, index)
-        writeStore()
+        local profiles = ensureStore().profiles
+        local profile = table.remove(profiles, index)
+        local written, writeError = writeStore()
+        if not written then
+            table.insert(profiles, index, profile)
+            return false, writeError
+        end
 
         return true
     end

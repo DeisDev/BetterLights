@@ -273,20 +273,20 @@ if SERVER then
     end)
 
     hook.Add("StartCommand", "BetterLights_FlashlightImpulse", function(ply, cmd)
+        if cmd:GetImpulse() ~= 100 then return end
+
         if not isModuleEnabledFor(ply) then
             reconcileFlashlightEligibility(ply)
             return
         end
 
-        if cmd:GetImpulse() ~= 100 then return end
         if integrationHandlesFlashlightImpulse(ply) then return end
 
         cmd:SetImpulse(0)
-        if recentlyHandledInput(ply) then return false end
+        if recentlyHandledInput(ply) then return end
 
         toggleFlashlight(ply)
         markHandledInput(ply)
-        return false
     end)
 
     hook.Add("PlayerSwitchFlashlight", "BetterLights_FlashlightSwitch", function(ply, state)

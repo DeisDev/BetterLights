@@ -733,11 +733,17 @@ if CLIENT then
         if shouldReplaceTFAFlashlights(weapon) then clearTFAFlashlight(weapon) end
     end
 
+    local function wrapFlashlightWeapon(weapon)
+        if not (IsValid(weapon) and weapon.IsWeapon and weapon:IsWeapon()) then return end
+
+        wrapArcCWFlashlights(weapon)
+        wrapArc9Flashlights(weapon)
+        wrapTFAFlashlight(weapon)
+    end
+
     local function scanFlashlightWeapons()
-        for _, ent in ipairs(ents.GetAll()) do
-            wrapArcCWFlashlights(ent)
-            wrapArc9Flashlights(ent)
-            wrapTFAFlashlight(ent)
+        for _, ent in ents.Iterator() do
+            wrapFlashlightWeapon(ent)
         end
     end
 
@@ -877,11 +883,7 @@ if CLIENT then
 
     hook.Add("OnEntityCreated", "BetterLights_Flashlight_ArcCW_Client", function(ent)
         timer.Simple(0, function()
-            if IsValid(ent) then
-                wrapArcCWFlashlights(ent)
-                wrapArc9Flashlights(ent)
-                wrapTFAFlashlight(ent)
-            end
+            wrapFlashlightWeapon(ent)
         end)
     end)
 

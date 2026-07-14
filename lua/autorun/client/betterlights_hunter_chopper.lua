@@ -65,7 +65,6 @@ if CLIENT then
 
         local function updateChopper(ent)
             if not IsValid(ent) then return end
-            seen[ent] = true
 
             if not spotlightEnabled then return end
 
@@ -76,7 +75,7 @@ if CLIENT then
             if not lamp then return end
 
             local r, g, b = BL.GetColorFromCvars(cvar_spotlight_r, cvar_spotlight_g, cvar_spotlight_b)
-            BL.UpdateProjectedTexture(lamp, {
+            if BL.UpdateProjectedTexture(lamp, {
                 pos = attachment.Pos,
                 ang = attachment.Ang,
                 nearZ = math.max(0.1, cvar_spotlight_near:GetFloat()),
@@ -85,7 +84,9 @@ if CLIENT then
                 brightness = math.max(0, cvar_spotlight_brightness:GetFloat()),
                 color = Color(r, g, b),
                 shadows = cvar_spotlight_shadows:GetBool()
-            })
+            }) then
+                seen[ent] = true
+            end
         end
 
         BL.ForEach(CHOPPER_CLASS, updateChopper)
