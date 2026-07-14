@@ -24,13 +24,13 @@ if CLIENT then
         local duration = 0.14
         if isAR2 and cvar_ar2_enable:GetBool() then
             local r, g, b = BL.GetColorFromCvars(cvar_ar2_col_r, cvar_ar2_col_g, cvar_ar2_col_b)
-            local size = math.max(0, cvar_ar2_size:GetFloat())
-            local brightness = math.max(0, cvar_ar2_brightness:GetFloat())
+            local size = cvar_ar2_size:GetFloat()
+            local brightness = cvar_ar2_brightness:GetFloat()
             BL.CreateFlash(pos, r, g, b, size, brightness, duration, 60000)
         else
             local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-            local size = math.max(0, cvar_size:GetFloat())
-            local brightness = math.max(0, cvar_brightness:GetFloat())
+            local size = cvar_size:GetFloat()
+            local brightness = cvar_brightness:GetFloat()
             BL.CreateFlash(pos, r, g, b, size, brightness, duration, 60000)
         end
     end)
