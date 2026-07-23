@@ -21,7 +21,18 @@ if CLIENT then
         BL.ForEach(TFA_ROCKET_CLASS, function(ent)
             if not IsValid(ent) then return end
 
-            BL.CreateDLight(ent:EntIndex(), ent:WorldSpaceCenter(), r, g, b, brightness, decay, size, false)
+            BL.CreateDLight(
+                ent:EntIndex(),
+                ent:WorldSpaceCenter(),
+                r,
+                g,
+                b,
+                brightness,
+                decay,
+                size,
+                false,
+                BL.LIGHT_OPTIONS_GAMEPLAY
+            )
         end)
     end)
 end

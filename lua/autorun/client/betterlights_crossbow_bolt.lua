@@ -22,7 +22,18 @@ if CLIENT then
         local function update(ent)
             if not IsValid(ent) then return end
             local pos = ent:WorldSpaceCenter()
-            BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
+            BL.CreateDLight(
+                ent:EntIndex(),
+                pos,
+                r,
+                g,
+                b,
+                brightness,
+                decay,
+                size,
+                false,
+                BL.LIGHT_OPTIONS_GAMEPLAY
+            )
         end
 
         BL.ForEach("crossbow_bolt", update)

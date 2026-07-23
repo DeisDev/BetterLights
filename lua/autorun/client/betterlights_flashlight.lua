@@ -554,7 +554,8 @@ if CLIENT then
             shadows = getEffectiveBool(cvar_shadows),
             shadowDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_depth_bias)),
             shadowSlopeScaleDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_slope_scale_depth_bias)),
-            shadowFilter = math.max(0, getEffectiveNumber(cvar_shadow_filter))
+            shadowFilter = math.max(0, getEffectiveNumber(cvar_shadow_filter)),
+            priority = localPlayer and BL.LIGHT_PRIORITY_LOCAL_PLAYER or BL.LIGHT_PRIORITY_GAMEPLAY
         })
     end
 

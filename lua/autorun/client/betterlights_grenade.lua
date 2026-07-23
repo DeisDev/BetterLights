@@ -31,10 +31,10 @@ if CLIENT then
 
             local idx = n:EntIndex()
 
-            BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false)
+            BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size, false, BL.LIGHT_OPTIONS_GAMEPLAY)
 
             if doElight then
-                BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * elMult, true)
+                BL.CreateDLight(idx, pos, r, g, b, brightness, decay, size * elMult, true, BL.LIGHT_OPTIONS_GAMEPLAY)
             end
         end
 

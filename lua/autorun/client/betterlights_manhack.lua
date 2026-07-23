@@ -14,6 +14,55 @@ if CLIENT then
     local ATTACH_NAMES = { "Eye", "Light" }
 
     BL.TrackClass("npc_manhack")
+    BL.RegisterNPCRagdollLightProvider("manhack_eyes", {
+        class = "npc_manhack",
+        category = "eye",
+        update = function(ragdoll, _, entry)
+            if not cvar_enable:GetBool() then return end
+
+            local size = math.max(0, cvar_size:GetFloat())
+            local brightness = math.max(0, cvar_brightness:GetFloat())
+            local decay = math.max(0, cvar_decay:GetFloat())
+            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+            local doElight = cvar_models_elight:GetBool()
+            local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+
+            for _, attachmentName in ipairs(ATTACH_NAMES) do
+                local pos = BL.GetAttachmentPos(ragdoll, { attachmentName })
+                if pos then
+                    local lightId = BL.GetNPCRagdollLightId(entry, attachmentName)
+                    BL.CreateDLight(
+                        lightId,
+                        pos,
+                        r,
+                        g,
+                        b,
+                        brightness,
+                        decay,
+                        size,
+                        false,
+                        BL.NPC_RAGDOLL_LIGHT_OPTIONS
+                    )
+
+                    if doElight then
+                        BL.CreateDLight(
+                            lightId,
+                            pos,
+                            r,
+                            g,
+                            b,
+                            brightness,
+                            decay,
+                            size * elMult,
+                            true,
+                            BL.NPC_RAGDOLL_LIGHT_OPTIONS
+                        )
+                    end
+                end
+            end
+        end
+    })
+
     BL.AddThink("BetterLights_Manhack_DLight", function()
         if not cvar_enable:GetBool() then return end
 

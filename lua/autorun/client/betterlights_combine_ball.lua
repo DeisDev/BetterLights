@@ -33,16 +33,29 @@ if CLIENT then
 
             if wantWorld then
                 BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false, {
-                    nomodel = not wantModels
+                    nomodel = not wantModels,
+                    priority = BL.LIGHT_PRIORITY_GAMEPLAY
                 })
             end
 
             if wantModels and (not wantWorld) then
                 if wantElight then
-                    BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size * elMult, true)
+                    BL.CreateDLight(
+                        ent:EntIndex(),
+                        pos,
+                        r,
+                        g,
+                        b,
+                        brightness,
+                        decay,
+                        size * elMult,
+                        true,
+                        BL.LIGHT_OPTIONS_GAMEPLAY
+                    )
                 else
                     BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false, {
-                        noworld = true
+                        noworld = true,
+                        priority = BL.LIGHT_PRIORITY_GAMEPLAY
                     })
                 end
             end

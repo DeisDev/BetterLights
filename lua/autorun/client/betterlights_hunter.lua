@@ -59,6 +59,55 @@ if CLIENT then
         suppressionKey = "explosion"
     })
 
+    BL.RegisterNPCRagdollLightProvider("hunter_eyes", {
+        class = HUNTER_CLASS,
+        category = "eye",
+        update = function(ragdoll, _, entry)
+            if not cvar_hunter_enable:GetBool() then return end
+
+            local size = math.max(0, cvar_hunter_size:GetFloat())
+            local brightness = math.max(0, cvar_hunter_brightness:GetFloat())
+            local decay = math.max(0, cvar_hunter_decay:GetFloat())
+            local doElight = cvar_hunter_models_elight:GetBool()
+            local elMult = math.max(0, cvar_hunter_models_elight_size_mult:GetFloat())
+            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+
+            for _, attachmentName in ipairs(EYE_ATTACHMENTS) do
+                local pos = BL.GetAttachmentPos(ragdoll, { attachmentName })
+                if pos then
+                    local lightId = BL.GetNPCRagdollLightId(entry, attachmentName)
+                    BL.CreateDLight(
+                        lightId,
+                        pos,
+                        r,
+                        g,
+                        b,
+                        brightness,
+                        decay,
+                        size,
+                        false,
+                        BL.NPC_RAGDOLL_LIGHT_OPTIONS
+                    )
+
+                    if doElight then
+                        BL.CreateDLight(
+                            lightId,
+                            pos,
+                            r,
+                            g,
+                            b,
+                            brightness,
+                            decay,
+                            size * elMult,
+                            true,
+                            BL.NPC_RAGDOLL_LIGHT_OPTIONS
+                        )
+                    end
+                end
+            end
+        end
+    })
+
     local function getHunterMuzzlePos(projectilePos)
         local bestPos
         local bestHunter
@@ -155,7 +204,18 @@ if CLIENT then
 
             if not doProjectileGlow then return end
 
-            BL.CreateDLight(ent:EntIndex(), pos, r, g, b, brightness, decay, size, false)
+            BL.CreateDLight(
+                ent:EntIndex(),
+                pos,
+                r,
+                g,
+                b,
+                brightness,
+                decay,
+                size,
+                false,
+                BL.LIGHT_OPTIONS_GAMEPLAY
+            )
         end
 
         BL.ForEach(FLECHETTE_CLASS, updateFlechette)

@@ -26,6 +26,40 @@ if CLIENT then
     end
 
     BL.TrackClass("npc_antlionguard")
+    BL.RegisterNPCRagdollLightProvider("antlion_guardian_ambient", {
+        class = "npc_antlionguard",
+        category = "ambient",
+        capture = function(ent)
+            return looksLikeGuardian(ent) and true or nil
+        end,
+        update = function(ragdoll, _, entry)
+            if not cvar_enable:GetBool() then return end
+
+            local size = math.max(0, cvar_size:GetFloat())
+            local brightness = math.max(0, cvar_brightness:GetFloat())
+            local decay = math.max(0, cvar_decay:GetFloat())
+            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+
+            for i, attachmentName in ipairs(ATTACH_NAMES) do
+                local pos = BL.GetAttachmentPos(ragdoll, { attachmentName })
+                if pos then
+                    BL.CreateDLight(
+                        BL.GetNPCRagdollLightId(entry, attachmentName),
+                        pos,
+                        r,
+                        g,
+                        b,
+                        brightness,
+                        decay,
+                        size,
+                        false,
+                        BL.NPC_RAGDOLL_LIGHT_OPTIONS
+                    )
+                end
+            end
+        end
+    })
+
     BL.AddThink("BetterLights_AntlionGuardian", function()
         if not cvar_enable:GetBool() then return end
 

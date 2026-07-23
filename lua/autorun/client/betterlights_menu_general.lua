@@ -557,6 +557,36 @@ if CLIENT then
         MENU.AddHelpText(maintenance, phrase("help.personal_reset_scope"))
     end
 
+    local function buildPerformancePage(panel)
+        local phrase = MENU.Phrase
+
+        MENU.SetupPage(panel, "page.performance.title", "page.performance.desc")
+
+        local limits = MENU.AddSection(panel, "section.light_budget", "section.light_budget.desc", true)
+        limits:CheckBox(phrase("control.enable_light_budget"), "betterlights_light_budget_enable")
+        limits:NumSlider(phrase("control.dlight_limit"), "betterlights_light_budget_dlight_limit", 0, 32, 0)
+        limits:NumSlider(phrase("control.elight_limit"), "betterlights_light_budget_elight_limit", 0, 64, 0)
+        limits:NumSlider(phrase("control.projected_light_limit"), "betterlights_light_budget_projected_limit", 0, 32, 0)
+        MENU.AddHelpText(limits, phrase("help.light_budget_headroom"))
+
+        local distance = MENU.AddSection(panel, "section.light_culling", "section.light_culling.desc", true)
+        distance:NumSlider(phrase("control.maximum_light_distance"), "betterlights_light_budget_max_distance", 0, 20000, 0)
+        distance:NumSlider(phrase("control.light_fade_distance"), "betterlights_light_budget_fade_distance", 0, 5000, 0)
+        distance:CheckBox(phrase("control.deprioritize_offscreen_lights"), "betterlights_light_budget_offscreen_deprioritize")
+        MENU.AddHelpText(distance, phrase("help.light_distance_disabled"))
+        MENU.AddHelpText(distance, phrase("help.offscreen_light_ranking"))
+
+        MENU.AddResetButton(panel, {
+            betterlights_light_budget_enable = 1,
+            betterlights_light_budget_dlight_limit = 28,
+            betterlights_light_budget_elight_limit = 56,
+            betterlights_light_budget_projected_limit = 6,
+            betterlights_light_budget_max_distance = 0,
+            betterlights_light_budget_fade_distance = 512,
+            betterlights_light_budget_offscreen_deprioritize = 1,
+        })
+    end
+
     hook.Add("BetterLights_ClientEnabledPreferenceChanged", "BetterLights_RefreshClientSettingsPage", function()
         timer.Simple(0, function()
             if IsValid(activeClientPanel) then
@@ -569,6 +599,7 @@ if CLIENT then
         local registerPage = MENU.RegisterPage
 
         registerPage("General", "BL_Client", "menu.client", buildClientPage)
+        registerPage("General", "BL_Performance", "menu.performance", buildPerformancePage)
         MENU.RegisterServerPanels()
 
         registerPage("Profiles", "BL_Profiles", "page.profiles.title", buildProfilesPage)

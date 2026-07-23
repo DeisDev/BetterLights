@@ -51,10 +51,10 @@ if CLIENT then
             local pos = BL.GetEntityCenter(ent)
             if not pos then return end
 
-            BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size, false)
+            BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size, false, BL.LIGHT_OPTIONS_GAMEPLAY)
 
             if doElight then
-                BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size * elMult, true)
+                BL.CreateDLight(idx, pos, gr, gg, gb, brightness_base, decay, size * elMult, true, BL.LIGHT_OPTIONS_GAMEPLAY)
             end
         end
 

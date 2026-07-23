@@ -11,6 +11,31 @@ if CLIENT then
     local cvar_col_b = BL.CreateClientConVar("betterlights_antlion_worker_color_b", "120", true, false, "Antlion Worker color - blue (0-255)")
 
     BL.TrackClass("npc_antlion_worker")
+    BL.RegisterNPCRagdollLightProvider("antlion_worker_ambient", {
+        class = "npc_antlion_worker",
+        category = "ambient",
+        update = function(ragdoll, _, entry)
+            if not cvar_enable:GetBool() then return end
+
+            local pos = BL.GetEntityCenter(ragdoll)
+            if not pos then return end
+
+            local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+            BL.CreateDLight(
+                BL.GetNPCRagdollLightId(entry, "ambient"),
+                pos,
+                r,
+                g,
+                b,
+                math.max(0, cvar_brightness:GetFloat()),
+                math.max(0, cvar_decay:GetFloat()),
+                math.max(0, cvar_size:GetFloat()),
+                false,
+                BL.NPC_RAGDOLL_LIGHT_OPTIONS
+            )
+        end
+    })
+
     BL.AddThink("BetterLights_AntlionWorker", function()
         if not cvar_enable:GetBool() then return end
 

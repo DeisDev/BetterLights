@@ -92,7 +92,18 @@ if CLIENT then
                 if not pos then return end
 
                 BL_Spit_LastPos[ent] = pos
-                BL.CreateDLight(ent:EntIndex(), pos, gr, gg, gb, brightness, decay, size, false)
+                BL.CreateDLight(
+                    ent:EntIndex(),
+                    pos,
+                    gr,
+                    gg,
+                    gb,
+                    brightness,
+                    decay,
+                    size,
+                    false,
+                    BL.LIGHT_OPTIONS_GAMEPLAY
+                )
             end)
         else
             BL.ForEach(TARGET_CLASS, function(ent)

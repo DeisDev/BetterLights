@@ -1715,6 +1715,7 @@ if CLIENT then
         BetterLights.Menu.RegisterGunfirePanels()
         BetterLights.Menu.RegisterWeaponPanels()
         addClientPanels()
+        BetterLights.Menu.RegisterNPCLightPanels()
         BetterLights.Menu.RegisterIntegrationPanels()
         BetterLights.Menu.RegisterDeveloperPanel()
         BetterLights.Menu.RegisterAboutPanel()

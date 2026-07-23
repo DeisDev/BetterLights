@@ -107,8 +107,46 @@ if CLIENT then
         return pos, ang, attachments.searchlightNearZ
     end
 
+    local function createScannerGlow(ent, attachments, lightId, options)
+        local settings = attachments.settings.glow
+        if not settings.enable:GetBool() then return end
+
+        local glow = BL.GetAttachmentTransform(ent, attachments.glow)
+        local pos = glow and glow.Pos
+        if not pos then return end
+
+        local size = math.max(0, settings.size:GetFloat())
+        local brightness = math.max(0, settings.brightness:GetFloat())
+        local decay = math.max(0, settings.decay:GetFloat())
+        local r, g, b = BL.GetColorFromCvars(settings.r, settings.g, settings.b)
+
+        BL.CreateDLight(lightId, pos, r, g, b, brightness, decay, size, false, options)
+
+        if settings.modelsElight:GetBool() then
+            local elMult = math.max(0, settings.modelsElightSizeMult:GetFloat())
+            BL.CreateDLight(lightId, pos, r, g, b, brightness, decay, size * elMult, true, options)
+        end
+    end
+
     BL.TrackClass("npc_cscanner")
     BL.TrackClass("npc_clawscanner")
+    for class, attachments in pairs(SCANNER_ATTACHMENTS) do
+        local scannerClass = class
+        local scannerAttachments = attachments
+        BL.RegisterNPCRagdollLightProvider("scanner_eyes_" .. scannerClass, {
+            class = scannerClass,
+            category = "eye",
+            update = function(ragdoll, _, entry)
+                createScannerGlow(
+                    ragdoll,
+                    scannerAttachments,
+                    BL.GetNPCRagdollLightId(entry, "eyes"),
+                    BL.NPC_RAGDOLL_LIGHT_OPTIONS
+                )
+            end
+        })
+    end
+
     BL.AddThink("BetterLights_CScanner_DLight", function()
         local seen = {}
 
@@ -119,23 +157,7 @@ if CLIENT then
             if not settings then return end
 
             local idx = ent:EntIndex()
-            local glow = BL.GetAttachmentTransform(ent, attachments.glow)
-            local glowPos = glow and glow.Pos
-            local glowSettings = settings.glow
-
-            if glowSettings.enable:GetBool() and glowPos then
-                local size = math.max(0, glowSettings.size:GetFloat())
-                local brightness = math.max(0, glowSettings.brightness:GetFloat())
-                local decay = math.max(0, glowSettings.decay:GetFloat())
-                local r, g, b = BL.GetColorFromCvars(glowSettings.r, glowSettings.g, glowSettings.b)
-
-                BL.CreateDLight(idx, glowPos, r, g, b, brightness, decay, size, false)
-
-                if glowSettings.modelsElight:GetBool() then
-                    local elMult = math.max(0, glowSettings.modelsElightSizeMult:GetFloat())
-                    BL.CreateDLight(idx, glowPos, r, g, b, brightness, decay, size * elMult, true)
-                end
-            end
+            createScannerGlow(ent, attachments, idx)
 
             local searchlight = settings.searchlight
             if searchlight.enable:GetBool() then
@@ -159,7 +181,8 @@ if CLIENT then
                     color = Color(slR, slG, slB),
                     shadows = searchlight.shadows:GetBool(),
                     noCull = true,
-                    linearAttenuation = math.max(0, searchlight.falloff:GetFloat())
+                    linearAttenuation = math.max(0, searchlight.falloff:GetFloat()),
+                    priority = BL.LIGHT_PRIORITY_AMBIENT
                 })
             end
         end

@@ -71,6 +71,8 @@ if CLIENT then
         local pos = BL.GetHeldWeaponAttachmentPos(ply, wep, placements, options)
         if not pos then return false end
 
+        options = options or BL.LIGHT_OPTIONS_GAMEPLAY
+        options.priority = options.priority or BL.LIGHT_PRIORITY_GAMEPLAY
         BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight, options)
         return true, pos
     end
@@ -106,7 +108,9 @@ if CLIENT then
         local pos = BL.GetHeldWeaponSurfaceLightPos(ply, wep, surfaceOptions)
         if not pos then return false end
 
-        BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight, lightOptions or surfaceOptions)
+        lightOptions = lightOptions or surfaceOptions or BL.LIGHT_OPTIONS_GAMEPLAY
+        lightOptions.priority = lightOptions.priority or BL.LIGHT_PRIORITY_GAMEPLAY
+        BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight, lightOptions)
         return true, pos
     end
 end

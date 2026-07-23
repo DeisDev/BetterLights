@@ -38,6 +38,31 @@ if CLIENT then
 
     BL.TrackClass("npc_dog")
 
+    BL.RegisterNPCRagdollLightProvider("dog_eyes", {
+        class = "npc_dog",
+        category = "eye",
+        update = function(ragdoll, _, entry)
+            if not dogEyes.enable:GetBool() then return end
+
+            local pos = BL.GetAttachmentPos(ragdoll, EYE_ATTACHMENT)
+            if not pos then return end
+
+            local r, g, b = BL.GetColorFromCvars(dogEyes.r, dogEyes.g, dogEyes.b)
+            BL.CreateDLight(
+                BL.GetNPCRagdollLightId(entry, "eyes"),
+                pos,
+                r,
+                g,
+                b,
+                math.max(0, dogEyes.brightness:GetFloat()),
+                math.max(0, dogEyes.decay:GetFloat()),
+                math.max(0, dogEyes.size:GetFloat()),
+                false,
+                BL.NPC_RAGDOLL_LIGHT_OPTIONS
+            )
+        end
+    })
+
     BL.AddThink("BetterLights_NPCEyeGlow", function()
         BL.ForEach("npc_dog", function(ent)
             createEyeLight(ent, dogEyes, 24300)

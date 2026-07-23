@@ -17,6 +17,101 @@ if CLIENT then
     BL._flashIdCounter = BL._flashIdCounter or 0
     BL._idCounter = BL._idCounter or 0
     BL._nextDLightRecordPrune = BL._nextDLightRecordPrune or 0
+    BL._dlightRequests = {}
+    BL._elightRequests = {}
+    BL._lightRequestsByKey = {}
+    BL._lightRequestPool = BL._lightRequestPool or {}
+    BL._lightBudgetPrevious = BL._lightBudgetPrevious or {
+        dlight = {},
+        elight = {}
+    }
+    BL._lightBudgetNext = BL._lightBudgetNext or {
+        dlight = {},
+        elight = {}
+    }
+    BL._lightBudgetScratch = BL._lightBudgetScratch or {
+        dlight = {},
+        elight = {},
+        projected = {}
+    }
+    BL._lightBudgetStats = BL._lightBudgetStats or {
+        dlight = {},
+        elight = {},
+        projected = {}
+    }
+
+    BL.LIGHT_PRIORITY_CORPSE = -2
+    BL.LIGHT_PRIORITY_AMBIENT = 0
+    BL.LIGHT_PRIORITY_GAMEPLAY = 1
+    BL.LIGHT_PRIORITY_FLASH = 2
+    BL.LIGHT_PRIORITY_LOCAL_PLAYER = 3
+    BL.LIGHT_OPTIONS_GAMEPLAY = {
+        priority = BL.LIGHT_PRIORITY_GAMEPLAY
+    }
+
+    local cvar_budget_enable = BL.CreateClientConVar(
+        "betterlights_light_budget_enable",
+        "1",
+        true,
+        false,
+        "Limit and prioritize Better Lights light allocations",
+        0,
+        1
+    )
+    local cvar_budget_dlights = BL.CreateClientConVar(
+        "betterlights_light_budget_dlight_limit",
+        "28",
+        true,
+        false,
+        "Maximum Better Lights world dynamic lights",
+        0,
+        32
+    )
+    local cvar_budget_elights = BL.CreateClientConVar(
+        "betterlights_light_budget_elight_limit",
+        "56",
+        true,
+        false,
+        "Maximum Better Lights entity lights",
+        0,
+        64
+    )
+    local cvar_budget_projected = BL.CreateClientConVar(
+        "betterlights_light_budget_projected_limit",
+        "6",
+        true,
+        false,
+        "Maximum Better Lights projected textures",
+        0,
+        32
+    )
+    local cvar_budget_max_distance = BL.CreateClientConVar(
+        "betterlights_light_budget_max_distance",
+        "0",
+        true,
+        false,
+        "Maximum distance from the view to a Better Lights light; 0 disables distance culling",
+        0,
+        20000
+    )
+    local cvar_budget_fade_distance = BL.CreateClientConVar(
+        "betterlights_light_budget_fade_distance",
+        "512",
+        true,
+        false,
+        "Distance over which lights fade before the maximum light distance",
+        0,
+        5000
+    )
+    local cvar_budget_offscreen = BL.CreateClientConVar(
+        "betterlights_light_budget_offscreen_deprioritize",
+        "1",
+        true,
+        false,
+        "Prefer lights whose influence reaches the current view when the light budget is full",
+        0,
+        1
+    )
 
     for key in pairs(BL._activeFlashByKey) do
         BL._activeFlashByKey[key] = nil
@@ -40,9 +135,203 @@ if CLIENT then
     end
 
     local THINK_ERROR_DISABLE_COUNT = 3
+    local LIGHT_REQUEST_POOL_MAX = 512
+    local PREVIOUS_WINNER_MULTIPLIER = 1.2
+    local OFFSCREEN_SCORE_MULTIPLIER = 0.15
 
     local function getDLightRecordKey(index, isElight)
         return (isElight and "e" or "d") .. tostring(index)
+    end
+
+    local function clearTable(values)
+        for key in pairs(values) do
+            values[key] = nil
+        end
+    end
+
+    local function getViewPos()
+        if MainEyePos then return MainEyePos() end
+        if EyePos then return EyePos() end
+
+        local ply = LocalPlayer()
+        if IsValid(ply) and ply.EyePos then
+            return ply:EyePos()
+        end
+
+        return vector_origin
+    end
+
+    local function getViewAngles()
+        if MainEyeAngles then return MainEyeAngles() end
+        if EyeAngles then return EyeAngles() end
+
+        local ply = LocalPlayer()
+        if IsValid(ply) and ply.EyeAngles then
+            return ply:EyeAngles()
+        end
+
+        return angle_zero
+    end
+
+    local function getDistanceFade(candidate, viewPos)
+        if not cvar_budget_enable:GetBool() then return 1 end
+
+        local maxDistance = math.max(0, cvar_budget_max_distance:GetFloat())
+        if maxDistance <= 0 then return 1 end
+
+        local distance = math.sqrt(candidate.pos:DistToSqr(viewPos))
+        local influenceDistance = math.max(0, distance - math.max(0, candidate.size or 0))
+        if influenceDistance >= maxDistance then return 0 end
+
+        local fadeDistance = math.Clamp(cvar_budget_fade_distance:GetFloat(), 0, maxDistance)
+        if fadeDistance <= 0 then return 1 end
+
+        local fadeStart = maxDistance - fadeDistance
+        if influenceDistance <= fadeStart then return 1 end
+
+        return math.Clamp((maxDistance - influenceDistance) / fadeDistance, 0, 1)
+    end
+
+    local function influenceReachesScreen(candidate, viewPos, viewAngles, distance)
+        local size = math.max(0, candidate.size or 0)
+        if distance <= size then return true end
+
+        local fov = 90
+        local ply = LocalPlayer()
+        if IsValid(ply) and ply.GetFOV then
+            fov = math.Clamp(ply:GetFOV(), 1, 179)
+        end
+
+        local offset = candidate.pos - viewPos
+        local forwardDistance = offset:Dot(viewAngles:Forward())
+        if forwardDistance < -size then return false end
+
+        local horizontalScale = math.tan(math.rad(fov * 0.5))
+        local aspect = math.max(0.1, ScrW() / math.max(1, ScrH()))
+        local verticalScale = horizontalScale / aspect
+        local projectedDistance = math.max(0, forwardDistance)
+
+        return math.abs(offset:Dot(viewAngles:Right())) <= projectedDistance * horizontalScale + size
+            and math.abs(offset:Dot(viewAngles:Up())) <= projectedDistance * verticalScale + size
+    end
+
+    local function getCandidateScore(candidate, viewPos, viewAngles, previous)
+        local distSqr = candidate.pos:DistToSqr(viewPos)
+        local distance = math.sqrt(distSqr)
+        local size = math.max(1, candidate.size or 0)
+        local sizeSqr = size * size
+        local influence = sizeSqr / (distSqr + sizeSqr)
+        local luminance = (
+            0.2126 * math.Clamp(candidate.r or 255, 0, 255)
+            + 0.7152 * math.Clamp(candidate.g or 255, 0, 255)
+            + 0.0722 * math.Clamp(candidate.b or 255, 0, 255)
+        ) / 255
+        local priority = math.Clamp(tonumber(candidate.priority) or BL.LIGHT_PRIORITY_AMBIENT, -4, 4)
+        local score = math.max(0.001, candidate.brightness or 0)
+            * math.max(0.05, luminance)
+            * math.max(0.01, influence)
+            * math.sqrt(size)
+            * math.max(0.001, candidate._budgetFade or 1)
+            * (2 ^ priority)
+
+        candidate._budgetOnScreen = influenceReachesScreen(candidate, viewPos, viewAngles, distance)
+        if cvar_budget_offscreen:GetBool() and not candidate._budgetOnScreen then
+            score = score * OFFSCREEN_SCORE_MULTIPLIER
+        end
+
+        if previous[candidate.key] then
+            score = score * PREVIOUS_WINNER_MULTIPLIER
+        end
+
+        return score
+    end
+
+    function BL.IsLightBudgetEnabled()
+        return cvar_budget_enable:GetBool()
+    end
+
+    function BL.GetLightBudgetLimit(kind)
+        if kind == "elight" then
+            return math.Clamp(cvar_budget_elights:GetInt(), 0, 64)
+        elseif kind == "projected" then
+            return math.Clamp(cvar_budget_projected:GetInt(), 0, 32)
+        end
+
+        return math.Clamp(cvar_budget_dlights:GetInt(), 0, 32)
+    end
+
+    function BL.SelectLightBudgetCandidates(kind, candidates, previous, nextSelected, scratch)
+        candidates = candidates or {}
+        previous = previous or {}
+        nextSelected = nextSelected or {}
+        scratch = scratch or {}
+
+        clearTable(nextSelected)
+        for i = #scratch, 1, -1 do
+            scratch[i] = nil
+        end
+
+        local stats = BL._lightBudgetStats[kind] or {}
+        BL._lightBudgetStats[kind] = stats
+        stats.requested = #candidates
+        stats.eligible = 0
+        stats.admitted = 0
+        stats.emitted = 0
+        stats.distanceCulled = 0
+        stats.budgetRejected = 0
+
+        local viewPos = getViewPos()
+        local viewAngles = getViewAngles()
+        for i = 1, #candidates do
+            local candidate = candidates[i]
+            local fade = getDistanceFade(candidate, viewPos)
+            candidate._budgetFade = fade
+            candidate._budgetOnScreen = nil
+            candidate._budgetScore = nil
+
+            if fade > 0
+                and (candidate.brightness or 0) > 0
+                and (candidate.size or 0) > 0
+            then
+                scratch[#scratch + 1] = candidate
+            elseif fade <= 0 then
+                stats.distanceCulled = stats.distanceCulled + 1
+            end
+        end
+
+        stats.eligible = #scratch
+
+        local limit = #scratch
+        if cvar_budget_enable:GetBool() then
+            limit = math.min(BL.GetLightBudgetLimit(kind), #scratch)
+        end
+
+        if #scratch > limit then
+            for i = 1, #scratch do
+                local candidate = scratch[i]
+                candidate._budgetScore = getCandidateScore(candidate, viewPos, viewAngles, previous)
+            end
+
+            table.sort(scratch, function(a, b)
+                if a._budgetScore == b._budgetScore then
+                    return tostring(a.key) < tostring(b.key)
+                end
+
+                return a._budgetScore > b._budgetScore
+            end)
+        end
+
+        for i = 1, limit do
+            nextSelected[scratch[i].key] = true
+        end
+
+        stats.admitted = limit
+        stats.budgetRejected = math.max(0, #scratch - limit)
+        return scratch, limit, stats
+    end
+
+    function BL.GetLightBudgetStats()
+        return BL._lightBudgetStats
     end
 
     local function pruneDLightRecords(now)
@@ -223,23 +512,10 @@ if CLIENT then
                 local t = (f.die - now) / dur
                 local brightness = f.baseBrightness * t
                 local size = f.baseSize * (0.4 + 0.6 * t)
-                local dl = DynamicLight(f.id)
-
-                if dl then
-                    local dieTime = now + 0.05
-                    dl.pos = f.pos
-                    dl.r = f.r
-                    dl.g = f.g
-                    dl.b = f.b
-                    dl.brightness = brightness
-                    dl.decay = 0
-                    dl.size = size
-                    dl.minlight = 0
-                    dl.noworld = false
-                    dl.nomodel = false
-                    dl.dietime = dieTime
-                    recordDLight(f.id, f.pos, f.r, f.g, f.b, size, false, dieTime)
-                end
+                BL.CreateDLight(f.id, f.pos, f.r, f.g, f.b, brightness, 0, size, false, {
+                    dietime = 0.05,
+                    priority = BL.LIGHT_PRIORITY_FLASH
+                })
             end
         end
     end
@@ -278,30 +554,132 @@ if CLIENT then
                math.Clamp(math.floor(b_cvar:GetFloat() + 0.5), 0, 255)
     end
 
+    local function getLightRequest()
+        local count = #BL._lightRequestPool
+        if count <= 0 then return {} end
+
+        local request = BL._lightRequestPool[count]
+        BL._lightRequestPool[count] = nil
+        return request
+    end
+
+    local function recycleLightRequest(request)
+        for key in pairs(request) do
+            request[key] = nil
+        end
+
+        if #BL._lightRequestPool < LIGHT_REQUEST_POOL_MAX then
+            BL._lightRequestPool[#BL._lightRequestPool + 1] = request
+        end
+    end
+
     function BL.CreateDLight(index, pos, r, g, b, brightness, decay, size, isElight, options)
         if not BL.IsEnabled() then return nil end
+        if not index or not pos then return nil end
 
         options = options or {}
+        isElight = isElight == true
 
-        local dl = DynamicLight(index, isElight or false)
-        if dl then
-            local dieTime = CurTime() + (options.dietime or 0.1)
-            dl.pos = pos
-            dl.r = r
-            dl.g = g
-            dl.b = b
-            dl.brightness = brightness
-            dl.decay = decay
-            dl.size = size
-            dl.minlight = 0
-            if not isElight then
-                dl.noworld = options.noworld == true
-                dl.nomodel = options.nomodel == true
-            end
-            dl.dietime = dieTime
-            recordDLight(index, pos, r, g, b, size, isElight, dieTime)
+        local key = getDLightRecordKey(index, isElight)
+        local request = BL._lightRequestsByKey[key]
+        if not request then
+            request = getLightRequest()
+            request.key = key
+            request.id = index
+            request.elight = isElight
+            BL._lightRequestsByKey[key] = request
+
+            local requests = isElight and BL._elightRequests or BL._dlightRequests
+            requests[#requests + 1] = request
         end
+
+        request.pos = pos
+        request.r = r
+        request.g = g
+        request.b = b
+        request.brightness = brightness
+        request.decay = decay
+        request.size = size
+        request.minlight = 0
+        request.noworld = options.noworld == true
+        request.nomodel = options.nomodel == true
+        request.dietime = CurTime() + (options.dietime or 0.1)
+        request.priority = tonumber(options.priority) or BL.LIGHT_PRIORITY_AMBIENT
+
+        return request
+    end
+
+    local function emitDLightRequest(request)
+        local dl = DynamicLight(request.id, request.elight)
+        if dl then
+            dl.pos = request.pos
+            dl.r = request.r
+            dl.g = request.g
+            dl.b = request.b
+            dl.brightness = request.brightness * (request._budgetFade or 1)
+            dl.decay = request.decay
+            dl.size = request.size
+            dl.minlight = request.minlight
+            if not request.elight then
+                dl.noworld = request.noworld
+                dl.nomodel = request.nomodel
+            end
+            dl.dietime = request.dietime
+            recordDLight(
+                request.id,
+                request.pos,
+                request.r,
+                request.g,
+                request.b,
+                request.size,
+                request.elight,
+                request.dietime
+            )
+        end
+
         return dl
+    end
+
+    local function clearLightRequests(requests)
+        for i = #requests, 1, -1 do
+            local request = requests[i]
+            BL._lightRequestsByKey[request.key] = nil
+            requests[i] = nil
+            recycleLightRequest(request)
+        end
+    end
+
+    local function flushLightRequestKind(kind, requests)
+        local previous = BL._lightBudgetPrevious[kind]
+        local nextSelected = BL._lightBudgetNext[kind]
+        local scratch = BL._lightBudgetScratch[kind]
+        local selected, selectedCount, stats = BL.SelectLightBudgetCandidates(
+            kind,
+            requests,
+            previous,
+            nextSelected,
+            scratch
+        )
+
+        for i = 1, selectedCount do
+            if emitDLightRequest(selected[i]) then
+                stats.emitted = stats.emitted + 1
+            end
+        end
+
+        BL._lightBudgetPrevious[kind] = nextSelected
+        BL._lightBudgetNext[kind] = previous
+        clearLightRequests(requests)
+    end
+
+    function BL.FlushDLightRequests()
+        flushLightRequestKind("dlight", BL._dlightRequests)
+        flushLightRequestKind("elight", BL._elightRequests)
+    end
+
+    function BL.ClearDLightRequests()
+        clearLightRequests(BL._dlightRequests)
+        clearLightRequests(BL._elightRequests)
     end
 
     function BL.LerpColor(r1, g1, b1, r2, g2, b2, t)
@@ -318,7 +696,10 @@ if CLIENT then
     end
 
     hook.Add("Think", "BetterLights_CoreThink", function()
-        if not BL.IsEnabled() then return end
+        if not BL.IsEnabled() then
+            BL.ClearDLightRequests()
+            return
+        end
 
         BL.UpdateFlashes()
 
@@ -339,5 +720,35 @@ if CLIENT then
                 end
             end
         end
+
+        BL.FlushDLightRequests()
     end)
+
+    hook.Add("BetterLights_EffectiveEnabledChanged", "BetterLights_LightBudgetEffectiveEnable", function(enabled)
+        if not enabled then
+            BL.ClearDLightRequests()
+        end
+    end)
+
+    concommand.Add("betterlights_print_light_budget", function()
+        local stats = BL.GetLightBudgetStats()
+        MsgC(Color(180, 220, 255), "[BetterLights] Light budget\n")
+
+        for _, kind in ipairs({ "dlight", "elight", "projected" }) do
+            local values = stats[kind] or {}
+            MsgC(
+                Color(220, 220, 220),
+                string.format(
+                    "  %s: requested=%d eligible=%d admitted=%d emitted=%d distance_culled=%d budget_rejected=%d\n",
+                    kind,
+                    values.requested or 0,
+                    values.eligible or 0,
+                    values.admitted or 0,
+                    values.emitted or 0,
+                    values.distanceCulled or 0,
+                    values.budgetRejected or 0
+                )
+            )
+        end
+    end, nil, "Print Better Lights light budget usage")
 end

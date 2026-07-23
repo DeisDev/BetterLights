@@ -89,6 +89,32 @@ if CLIENT then
             BL.GetColorFromCvars(selected.r, selected.g, selected.b)
     end
 
+    BL.RegisterNPCRagdollLightProvider("combine_soldier_eyes", {
+        class = "npc_combine_s",
+        category = "eye",
+        capture = getColorKey,
+        update = function(ragdoll, colorKey, entry)
+            local settings, size, brightness, decay, red, green, blue = getSettings(colorKey)
+            if not settings.enable:GetBool() then return end
+
+            local pos = BL.GetAttachmentPos(ragdoll, { "eyes" })
+            if not pos then return end
+
+            BL.CreateDLight(
+                BL.GetNPCRagdollLightId(entry, "eyes"),
+                pos,
+                red,
+                green,
+                blue,
+                brightness,
+                decay,
+                size,
+                false,
+                BL.NPC_RAGDOLL_LIGHT_OPTIONS
+            )
+        end
+    })
+
     BL.AddThink("BetterLights_CombineSoldier", function()
         BL.ForEach("npc_combine_s", function(ent)
             local colorKey = getColorKey(ent)

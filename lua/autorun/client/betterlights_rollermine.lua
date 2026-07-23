@@ -47,6 +47,83 @@ if CLIENT then
     end
 
     BL.TrackClass("npc_rollermine")
+    BL.RegisterNPCRagdollLightProvider("rollermine_ambient", {
+        class = "npc_rollermine",
+        category = "ambient",
+        capture = function(ent)
+            return {
+                hacked = BL_IsRollermineHacked(ent),
+                skin = ent.GetSkin and ent:GetSkin() or 0,
+                spiked = BL.MatchesModel(ent, "roller_spikes")
+            }
+        end,
+        update = function(ragdoll, data, entry)
+            local hacked = data.hacked == true
+            if hacked and not cvar_h_enable:GetBool() then return end
+            if not hacked and not cvar_enable:GetBool() then return end
+
+            local pos = BL.GetEntityCenter(ragdoll)
+            if not pos then return end
+
+            local r, g, b
+            local size, brightness, decay, useElight, elightMult
+            if hacked then
+                r, g, b = BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b)
+                size = math.max(0, cvar_h_size:GetFloat())
+                brightness = math.max(0, cvar_h_brightness:GetFloat())
+                decay = math.max(0, cvar_h_decay:GetFloat())
+                useElight = cvar_h_models_elight:GetBool()
+                elightMult = math.max(0, cvar_h_models_elight_mult:GetFloat())
+            else
+                local colorFn = skinColors[data.skin]
+                if colorFn then
+                    r, g, b = colorFn()
+                else
+                    r, g, b = BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b)
+                end
+                size = math.max(0, cvar_size:GetFloat())
+                brightness = math.max(0, cvar_brightness:GetFloat())
+                decay = math.max(0, cvar_decay:GetFloat())
+                useElight = cvar_models_elight:GetBool()
+                elightMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
+            end
+
+            if data.spiked then
+                brightness = brightness * 2.5
+                size = size * 1.5
+            end
+
+            local lightId = BL.GetNPCRagdollLightId(entry, "center")
+            BL.CreateDLight(
+                lightId,
+                pos,
+                r,
+                g,
+                b,
+                brightness,
+                decay,
+                size,
+                false,
+                BL.NPC_RAGDOLL_LIGHT_OPTIONS
+            )
+
+            if useElight then
+                BL.CreateDLight(
+                    lightId,
+                    pos,
+                    r,
+                    g,
+                    b,
+                    brightness,
+                    decay,
+                    size * elightMult,
+                    true,
+                    BL.NPC_RAGDOLL_LIGHT_OPTIONS
+                )
+            end
+        end
+    })
+
     BL.AddThink("BetterLights_Rollermine_DLight", function()
         if not cvar_enable:GetBool() and not cvar_h_enable:GetBool() then return end
         local function update(ent)

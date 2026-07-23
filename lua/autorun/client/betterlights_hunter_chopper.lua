@@ -83,7 +83,8 @@ if CLIENT then
                 fov = math.Clamp(cvar_spotlight_fov:GetFloat(), 1, 175),
                 brightness = math.max(0, cvar_spotlight_brightness:GetFloat()),
                 color = Color(r, g, b),
-                shadows = cvar_spotlight_shadows:GetBool()
+                shadows = cvar_spotlight_shadows:GetBool(),
+                priority = BL.LIGHT_PRIORITY_GAMEPLAY
             }) then
                 seen[ent] = true
             end
