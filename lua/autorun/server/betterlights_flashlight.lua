@@ -219,7 +219,6 @@ if SERVER then
         if not IsValid(ply) then return false end
 
         state = state and true or false
-        if state == false and IsValid(ply.BetterLights_TFADeployPreserveFlashlight) then return true end
         if not skipPermission and not canSwitchFlashlight(ply, state) then return false end
         if isModuleEnabledFor(ply) then
             turnOffVanillaFlashlight(ply)
@@ -241,11 +240,16 @@ if SERVER then
         return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false))
     end
 
-    local function reconcileFlashlightEligibility(ply)
+    local function reconcileFlashlightEligibility(ply, adoptVanillaState)
         if not IsValid(ply) then return end
 
-        if isModuleEnabledFor(ply) then
-            if isVanillaFlashlightOn(ply) then
+        local moduleEnabled = isModuleEnabledFor(ply)
+        local moduleWasEnabled = ply.BetterLights_FlashlightModuleEnabled == true
+        ply.BetterLights_FlashlightModuleEnabled = moduleEnabled
+
+        if moduleEnabled then
+            -- Only preserve engine state when Better Lights first takes ownership.
+            if adoptVanillaState and not moduleWasEnabled and isVanillaFlashlightOn(ply) then
                 setFlashlight(ply, true, true, true)
             end
 
@@ -269,14 +273,14 @@ if SERVER then
         ply.BetterLights_ARC9FlashlightOverrideDisabled = net.ReadBool()
         ply.BetterLights_TFAFlashlightOverrideDisabled = len >= 7 and net.ReadBool() or false
 
-        reconcileFlashlightEligibility(ply)
+        reconcileFlashlightEligibility(ply, true)
     end)
 
     hook.Add("StartCommand", "BetterLights_FlashlightImpulse", function(ply, cmd)
         if cmd:GetImpulse() ~= 100 then return end
 
         if not isModuleEnabledFor(ply) then
-            reconcileFlashlightEligibility(ply)
+            reconcileFlashlightEligibility(ply, false)
             return
         end
 
@@ -316,13 +320,13 @@ if SERVER then
 
     hook.Add("PlayerSwitchWeapon", "BetterLights_FlashlightIntegrationSwitch", function(ply)
         timer.Simple(0, function()
-            reconcileFlashlightEligibility(ply)
+            reconcileFlashlightEligibility(ply, false)
         end)
     end)
 
     local function reconcileFlashlights()
         for _, ply in ipairs(player.GetAll()) do
-            reconcileFlashlightEligibility(ply)
+            reconcileFlashlightEligibility(ply, true)
         end
     end
 
@@ -354,6 +358,8 @@ if SERVER then
             if state == nil then
                 return toggleFlashlight(self)
             end
+
+            if state == false and IsValid(self.BetterLights_TFADeployPreserveFlashlight) then return true end
 
             return setFlashlight(self, state)
         end

@@ -1,5 +1,12 @@
 [
   {
+    "version": "v1.6.0-beta11",
+    "title": "Better Lights v1.6.0-beta11",
+    "items": [
+      "Fixed the player flashlight turning on unexpectedly after switching weapons or syncing settings."
+    ]
+  },
+  {
     "version": "v1.6.0-beta10",
     "title": "Better Lights v1.6.0-beta10",
     "items": [
