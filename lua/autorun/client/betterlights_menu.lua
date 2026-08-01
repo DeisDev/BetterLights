@@ -1383,7 +1383,7 @@ if CLIENT then
                 betterlights_flashlight_weapon_attachment = 1,
                 betterlights_flashlight_forward_offset = 0,
                 betterlights_flashlight_attachment_offset = 2,
-                betterlights_flashlight_fallback_offset = 8,
+                betterlights_flashlight_fallback_offset = 0,
             })
         end)
 

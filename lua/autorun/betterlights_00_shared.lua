@@ -99,7 +99,7 @@ do
             order = 6,
             name = "betterlights_flashlight_fallback_offset",
             type = "number",
-            default = 8,
+            default = 0,
             min = -24,
             max = 24,
             decimals = 1,

@@ -108,7 +108,7 @@ if CLIENT then
     local cvar_distance = BL.CreateClientConVar("betterlights_flashlight_distance", "1200", true, false, "Flashlight beam length")
     local cvar_forward_offset = BL.CreateClientConVar("betterlights_flashlight_forward_offset", "0", true, false, "Extra forward offset for the flashlight beam")
     local cvar_attachment_offset = BL.CreateClientConVar("betterlights_flashlight_attachment_offset", "2", true, false, "Side offset for weapon-attached flashlights")
-    local cvar_view_origin_offset = BL.CreateClientConVar("betterlights_flashlight_fallback_offset", "8", true, false, "Side offset for view-origin flashlights")
+    local cvar_view_origin_offset = BL.CreateClientConVar("betterlights_flashlight_fallback_offset", "0", true, false, "Side offset for view-origin flashlights")
     local cvar_brightness = BL.CreateClientConVar("betterlights_flashlight_brightness", "1.35", true, false, "Flashlight brightness")
     local cvar_color_r = BL.CreateClientConVar("betterlights_flashlight_color_r", "255", true, false, "Flashlight color - red (0-255)")
     local cvar_color_g = BL.CreateClientConVar("betterlights_flashlight_color_g", "245", true, false, "Flashlight color - green (0-255)")
@@ -167,8 +167,6 @@ if CLIENT then
     local FLARE_MAX_FADE_DISTANCE = 2048
     local ATTACHMENT_OFFSET_FORWARD = 1
     local ATTACHMENT_OFFSET_DOWN = 2
-    local EYE_OFFSET_FORWARD = 26
-    local EYE_OFFSET_DOWN = 3
     local VEHICLE_OFFSET_FORWARD = 18
     local VEHICLE_OFFSET_DOWN = 1
     -- Common SWEP attachment conventions. This list is intentionally broad for flashlight compatibility.
@@ -437,20 +435,22 @@ if CLIENT then
         return applyAttachmentOffset(attachment.Pos, attachment.Ang), attachment.Ang, attachment.Pos, attachment.Ang
     end
 
-    local function getViewOriginTransform(ply)
-        local aim = ply.GetAimVector and ply:GetAimVector() or nil
-        local ang = aim and aim:Angle() or ply:EyeAngles()
-        local pos = ply:EyePos()
+    local function getViewOriginTransform(ply, localPlayer)
+        local useMainView = ply == localPlayer and not ply:ShouldDrawLocalPlayer()
+        local useMainViewAngles = useMainView and MainEyeAngles
+        local aim = not useMainViewAngles and ply.GetAimVector and ply:GetAimVector() or nil
+        local ang = useMainViewAngles and MainEyeAngles() or (aim and aim:Angle() or ply:EyeAngles())
+        local pos = useMainView and MainEyePos and MainEyePos() or ply:EyePos()
         local inVehicle = ply.InVehicle and ply:InVehicle()
-        local forwardOffset = inVehicle and VEHICLE_OFFSET_FORWARD or EYE_OFFSET_FORWARD
-        local downOffset = inVehicle and VEHICLE_OFFSET_DOWN or EYE_OFFSET_DOWN
+        local forwardOffset = inVehicle and VEHICLE_OFFSET_FORWARD or 0
+        local downOffset = inVehicle and VEHICLE_OFFSET_DOWN or 0
 
         pos = pos
             + ang:Forward() * (forwardOffset + math.Clamp(getEffectiveNumber(cvar_forward_offset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
             + ang:Right() * getEffectiveNumber(cvar_view_origin_offset)
             - ang:Up() * downOffset
 
-        if not inVehicle and ply.GetViewPunchAngles then
+        if not inVehicle and not useMainViewAngles and ply.GetViewPunchAngles then
             ang = ang + ply:GetViewPunchAngles()
         end
 
@@ -466,7 +466,7 @@ if CLIENT then
         local pos, ang, flarePos, flareAng = getWeaponAttachmentTransform(ply, localPlayer)
         if pos then return pos, ang, flarePos, flareAng end
 
-        return getViewOriginTransform(ply)
+        return getViewOriginTransform(ply, localPlayer)
     end
 
     local function getWallDistance(ply, pos, ang)
