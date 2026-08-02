@@ -1,5 +1,12 @@
 [
   {
+    "version": "v1.6.0-beta13",
+    "title": "Better Lights v1.6.0-beta13",
+    "items": [
+      "Added compatibility with the Hexa Core Shield Generator, preventing its energy core from triggering repeated explosion lights."
+    ]
+  },
+  {
     "version": "v1.6.0-beta12",
     "title": "Better Lights v1.6.0-beta12",
     "items": [

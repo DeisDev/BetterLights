@@ -834,6 +834,8 @@ do
     EXP.EffectProfiles = EXP.EffectProfiles or {}
     EXP.ParticleProfiles = EXP.ParticleProfiles or {}
     EXP.InputProfiles = EXP.InputProfiles or {}
+    EXP.EffectExclusionsById = EXP.EffectExclusionsById or {}
+    EXP.EffectExclusionsByName = EXP.EffectExclusionsByName or {}
 
     local function normalizeString(value)
         if value == nil then return nil end
@@ -884,6 +886,28 @@ do
         end
     end
 
+    local function rebuildEffectExclusions()
+        local byName = {}
+
+        for _, exclusion in pairs(EXP.EffectExclusionsById) do
+            for i = 1, #exclusion.effects do
+                local key = normalizeKey(exclusion.effects[i])
+                if key then
+                    byName[key] = byName[key] or {}
+                    byName[key][#byName[key] + 1] = exclusion
+                end
+            end
+        end
+
+        for _, exclusions in pairs(byName) do
+            table.sort(exclusions, function(a, b)
+                return tostring(a.id or "") < tostring(b.id or "")
+            end)
+        end
+
+        EXP.EffectExclusionsByName = byName
+    end
+
     function EXP.RegisterProfile(id, def)
         id = normalizeString(id)
         if not id then return nil end
@@ -915,6 +939,56 @@ do
         end
 
         return profile
+    end
+
+    -- Integration adapters can veto Better Lights detection without suppressing the original effect.
+    function EXP.RegisterEffectExclusion(id, def)
+        id = normalizeString(id)
+        if not id or type(def) ~= "table" or not isfunction(def.shouldExclude) then return nil end
+
+        local effects = buildList(def.effect, def.effects)
+        if #effects == 0 then return nil end
+
+        local exclusion = {}
+        for k, v in pairs(def) do
+            exclusion[k] = v
+        end
+
+        exclusion.id = id
+        exclusion.effects = effects
+        EXP.EffectExclusionsById[id] = exclusion
+        rebuildEffectExclusions()
+        return exclusion
+    end
+
+    function EXP.RemoveEffectExclusion(id)
+        id = normalizeString(id)
+        if not id or not EXP.EffectExclusionsById[id] then return false end
+
+        EXP.EffectExclusionsById[id] = nil
+        rebuildEffectExclusions()
+        return true
+    end
+
+    function EXP.ShouldExcludeEffect(effectName, effectData, pos, profileId)
+        local key = normalizeKey(effectName)
+        local exclusions = key and EXP.EffectExclusionsByName[key] or nil
+        if not exclusions then return false end
+
+        for i = 1, #exclusions do
+            local exclusion = exclusions[i]
+            if not exclusion.disabled then
+                local ok, excluded = pcall(exclusion.shouldExclude, effectName, effectData, pos, profileId)
+                if not ok then
+                    exclusion.disabled = true
+                    ErrorNoHalt("[BetterLights] Explosion effect exclusion '" .. tostring(exclusion.id) .. "' failed: " .. tostring(excluded) .. "\n")
+                elseif excluded then
+                    return true, exclusion.id
+                end
+            end
+        end
+
+        return false
     end
 
     function EXP.GetProfile(id)
@@ -956,6 +1030,8 @@ do
         local inputs = EXP.InputProfiles[classKey]
         return inputs and inputs[inputKey] or nil
     end
+
+    rebuildEffectExclusions()
 
     EXP.RegisterProfile("generic", {
         effects = {

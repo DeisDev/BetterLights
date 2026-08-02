@@ -1,7 +1,7 @@
 if SERVER then
     local BL = BetterLights
     local EXP = BL.Explosions
-    local WRAPPER_VERSION = 1
+    local WRAPPER_VERSION = 2
     local SUPPRESSION_DISTANCE_SQR = 160 * 160
     local SUPPRESSION_AGE = 0.12
     local DAMAGE_REMOVAL_WINDOW = 0.35
@@ -225,6 +225,7 @@ if SERVER then
 
         local pos = effectData:GetOrigin()
         if not isUsableVector(pos) then return nil end
+        if EXP.ShouldExcludeEffect(effectName, effectData, pos, profileId) then return nil end
 
         return profileId, pos
     end
