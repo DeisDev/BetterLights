@@ -1,5 +1,13 @@
 [
   {
+    "version": "v1.6.0-beta12",
+    "title": "Better Lights v1.6.0-beta12",
+    "items": [
+      "Fixed flashlight beams appearing beside held weapons when weapon attachment is disabled.",
+      "Improved flashlight centering and close-range coverage with default and ARC9 weapons."
+    ]
+  },
+  {
     "version": "v1.6.0-beta11",
     "title": "Better Lights v1.6.0-beta11",
     "items": [
