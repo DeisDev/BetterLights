@@ -1230,7 +1230,7 @@ if CLIENT then
             panel:NumSlider(phrase("control.brightness"), "betterlights_fire_brightness", 0, 10, 2)
             panel:NumSlider(phrase("control.decay"), "betterlights_fire_decay", 0, 5000, 0)
             panel:CheckBox(phrase("control.add_model_elight"), "betterlights_fire_models_elight")
-            panel:NumSlider(phrase("control.model_elight_radius"), "betterlights_fire_models_elight_size_mult", 0, 3, 2)
+            panel:NumSlider(phrase("control.fire_model_light_intensity"), "betterlights_fire_models_elight_size_mult", 0, 3, 2)
             addColorMixerControl(panel, "control.color", "betterlights_fire_color_r", "betterlights_fire_color_g", "betterlights_fire_color_b")
             panel:CheckBox(phrase("control.flicker"), "betterlights_fire_flicker_enable")
             panel:NumSlider(phrase("control.flicker_amount"), "betterlights_fire_flicker_amount", 0, 1, 2)
