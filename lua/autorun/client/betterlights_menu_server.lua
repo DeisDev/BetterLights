@@ -29,7 +29,9 @@ if CLIENT then
     local TEXTURE_NAME = "betterlights_flashlight_texture"
 
     local function canChangeServerSettings()
-        return game.SinglePlayer() or (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin())
+        local ply = LocalPlayer()
+        return game.SinglePlayer()
+            or (IsValid(ply) and (ply:IsListenServerHost() or ply:IsAdmin()))
     end
 
     local function hasServerSettingsState()

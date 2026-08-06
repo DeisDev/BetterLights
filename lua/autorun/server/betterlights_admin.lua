@@ -148,7 +148,10 @@ if SERVER then
     end
 
     local function canChangeServerSettings(ply)
-        return not IsValid(ply) or game.SinglePlayer() or ply:IsAdmin()
+        return not IsValid(ply)
+            or game.SinglePlayer()
+            or ply:IsListenServerHost()
+            or ply:IsAdmin()
     end
 
     BL.CanChangeServerSettings = canChangeServerSettings
