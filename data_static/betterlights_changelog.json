@@ -1,5 +1,12 @@
 [
   {
+    "version": "v1.6.0-beta16",
+    "title": "Better Lights v1.6.0-beta16",
+    "items": [
+      "Fixed the player hosting a multiplayer game being unable to change Better Lights server settings unless they were also marked as an admin."
+    ]
+  },
+  {
     "version": "v1.6.0-beta15",
     "title": "Better Lights v1.6.0-beta15",
     "items": [
