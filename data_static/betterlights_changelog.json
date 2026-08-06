@@ -1,5 +1,13 @@
 [
   {
+    "version": "v1.6.0-beta15",
+    "title": "Better Lights v1.6.0-beta15",
+    "items": [
+      "Added a personal flashlight attachment blacklist, including a shortcut for blacklisting the held weapon.",
+      "Fixed flashlight placement when using the Hands weapon in Hide and Seek."
+    ]
+  },
+  {
     "version": "v1.6.0-beta14",
     "title": "Better Lights v1.6.0-beta14",
     "items": [
