@@ -172,9 +172,6 @@ if CLIENT then
     -- Common SWEP attachment conventions. This list is intentionally broad for flashlight compatibility.
     local ATTACHMENT_NAMES = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
     local PLAYER_EYE_ATTACHMENT_NAMES = { "eyes" }
-    local VIEW_ORIGIN_WEAPONS = {
-        weapon_crowbar = true
-    }
 
     local projectors = {}
     local projectorData = {}
@@ -420,7 +417,7 @@ if CLIENT then
 
         local activeWeapon = ply:GetActiveWeapon()
         if not IsValid(activeWeapon) then return end
-        if VIEW_ORIGIN_WEAPONS[activeWeapon:GetClass()] then return end
+        if FL.IsWeaponAttachmentBlacklisted(activeWeapon) then return end
         if integrationUsesViewOrigin(ply, localPlayer, activeWeapon) then return end
 
         local attachment = getIntegrationAttachmentTransform(ply, localPlayer, activeWeapon)

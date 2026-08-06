@@ -539,6 +539,12 @@ if CLIENT then
                 phrase("dialog.reset_personal_settings.title"),
                 phrase("button.reset_personal_settings"),
                 function()
+                    local flashlightCleared = BetterLights.Flashlight.ClearWeaponAttachmentBlacklist()
+                    if not flashlightCleared then
+                        notify("notice.flashlight_attachment_blacklist_save_failed", NOTIFY_ERROR, 4)
+                        return
+                    end
+
                     local cleared = BetterLights.MuzzleFlash.ClearWeaponBlacklist()
                     if not cleared then
                         notify("notice.muzzle_blacklist_save_failed", NOTIFY_ERROR, 4)

@@ -1385,6 +1385,14 @@ if CLIENT then
                 betterlights_flashlight_attachment_offset = 2,
                 betterlights_flashlight_fallback_offset = 0,
             })
+
+            local blacklist = addSection(
+                panel,
+                "section.flashlight_attachment_blacklist",
+                "section.flashlight_attachment_blacklist.desc",
+                false
+            )
+            BetterLights.Flashlight.BuildWeaponAttachmentBlacklistEditor(blacklist)
         end)
 
     registerPage("Flashlight", "BL_FlashlightVisual", "menu.visual", function(panel)
