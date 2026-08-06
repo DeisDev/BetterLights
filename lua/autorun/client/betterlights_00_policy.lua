@@ -1,6 +1,11 @@
 if CLIENT then
     local BL = BetterLights
     local schema = BL.FLASHLIGHT_SETTING_DEFS
+    local SERVER_SETTINGS_RETRY_TIMER = "BetterLights_ServerSettingsRequestRetry"
+    local SERVER_SETTINGS_RETRY_DELAY = 1
+    local awaitingServerSettings = false
+
+    timer.Remove(SERVER_SETTINGS_RETRY_TIMER)
 
     local cvar_client_enable = BL.CreateClientConVar(
         "betterlights_client_enable",
@@ -178,6 +183,26 @@ if CLIENT then
         return true
     end
 
+    local function stopServerSettingsRequests()
+        awaitingServerSettings = false
+        timer.Remove(SERVER_SETTINGS_RETRY_TIMER)
+    end
+
+    local function requestServerSettingsUntilReceived()
+        awaitingServerSettings = true
+
+        timer.Create(SERVER_SETTINGS_RETRY_TIMER, SERVER_SETTINGS_RETRY_DELAY, 0, function()
+            if not awaitingServerSettings then
+                timer.Remove(SERVER_SETTINGS_RETRY_TIMER)
+                return
+            end
+
+            BL.RequestServerSettings()
+        end)
+
+        BL.RequestServerSettings()
+    end
+
     function BL.SubmitServerSettings(state)
         if not IsValid(LocalPlayer()) then return false, "local_player_unavailable" end
 
@@ -193,9 +218,12 @@ if CLIENT then
     local function receiveServerSettings()
         local state, err = BL.ReadServerSettingsState()
         if not state then
+            stopServerSettingsRequests()
             hook.Run("BetterLights_ServerSettingsReceiveFailed", err)
             return
         end
+
+        stopServerSettingsRequests()
 
         local previousState = BL._serverSettingsState
         local previousEnabled = BL.IsEnabled()
@@ -226,14 +254,10 @@ if CLIENT then
     end)
 
     hook.Add("InitPostEntity", "BetterLights_RequestServerSettings", function()
-        BL.RequestServerSettings()
+        requestServerSettingsUntilReceived()
     end)
 
     hook.Add("OnReloaded", "BetterLights_RequestServerSettingsReload", function()
-        timer.Simple(0, BL.RequestServerSettings)
+        requestServerSettingsUntilReceived()
     end)
-
-    if IsValid(LocalPlayer()) then
-        timer.Simple(0, BL.RequestServerSettings)
-    end
 end

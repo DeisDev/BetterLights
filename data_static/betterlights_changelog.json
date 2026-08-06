@@ -1,5 +1,12 @@
 [
   {
+    "version": "v1.6.0-beta14",
+    "title": "Better Lights v1.6.0-beta14",
+    "items": [
+      "Fixed Better Lights staying disabled after transitioning between campaign levels."
+    ]
+  },
+  {
     "version": "v1.6.0-beta13",
     "title": "Better Lights v1.6.0-beta13",
     "items": [
