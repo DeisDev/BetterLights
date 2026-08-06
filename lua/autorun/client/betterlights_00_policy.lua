@@ -260,4 +260,7 @@ if CLIENT then
     hook.Add("OnReloaded", "BetterLights_RequestServerSettingsReload", function()
         requestServerSettingsUntilReceived()
     end)
+
+    -- Do not rely solely on InitPostEntity; another hook returning a value can stop later hooks from running.
+    requestServerSettingsUntilReceived()
 end

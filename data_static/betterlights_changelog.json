@@ -1,5 +1,12 @@
 [
   {
+    "version": "v1.6.0-beta17",
+    "title": "Better Lights v1.6.0-beta17",
+    "items": [
+      "Fixed Better Lights sometimes remaining disabled when starting a game until its server setting was reapplied."
+    ]
+  },
+  {
     "version": "v1.6.0-beta16",
     "title": "Better Lights v1.6.0-beta16",
     "items": [
