@@ -9,11 +9,11 @@ Better Lights adds extra dynamic lighting to weapons, NPCs, items, projectiles, 
 <!-- steam-workshop-stats:start -->
 [Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=3597784225)
 
-- Subscribers: **134,484**
-- Lifetime subscribers: **245,860**
-- Favorites: **12,437**
-- Views: **128,070**
-- Last updated: **2026-08-19**
+- Subscribers: **134,790**
+- Lifetime subscribers: **246,522**
+- Favorites: **12,453**
+- Views: **128,238**
+- Last updated: **2026-08-20**
 <!-- steam-workshop-stats:end -->
 
 > [!IMPORTANT]
