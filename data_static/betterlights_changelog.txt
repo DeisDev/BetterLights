@@ -9,6 +9,70 @@
 [*]Improved Rollermine lights and settings for regular, hacked, and temporary power-down states.
 [*]Polished the in-game changelog, which now opens after updates by default and includes a Never show again option.
 [*]Fixed flashlight placement on the Crossbow by preventing it from using weapon attachments.
+[*]Fixed player models sometimes blocking their own flashlight beams in third person or when viewed by other players.
+[*]Added separate flashlight attachment and position controls for first person, third person, and other players.
+[*]Added a personal flashlight attachment blacklist, including a shortcut for blacklisting the held weapon.
+[*]Fixed flashlight placement when using the Hands weapon in Hide and Seek.
+[*]Added compatibility with the Hexa Core Shield Generator, preventing its energy core from triggering repeated explosion lights.
+[*]Improved flashlight centering and close-range coverage with default and ARC9 weapons.
+[*]Added a global light budget that prioritizes important effects when scenes get crowded.
+[*]Added controls for dynamic, entity, and projected light limits.
+[*]Added optional distance fading and view-aware light prioritization.
+[*]Added optional persistent eye and ambient lights to supported NPC ragdolls.
+[*]Added configurable eye lights for player models, including first-person and multiplayer options.
+[*]Added flashlight, muzzle flash, projectile, and explosion compatibility for Customizable Weaponry 2.0 and TFA Base weapons.
+[*]Added menu controls for Combine Ball lighting targets, RPG explosion flashes, and showing the held crossbow light only while loaded.
+[*]Improved ARC9 flashlight placement so beams and lens flares follow the active attachment.
+[*]Improved ARC9 muzzle flashes so attachments, muzzle devices, and suppressors are handled more accurately.
+[*]Improved muzzle flash compatibility across supported weapon bases.
+[*]Fixed rapid repeated flashes sometimes replacing newer effects.
+[*]Fixed Hunter Chopper spotlights lingering when their attachment was unavailable.
+[*]Fixed fire lights remaining visible when their size or brightness was set to zero.
+[*]Improved flashlight input compatibility with other addons.
+[*]Improved settings profile saving and sharing with smaller files and compact profile codes.
+[*]Existing profile JSON can still be imported, viewed, and copied.
+[*]Fixed profiles and advanced muzzle flash rules reporting success when their files could not be saved.
+[*]Added server-wide flashlight settings.
+[*]Added a personal option to disable Better Lights.
+[*]Added a muzzle flash blacklist.
+[*]Improved the server and personal settings menus.
+[*]Improved flashlight lens flare placement and color.
+[*]Fixed gunfire lights appearing for some non-gun weapons.
+[*]Added advanced flashlight shadow settings.
+[*]Improved flashlight shadow stability near props.
+[*]Fixed scanner searchlights on some models.
+[*]Added flashlight lens flare settings.
+[*]Fixed the player flashlight freezing with some camera addons.
+[*]Added integration settings for MW Base, ArcCW, and ARC9.
+[*]Added M9K flashlight compatibility.
+[*]Fixed flashlight battery HUD compatibility with Oxygen and Stamina.
+[*]Fixed unwanted muzzle flashes on some NPC and NextBot attacks.
+[*]Added ArcCW flashlight and muzzle flash compatibility.
+[*]Fixed Better Lights flashlight sounds for nearby players.
+[*]Improved MW Base muzzle flash handling.
+[*]Better Lights flashlight can now attach to MW Base weapons.
+[*]Fixed eye glow appearing on some custom Combine NPC models.
+[*]Fixed profile resets not restoring every personal setting.
+[*]Fixed profile actions causing console errors for some players.
+[*]Moved settings profiles into their own Profiles category.
+[*]Added settings profiles for saving, loading, importing, and exporting personal settings.
+[*]Added a personal settings reset option to the Profiles page.
+[*]Added impact lights for Stun Stick hits.
+[*]Added optional eye lights for Dog.
+[*]Improved explosion flashes and reduced false flashes from removed entities.
+[*]Improved scanner searchlights so they aim more reliably and shine farther.
+[*]Improved muzzle flash placement for weapons with real muzzle attachments.
+[*]Improved ARC9 muzzle flash handling.
+[*]Improved held and dropped weapon light placement.
+[*]Improved flashlight weapon attachment handling.
+[*]Improved scanner lights, searchlights, and cleanup.
+[*]Improved the settings menu layout and help text spacing.
+[*]Improved flashlight and spotlight update handling.
+[*]Improved Antlion Worker glow placement.
+[*]Fixed shotgun muzzle flashes creating extra lights per shot.
+[*]Fixed unsupported weapons showing muzzle flashes from the player position.
+[*]Fixed the Combine Mine idle glow toggle.
+[*]Fixed scanner searchlight settings when changed after loading.
 [/list]
 
 [b]Better Lights v1.6.0-beta18[/b]
