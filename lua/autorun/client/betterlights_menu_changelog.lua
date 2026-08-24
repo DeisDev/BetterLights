@@ -1,6 +1,22 @@
 if CLIENT then
 
-    local MENU = BetterLights.Menu
+    local BL = BetterLights
+    local MENU = BL.Menu
+
+    local AUTO_OPEN_TIMER = "BetterLights_AutoOpenChangelog"
+    local SEEN_VERSION_COOKIE = "betterlights_changelog_seen_version"
+    local cvar_auto_open = BL.CreateClientConVar(
+        "betterlights_changelog_auto_open",
+        "0",
+        true,
+        false,
+        "Show the Better Lights changelog once after the addon updates",
+        0,
+        1,
+        { includeInProfiles = false }
+    )
+
+    timer.Remove(AUTO_OPEN_TIMER)
 
     local function phrase(key)
         return MENU.Phrase and MENU.Phrase(key) or language.GetPhrase("betterlights." .. key)
@@ -22,6 +38,18 @@ if CLIENT then
         if normalized then return "v" .. normalized end
 
         return version
+    end
+
+    local function getCurrentVersion()
+        return normalizeVersion(BL.VERSION)
+    end
+
+    local function markVersionSeen(version)
+        version = normalizeVersion(version)
+        if version == "" then return false end
+
+        cookie.Set(SEEN_VERSION_COOKIE, version)
+        return true
     end
 
     local function readChangelogJson()
@@ -70,7 +98,7 @@ if CLIENT then
     end
 
     local function getChangelogEntries()
-        local currentVersion = normalizeVersion(BetterLights.VERSION)
+        local currentVersion = getCurrentVersion()
         local entries = parseChangelogJsonEntries(readChangelogJson())
 
         local currentIndex
@@ -161,6 +189,7 @@ if CLIENT then
         frame:SetSize(math.min(ScrW() - 80, 780), math.min(ScrH() - 80, 560))
         frame:Center()
         frame:MakePopup()
+        markVersionSeen(currentVersion)
 
         local body = vgui.Create("DPanel", frame)
         body:Dock(FILL)
@@ -265,5 +294,30 @@ if CLIENT then
         end
 
         selectEntry(currentEntry or entries[1], currentButton or firstButton)
+    end
+
+    local function checkForUpdatedChangelog()
+        local currentVersion = getCurrentVersion()
+        if currentVersion == "" then return end
+
+        local seenVersion = normalizeVersion(cookie.GetString(SEEN_VERSION_COOKIE, ""))
+        if not cvar_auto_open:GetBool() or seenVersion == "" then
+            markVersionSeen(currentVersion)
+            return
+        end
+
+        if seenVersion ~= currentVersion then
+            MENU.OpenChangelogWindow()
+        end
+    end
+
+    local function queueUpdatedChangelogCheck()
+        timer.Create(AUTO_OPEN_TIMER, 1, 1, checkForUpdatedChangelog)
+    end
+
+    hook.Add("InitPostEntity", "BetterLights_AutoOpenChangelog", queueUpdatedChangelogCheck)
+
+    if IsValid(LocalPlayer()) then
+        queueUpdatedChangelogCheck()
     end
 end

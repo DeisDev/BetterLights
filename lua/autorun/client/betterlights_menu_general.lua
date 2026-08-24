@@ -531,6 +531,10 @@ if CLIENT then
         end
         MENU.AddHelpText(client, phrase("help.optional_bind"))
 
+        local updates = MENU.AddSection(panel, "section.changelog_updates", "section.changelog_updates.desc", true)
+        updates:CheckBox(phrase("control.auto_open_changelog"), "betterlights_changelog_auto_open")
+        MENU.AddHelpText(updates, phrase("help.auto_open_changelog"))
+
         local maintenance = MENU.AddSection(panel, "section.personal_maintenance", "section.personal_maintenance.desc", true)
         local reset = MENU.AddStyledButton(maintenance, phrase("button.reset_personal_settings"))
         reset.DoClick = function()
