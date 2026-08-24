@@ -14,20 +14,20 @@ if CLIENT then
     end
 
     local CATEGORY_DEFS = {
-        { "General", "category.general" },
-        { "Admin", "category.admin" },
-        { "Profiles", "category.profiles" },
-        { "Flashlight", "category.flashlight" },
-        { "Weapons", "category.weapons" },
-        { "Projectiles", "category.projectiles" },
-        { "NPCs", "category.npcs" },
-        { "Eye Glow", "category.eye_glow" },
-        { "Gunfire", "category.gunfire" },
-        { "Environment", "category.environment" },
-        { "Pickups", "category.pickups" },
-        { "Integrations", "category.integrations" },
-        { "Developer", "category.developer", developer = true },
-        { "About", "category.about" }
+        { "General", "category.general", icon = "icon16/cog.png" },
+        { "Profiles", "category.profiles", icon = "icon16/disk.png" },
+        { "Flashlight", "category.flashlight", icon = "icon16/lightbulb.png" },
+        { "Weapons", "category.weapons", icon = "icon16/gun.png" },
+        { "Gunfire", "category.gunfire", icon = "icon16/bomb.png" },
+        { "Projectiles", "category.projectiles", icon = "icon16/bullet_go.png" },
+        { "NPCs", "category.npcs", icon = "icon16/group.png" },
+        { "Eye Glow", "category.eye_glow", icon = "icon16/eye.png" },
+        { "Environment", "category.environment", icon = "icon16/world.png" },
+        { "Pickups", "category.pickups", icon = "icon16/box.png" },
+        { "Integrations", "category.integrations", icon = "icon16/plugin.png" },
+        { "Admin", "category.admin", icon = "icon16/shield.png" },
+        { "Developer", "category.developer", icon = "icon16/wrench.png", developer = true },
+        { "About", "category.about", icon = "icon16/information.png" }
     }
 
     local function phrase(key)
