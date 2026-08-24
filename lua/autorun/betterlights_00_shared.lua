@@ -11,7 +11,7 @@ BL.NET_SERVER_SETTINGS_STATE = "BetterLights_ServerSettings"
 BL.SERVER_MODE_DISABLED = 0
 BL.SERVER_MODE_ENABLED = 1
 BL.SERVER_MODE_PLAYER_CHOICE = 2
-BL.SERVER_SETTINGS_PROTOCOL_VERSION = 2
+BL.SERVER_SETTINGS_PROTOCOL_VERSION = 3
 
 BL.NET_MUZZLE_FLASH = 1
 BL.NET_BULLET_IMPACT = 2
@@ -389,6 +389,16 @@ do
             section = "position_world",
             sectionKey = "section.flashlight_position_world",
             labelKey = "control.view_origin_side_offset"
+        },
+        {
+            id = 30,
+            order = 30,
+            name = "betterlights_flashlight_world_spill",
+            type = "bool",
+            default = false,
+            section = "position_world",
+            sectionKey = "section.flashlight_position_world",
+            labelKey = "control.flashlight_world_spill"
         }
     }
 

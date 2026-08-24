@@ -1,5 +1,12 @@
 [
   {
+    "version": "v1.6.0-beta19",
+    "title": "Better Lights v1.6.0-beta19",
+    "items": [
+      "Added an optional third-person flashlight spill light to imitate reflected light around players."
+    ]
+  },
+  {
     "version": "v1.6.0-beta18",
     "title": "Better Lights v1.6.0-beta18",
     "items": [

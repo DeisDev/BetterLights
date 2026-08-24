@@ -113,6 +113,7 @@ if CLIENT then
     local cvar_world_forward_offset = BL.CreateClientConVar("betterlights_flashlight_world_forward_offset", "16", true, false, "Extra forward offset for third-person and other-player flashlight beams", -32, 96)
     local cvar_world_attachment_offset = BL.CreateClientConVar("betterlights_flashlight_world_attachment_offset", "2", true, false, "Side offset for world-weapon-attached flashlights", -24, 24)
     local cvar_world_view_origin_offset = BL.CreateClientConVar("betterlights_flashlight_world_fallback_offset", "0", true, false, "Side offset for third-person and other-player view-origin flashlights", -24, 24)
+    local cvar_world_spill = BL.CreateClientConVar("betterlights_flashlight_world_spill", "0", true, false, "Add a point light at third-person and other-player flashlight sources", 0, 1)
     local cvar_brightness = BL.CreateClientConVar("betterlights_flashlight_brightness", "1.35", true, false, "Flashlight brightness")
     local cvar_color_r = BL.CreateClientConVar("betterlights_flashlight_color_r", "255", true, false, "Flashlight color - red (0-255)")
     local cvar_color_g = BL.CreateClientConVar("betterlights_flashlight_color_g", "245", true, false, "Flashlight color - green (0-255)")
@@ -173,6 +174,11 @@ if CLIENT then
     local ATTACHMENT_OFFSET_DOWN = 2
     local VEHICLE_OFFSET_FORWARD = 18
     local VEHICLE_OFFSET_DOWN = 1
+    local WORLD_SPILL_SIZE = 128
+    local WORLD_SPILL_BRIGHTNESS_SCALE = 0.35
+    local WORLD_SPILL_LIGHT_OPTIONS = {
+        priority = BL.LIGHT_PRIORITY_AMBIENT
+    }
     -- Common SWEP attachment conventions. This list is intentionally broad for flashlight compatibility.
     local ATTACHMENT_NAMES = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
     local PLAYER_EYE_ATTACHMENT_NAMES = { "eyes" }
@@ -192,6 +198,8 @@ if CLIENT then
     local projectors = {}
     local projectorData = {}
     local flarePixVis = {}
+    BL._flashlightWorldSpillLightIds = BL._flashlightWorldSpillLightIds or {}
+    setmetatable(BL._flashlightWorldSpillLightIds, { __mode = "k" })
     local knownTextureCache
     local traceData = {
         mins = Vector(-4, -4, -4),
@@ -508,6 +516,33 @@ if CLIENT then
         )
     end
 
+    local function getWorldSpillLightId(ply)
+        local id = BL._flashlightWorldSpillLightIds[ply]
+        if id then return id end
+
+        id = BL.NewLightId(90000)
+        BL._flashlightWorldSpillLightIds[ply] = id
+        return id
+    end
+
+    local function updateWorldSpillLight(ply, localPlayer, pos, color, brightness)
+        if isFirstPersonView(ply, localPlayer) then return end
+        if not getEffectiveBool(cvar_world_spill) then return end
+
+        BL.CreateDLight(
+            getWorldSpillLightId(ply),
+            pos,
+            color.r,
+            color.g,
+            color.b,
+            brightness * WORLD_SPILL_BRIGHTNESS_SCALE,
+            0,
+            WORLD_SPILL_SIZE,
+            false,
+            WORLD_SPILL_LIGHT_OPTIONS
+        )
+    end
+
     local function getSmoothedAngle(data, ang)
         if not getEffectiveBool(cvar_sway) then
             data.smoothAng = nil
@@ -562,7 +597,10 @@ if CLIENT then
         local wallDist = getWallDistance(ply, pos, ang)
         local distance = math.Clamp(getEffectiveNumber(cvar_distance), MIN_DISTANCE, MAX_DISTANCE)
         local flashlightColor = getFlashlightColor()
+        local brightness = getBrightness(ply, wallDist)
         data.flashlightColor = flashlightColor
+
+        updateWorldSpillLight(ply, localPlayer, data.flarePos, flashlightColor, brightness)
 
         BL.UpdateProjectedTexture(lamp, {
             texture = getTexturePath(),
@@ -571,7 +609,7 @@ if CLIENT then
             nearZ = NEAR_Z,
             farZ = distance,
             fov = getFOV(wallDist),
-            brightness = getBrightness(ply, wallDist),
+            brightness = brightness,
             color = flashlightColor,
             shadows = getEffectiveBool(cvar_shadows),
             shadowDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_depth_bias)),

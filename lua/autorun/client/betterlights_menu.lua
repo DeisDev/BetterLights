@@ -1399,6 +1399,8 @@ if CLIENT then
             addHelpText(world, phrase("help.attached_side_offset"))
             addFlashlightSlider(world, phrase("control.view_origin_side_offset"), "betterlights_flashlight_world_fallback_offset", -24, 24, 1)
             addHelpText(world, phrase("help.view_origin_side_offset"))
+            addFlashlightCheckbox(world, phrase("control.flashlight_world_spill"), "betterlights_flashlight_world_spill")
+            addHelpText(world, phrase("help.flashlight_world_spill"))
 
             addFlashlightResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
@@ -1409,6 +1411,7 @@ if CLIENT then
                 betterlights_flashlight_world_forward_offset = 16,
                 betterlights_flashlight_world_attachment_offset = 2,
                 betterlights_flashlight_world_fallback_offset = 0,
+                betterlights_flashlight_world_spill = 0,
             })
 
             local blacklist = addSection(
