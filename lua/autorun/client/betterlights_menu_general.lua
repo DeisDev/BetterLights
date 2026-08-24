@@ -603,7 +603,6 @@ if CLIENT then
         MENU.TrackClientSettingsPanel(panel, buildClientPage)
         MENU.SetupPage(panel, "page.client.title", "page.client.desc")
         addClientPreferenceSection(panel)
-        MENU.AddSettingsAccessControls(panel, { showOpenButton = false })
 
         local phrase = MENU.Phrase
 

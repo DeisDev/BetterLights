@@ -15,6 +15,7 @@ if CLIENT then
 
     local CATEGORY_DEFS = {
         { "General", "category.general", icon = "icon16/cog.png" },
+        { "Appearance", "category.appearance", icon = "icon16/application_view_tile.png" },
         { "Profiles", "category.profiles", icon = "icon16/disk.png" },
         { "Flashlight", "category.flashlight", icon = "icon16/lightbulb.png" },
         { "Weapons", "category.weapons", icon = "icon16/gun.png" },
@@ -102,6 +103,7 @@ if CLIENT then
 
         registeringPages = true
         MENU.RegisterGeneralPanel()
+        MENU.RegisterAppearancePanel()
         MENU.RegisterGunfirePanels()
         MENU.RegisterWeaponPanels()
         addClientPanels()

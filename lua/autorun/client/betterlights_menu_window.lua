@@ -14,12 +14,21 @@ if CLIENT then
     local DEFAULT_NAVIGATION_WIDTH = 230
     local MIN_NAVIGATION_WIDTH = 170
     local MIN_CONTENT_WIDTH = 420
+    local DEFAULT_WINDOW_OPACITY = 100
+    local MIN_WINDOW_OPACITY = 50
+    local DEFAULT_NAVIGATION_ICONS = true
+    local DEFAULT_COMPACT_NAVIGATION = false
+    local DEFAULT_TREE_LINE_HEIGHT = 22
+    local COMPACT_TREE_LINE_HEIGHT = 18
     local COOKIE_WINDOW_X = "betterlights_menu_window_x"
     local COOKIE_WINDOW_Y = "betterlights_menu_window_y"
     local COOKIE_WINDOW_WIDTH = "betterlights_menu_window_width"
     local COOKIE_WINDOW_HEIGHT = "betterlights_menu_window_height"
     local COOKIE_NAVIGATION_WIDTH = "betterlights_menu_navigation_width"
     local COOKIE_LAST_PAGE = "betterlights_menu_last_page"
+    local COOKIE_WINDOW_OPACITY = "betterlights_menu_window_opacity"
+    local COOKIE_NAVIGATION_ICONS = "betterlights_menu_navigation_icons"
+    local COOKIE_COMPACT_NAVIGATION = "betterlights_menu_compact_navigation"
     local bindListenerKey = KEY_NONE
     local bindListenerArmed = false
     local suppressBindToggleUntilRelease = false
@@ -28,6 +37,41 @@ if CLIENT then
 
     local function phrase(key)
         return MENU.Phrase(key)
+    end
+
+    local function readCookieNumber(name, fallback)
+        local value = cookie.GetNumber(name, fallback)
+        if not isnumber(value) or value ~= value or value == math.huge or value == -math.huge then
+            return fallback
+        end
+
+        return math.floor(value)
+    end
+
+    local function readCookieBool(name, fallback)
+        local value = readCookieNumber(name, fallback and 1 or 0)
+        if value ~= 0 and value ~= 1 then return fallback end
+        return value == 1
+    end
+
+    local function getWindowOpacity()
+        return math.Clamp(
+            readCookieNumber(COOKIE_WINDOW_OPACITY, DEFAULT_WINDOW_OPACITY),
+            MIN_WINDOW_OPACITY,
+            100
+        )
+    end
+
+    local function getNavigationIconsEnabled()
+        return readCookieBool(COOKIE_NAVIGATION_ICONS, DEFAULT_NAVIGATION_ICONS)
+    end
+
+    local function getNavigationLineHeight()
+        if readCookieBool(COOKIE_COMPACT_NAVIGATION, DEFAULT_COMPACT_NAVIGATION) then
+            return COMPACT_TREE_LINE_HEIGHT
+        end
+
+        return DEFAULT_TREE_LINE_HEIGHT
     end
 
     MENU._lastPageId = MENU._lastPageId or cookie.GetString(COOKIE_LAST_PAGE, DEFAULT_PAGE_ID)
@@ -315,8 +359,8 @@ if CLIENT then
         local tree = vgui.Create("DTree", self.Navigation)
         tree:Dock(FILL)
         tree:DockMargin(0, 6, 0, 0)
-        tree:SetLineHeight(22)
-        tree:SetShowIcons(true)
+        tree:SetLineHeight(getNavigationLineHeight())
+        tree:SetShowIcons(getNavigationIconsEnabled())
 
         local owner = self
         tree.OnNodeSelected = function(_, node)
@@ -530,15 +574,6 @@ if CLIENT then
 
     vgui.Register("BetterLightsSettingsPanel", SETTINGS_PANEL, "DPanel")
 
-    local function readCookieNumber(name, fallback)
-        local value = cookie.GetNumber(name, fallback)
-        if not isnumber(value) or value ~= value or value == math.huge or value == -math.huge then
-            return fallback
-        end
-
-        return math.floor(value)
-    end
-
     local function getFrameLimits()
         local maxWidth = math.max(320, ScrW() - WINDOW_MARGIN)
         local maxHeight = math.max(300, ScrH() - WINDOW_MARGIN)
@@ -602,6 +637,123 @@ if CLIENT then
         end
     end
 
+    local function applyWindowAppearance(frame)
+        if not IsValid(frame) then return end
+
+        frame:SetAlpha(math.floor(getWindowOpacity() * 2.55 + 0.5))
+
+        local settingsPanel = frame.SettingsPanel
+        if not (IsValid(settingsPanel) and IsValid(settingsPanel.Tree)) then return end
+
+        settingsPanel.Tree:SetShowIcons(getNavigationIconsEnabled())
+        settingsPanel.Tree:SetLineHeight(getNavigationLineHeight())
+        settingsPanel.Tree:InvalidateLayout(true)
+    end
+
+    local function resetWindowLayout(frame)
+        cookie.Delete(COOKIE_WINDOW_X)
+        cookie.Delete(COOKIE_WINDOW_Y)
+        cookie.Delete(COOKIE_WINDOW_WIDTH)
+        cookie.Delete(COOKIE_WINDOW_HEIGHT)
+        cookie.Delete(COOKIE_NAVIGATION_WIDTH)
+
+        if not IsValid(frame) then return end
+
+        local x, y, width, height, minWidth, minHeight = getSavedFrameBounds()
+        frame:SetMinWidth(minWidth)
+        frame:SetMinHeight(minHeight)
+        frame:SetSize(width, height)
+        frame:SetPos(x, y)
+
+        if IsValid(frame.SettingsPanel) then
+            frame.SettingsPanel:UpdateDividerBounds(width, DEFAULT_NAVIGATION_WIDTH)
+        end
+    end
+
+    local function addAppearanceCheckBox(panel, labelKey, cookieName, defaultValue)
+        local checkBox = vgui.Create("DCheckBoxLabel")
+        checkBox:SetText(phrase(labelKey))
+        checkBox:SetDark(true)
+        checkBox:SetValue(readCookieBool(cookieName, defaultValue) and 1 or 0)
+        checkBox:SizeToContents()
+        panel:AddItem(checkBox)
+
+        checkBox.OnChange = function(_, value)
+            cookie.Set(cookieName, value and "1" or "0")
+            applyWindowAppearance(MENU._settingsFrame)
+        end
+        return checkBox
+    end
+
+    local function buildAppearancePage(panel)
+        MENU.SetupPage(panel, "page.settings_window.title", "page.settings_window.desc")
+
+        local window = MENU.AddSection(
+            panel,
+            "section.window_appearance",
+            "section.window_appearance.desc",
+            true
+        )
+        local opacity = vgui.Create("DNumSlider")
+        opacity:SetText(phrase("control.window_opacity"))
+        opacity:SetDark(true)
+        opacity:SetMinMax(MIN_WINDOW_OPACITY, 100)
+        opacity:SetDecimals(0)
+        opacity:SetDefaultValue(DEFAULT_WINDOW_OPACITY)
+        opacity:SetValue(getWindowOpacity())
+        window:AddItem(opacity)
+
+        opacity.OnValueChanged = function(_, value)
+            local rounded = math.Clamp(math.floor(value + 0.5), MIN_WINDOW_OPACITY, 100)
+            cookie.Set(COOKIE_WINDOW_OPACITY, tostring(rounded))
+            applyWindowAppearance(MENU._settingsFrame)
+        end
+
+        MENU.AddHelpText(window, phrase("help.window_opacity"))
+
+        local navigation = MENU.AddSection(
+            panel,
+            "section.window_navigation",
+            "section.window_navigation.desc",
+            true
+        )
+        addAppearanceCheckBox(
+            navigation,
+            "control.show_navigation_icons",
+            COOKIE_NAVIGATION_ICONS,
+            DEFAULT_NAVIGATION_ICONS
+        )
+        addAppearanceCheckBox(
+            navigation,
+            "control.compact_navigation",
+            COOKIE_COMPACT_NAVIGATION,
+            DEFAULT_COMPACT_NAVIGATION
+        )
+        MENU.AddHelpText(navigation, phrase("help.window_navigation"))
+
+        local layout = MENU.AddSection(panel, "section.window_resets", "section.window_resets.desc", false)
+        local resetAppearance = MENU.AddStyledButton(layout, phrase("button.reset_window_appearance"))
+        resetAppearance.DoClick = function()
+            cookie.Delete(COOKIE_WINDOW_OPACITY)
+            cookie.Delete(COOKIE_NAVIGATION_ICONS)
+            cookie.Delete(COOKIE_COMPACT_NAVIGATION)
+            applyWindowAppearance(MENU._settingsFrame)
+            MENU.RefreshSettingsWindow()
+        end
+
+        local resetLayout = MENU.AddStyledButton(layout, phrase("button.reset_window_layout"))
+        resetLayout.DoClick = function()
+            resetWindowLayout(MENU._settingsFrame)
+        end
+        MENU.AddHelpText(layout, phrase("help.window_layout"))
+
+        MENU.AddSettingsAccessControls(panel, { showOpenButton = false })
+    end
+
+    function MENU.RegisterAppearancePanel()
+        MENU.RegisterPage("Appearance", "BL_SettingsWindow", "page.settings_window.title", buildAppearancePage)
+    end
+
     if IsValid(MENU._settingsFrame) then
         saveFrameLayout(MENU._settingsFrame)
         MENU._settingsFrame:Remove()
@@ -618,6 +770,7 @@ if CLIENT then
 
         if IsValid(frame) then
             clampFrameToScreen(frame)
+            applyWindowAppearance(frame)
             frame:SetVisible(true)
             frame:MakePopup()
             frame:MoveToFront()
@@ -645,6 +798,7 @@ if CLIENT then
             readCookieNumber(COOKIE_NAVIGATION_WIDTH, DEFAULT_NAVIGATION_WIDTH)
         )
         frame.SettingsPanel:Refresh(pageId)
+        applyWindowAppearance(frame)
 
         frame.OnClose = function(self)
             saveFrameLayout(self)
