@@ -7,6 +7,7 @@ if CLIENT then
         MENU.SetupPage(panel, "page.npc_remains.title", "page.npc_remains.desc")
 
         local persistence = MENU.AddSection(panel, "section.npc_remains", "section.npc_remains.desc", true)
+        persistence.BetterLightsSkipAutoState = true
         persistence:CheckBox(
             phrase("control.keep_npc_eye_lights_after_death"),
             "betterlights_npc_ragdoll_eye_lights_enable"
@@ -44,6 +45,7 @@ if CLIENT then
         MENU.AddHelpText(behavior, phrase("help.player_eye_first_person"))
 
         local light = MENU.AddSection(panel, "section.player_eye_light", nil, true)
+        MENU.BeginControlGroup(light, "betterlights_player_eye_enable")
         MENU.AddLightControls(light, "betterlights_player_eye", {
             enableLabel = false,
             radiusMax = 400,

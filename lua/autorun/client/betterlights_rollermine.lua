@@ -24,15 +24,15 @@ if CLIENT then
     local rm2_r = BL.CreateClientConVar("betterlights_rollermine_skin2_color_r", "255", true, false, "Rollermine skin2 (red) color - red (0-255)")
     local rm2_g = BL.CreateClientConVar("betterlights_rollermine_skin2_color_g", "80", true, false, "Rollermine skin2 (red) color - green (0-255)")
     local rm2_b = BL.CreateClientConVar("betterlights_rollermine_skin2_color_b", "80", true, false, "Rollermine skin2 (red) color - blue (0-255)")
-    local skinColors = {
-        [0] = function() return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b) end,
-        [1] = function() return BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b) end,
-        [2] = function() return BL.GetColorFromCvars(rm2_r, rm2_g, rm2_b) end
-    }
+    local function BL_GetRollermineColor(hacked, skin)
+        if skin == 2 then
+            return BL.GetColorFromCvars(rm2_r, rm2_g, rm2_b)
+        end
 
-    local function BL_GetRollermineColor(ent)
-        local colorFn = BL.DetectSkinVariant(ent, skinColors)
-        if colorFn then return colorFn() end
+        if hacked or skin == 1 then
+            return BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b)
+        end
+
         return BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b)
     end
 
@@ -40,9 +40,10 @@ if CLIENT then
         return BL.DetectEntityVariant(ent, {
             debugName = "hacked rollermine",
             debugCvar = cvar_debug,
-            nwBools = { "m_bHacked", "hacked", "isHacked", "friendly", "is_friendly", "IsFriendly" },
-            saveTableKeys = { "m_bHacked", "m_bIsHacked", "hacked" },
-            checkDisposition = true
+            nwBools = { "m_bHackedByAlyx", "m_bHacked", "hacked", "isHacked", "friendly", "is_friendly", "IsFriendly" },
+            saveTableKeys = { "m_bHackedByAlyx", "m_bHacked", "m_bIsHacked", "hacked" },
+            checkDisposition = true,
+            skin = 1
         })
     end
 
@@ -65,22 +66,15 @@ if CLIENT then
             local pos = BL.GetEntityCenter(ragdoll)
             if not pos then return end
 
-            local r, g, b
+            local r, g, b = BL_GetRollermineColor(hacked, data.skin)
             local size, brightness, decay, useElight, elightMult
             if hacked then
-                r, g, b = BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b)
                 size = math.max(0, cvar_h_size:GetFloat())
                 brightness = math.max(0, cvar_h_brightness:GetFloat())
                 decay = math.max(0, cvar_h_decay:GetFloat())
                 useElight = cvar_h_models_elight:GetBool()
                 elightMult = math.max(0, cvar_h_models_elight_mult:GetFloat())
             else
-                local colorFn = skinColors[data.skin]
-                if colorFn then
-                    r, g, b = colorFn()
-                else
-                    r, g, b = BL.GetColorFromCvars(rm0_r, rm0_g, rm0_b)
-                end
                 size = math.max(0, cvar_size:GetFloat())
                 brightness = math.max(0, cvar_brightness:GetFloat())
                 decay = math.max(0, cvar_decay:GetFloat())
@@ -146,17 +140,15 @@ if CLIENT then
                 end
             end
 
-            local r, g, b
+            local r, g, b = BL_GetRollermineColor(hacked, ent.GetSkin and ent:GetSkin() or 0)
             local size, brightness, decay, use_elight, el_mult
             if hacked then
-                r, g, b = BL.GetColorFromCvars(rm1_r, rm1_g, rm1_b)
                 size = math.max(0, cvar_h_size:GetFloat())
                 brightness = math.max(0, cvar_h_brightness:GetFloat())
                 decay = math.max(0, cvar_h_decay:GetFloat())
                 use_elight = cvar_h_models_elight:GetBool()
                 el_mult = math.max(0, cvar_h_models_elight_mult:GetFloat())
             else
-                r, g, b = BL_GetRollermineColor(ent)
                 size = math.max(0, cvar_size:GetFloat())
                 brightness = math.max(0, cvar_brightness:GetFloat())
                 decay = math.max(0, cvar_decay:GetFloat())

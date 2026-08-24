@@ -38,7 +38,17 @@ if CLIENT then
             panel:CheckBox(phrase("control.add_model_elight"), "betterlights_physgun_models_elight")
             panel:NumSlider(phrase("control.model_elight_radius"), "betterlights_physgun_models_elight_size_mult", 0, 3, 2)
             panel:CheckBox(phrase("control.override_weapon_color"), "betterlights_physgun_color_override")
-            addColorMixerControl(panel, "control.override_color", "betterlights_physgun_color_r", "betterlights_physgun_color_g", "betterlights_physgun_color_b")
+            addColorMixerControl(
+                panel,
+                "control.override_color",
+                "betterlights_physgun_color_r",
+                "betterlights_physgun_color_g",
+                "betterlights_physgun_color_b",
+                nil,
+                nil,
+                nil,
+                "betterlights_physgun_color_override"
+            )
             addResetButton(panel, {
                 betterlights_physgun_enable = 1,
                 betterlights_physgun_size = 33,

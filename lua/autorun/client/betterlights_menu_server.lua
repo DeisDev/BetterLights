@@ -199,11 +199,13 @@ if CLIENT then
             selected = staged.values[def.name] and BL.SERVER_MODE_ENABLED or BL.SERVER_MODE_DISABLED
         end
 
-        local combo, label = addLabeledCombo(section, MENU.Phrase(def.serverLabelKey or def.labelKey), selected)
+        local settingLabel = MENU.Phrase(def.serverLabelKey or def.labelKey)
+        local combo, label = addLabeledCombo(section, settingLabel, selected)
         refreshers[#refreshers + 1] = function()
             local enabled = editable and isSettingRelevant(staged, def.name)
-            label:SetEnabled(enabled)
-            combo:SetEnabled(enabled)
+            label:SetText(enabled and settingLabel or MENU.PhraseFormat("state.unavailable_label", settingLabel))
+            MENU.SetControlLocked(label, not enabled)
+            MENU.SetControlLocked(combo, not enabled)
         end
         combo.OnSelect = function(_, _, _, data)
             staged.overrides[def.name] = data ~= BL.SERVER_MODE_PLAYER_CHOICE
@@ -217,13 +219,15 @@ if CLIENT then
 
     local function addNumberSetting(section, def, staged, editable, refreshers, onChanged)
         local override = vgui.Create("DCheckBoxLabel")
-        override:SetText(MENU.PhraseFormat("control.override_setting", MENU.Phrase(def.labelKey)))
+        local overrideLabel = MENU.PhraseFormat("control.override_setting", MENU.Phrase(def.labelKey))
+        local valueLabel = MENU.Phrase(def.labelKey)
+        override:SetText(overrideLabel)
         override:SetValue(staged.overrides[def.name] and 1 or 0)
         override:SizeToContents()
         section:AddItem(override)
 
         local slider = vgui.Create("DNumSlider")
-        slider:SetText(MENU.Phrase(def.labelKey))
+        slider:SetText(valueLabel)
         slider:SetMinMax(def.min, def.max)
         slider:SetDecimals(def.decimals or 0)
         slider:SetValue(tonumber(staged.values[def.name]) or def.default)
@@ -231,8 +235,19 @@ if CLIENT then
 
         refreshers[#refreshers + 1] = function()
             local relevant = isSettingRelevant(staged, def.name)
-            override:SetEnabled(editable and relevant)
-            slider:SetEnabled(editable and relevant and staged.overrides[def.name])
+            local canOverride = editable and relevant
+            local valueActive = canOverride and staged.overrides[def.name]
+            override:SetText(canOverride and overrideLabel or MENU.PhraseFormat("state.unavailable_label", overrideLabel))
+            override:SizeToContents()
+            if not canOverride then
+                slider:SetText(MENU.PhraseFormat("state.unavailable_label", valueLabel))
+            elseif valueActive then
+                slider:SetText(valueLabel)
+            else
+                slider:SetText(MENU.PhraseFormat("state.player_choice_label", valueLabel))
+            end
+            MENU.SetControlLocked(override, not canOverride)
+            MENU.SetControlLocked(slider, not valueActive)
         end
 
         slider.OnValueChanged = function(_, value)
@@ -252,14 +267,16 @@ if CLIENT then
             or staged.overrides[COLOR_NAMES.b]
 
         local override = vgui.Create("DCheckBoxLabel")
-        override:SetText(MENU.Phrase("control.override_flashlight_color"))
+        local overrideLabel = MENU.Phrase("control.override_flashlight_color")
+        local mixerLabel = MENU.Phrase("control.flashlight_color")
+        override:SetText(overrideLabel)
         override:SetValue(forced and 1 or 0)
         override:SizeToContents()
         section:AddItem(override)
 
         local mixer = vgui.Create("DColorMixer")
         mixer:SetTall(220)
-        mixer:SetLabel(MENU.Phrase("control.flashlight_color"))
+        mixer:SetLabel(mixerLabel)
         mixer:SetPalette(true)
         mixer:SetAlphaBar(false)
         mixer:SetWangs(true)
@@ -275,8 +292,19 @@ if CLIENT then
             local overridden = staged.overrides[COLOR_NAMES.r]
                 or staged.overrides[COLOR_NAMES.g]
                 or staged.overrides[COLOR_NAMES.b]
-            override:SetEnabled(editable and relevant)
-            mixer:SetEnabled(editable and relevant and overridden)
+            local canOverride = editable and relevant
+            local valueActive = canOverride and overridden
+            override:SetText(canOverride and overrideLabel or MENU.PhraseFormat("state.unavailable_label", overrideLabel))
+            override:SizeToContents()
+            if not canOverride then
+                mixer:SetLabel(MENU.PhraseFormat("state.unavailable_label", mixerLabel))
+            elseif valueActive then
+                mixer:SetLabel(mixerLabel)
+            else
+                mixer:SetLabel(MENU.PhraseFormat("state.player_choice_label", mixerLabel))
+            end
+            MENU.SetControlLocked(override, not canOverride)
+            MENU.SetControlLocked(mixer, not valueActive)
         end
 
         mixer.ValueChanged = function(_, color)
@@ -298,7 +326,8 @@ if CLIENT then
     local function addTextureSetting(section, staged, editable, refreshers, onChanged, rebuild)
         local lastValidValue = tostring(staged.values[TEXTURE_NAME] or "")
         local override = vgui.Create("DCheckBoxLabel")
-        override:SetText(MENU.Phrase("control.override_flashlight_texture"))
+        local overrideLabel = MENU.Phrase("control.override_flashlight_texture")
+        override:SetText(overrideLabel)
         override:SetValue(staged.overrides[TEXTURE_NAME] and 1 or 0)
         override:SizeToContents()
         section:AddItem(override)
@@ -310,8 +339,11 @@ if CLIENT then
 
         refreshers[#refreshers + 1] = function()
             local relevant = isSettingRelevant(staged, TEXTURE_NAME)
-            override:SetEnabled(editable and relevant)
-            entry:SetEnabled(editable and relevant and staged.overrides[TEXTURE_NAME])
+            local canOverride = editable and relevant
+            override:SetText(canOverride and overrideLabel or MENU.PhraseFormat("state.unavailable_label", overrideLabel))
+            override:SizeToContents()
+            MENU.SetControlLocked(override, not canOverride)
+            MENU.SetControlLocked(entry, not (canOverride and staged.overrides[TEXTURE_NAME]))
         end
 
         local validation = vgui.Create("DLabel")
@@ -483,9 +515,9 @@ if CLIENT then
         )
 
         if not serverStateReady then
-            MENU.AddHelpText(overview, MENU.Phrase("help.server_settings_loading"))
+            MENU.AddStateNotice(overview, MENU.Phrase("help.server_settings_loading"), true)
         elseif not editable then
-            MENU.AddHelpText(overview, MENU.Phrase("help.server_settings_read_only"))
+            MENU.AddStateNotice(overview, MENU.Phrase("help.server_settings_read_only"), true)
         end
 
         local usePersonal = MENU.AddStyledButton(overview, MENU.Phrase("button.use_personal_flashlight_values"))
@@ -568,13 +600,17 @@ if CLIENT then
 
         local policy = MENU.AddSection(panel, "section.server_policy", "section.server_policy.desc", true)
         if not serverStateReady then
-            MENU.AddHelpText(policy, MENU.Phrase("help.server_settings_loading"))
+            MENU.AddStateNotice(policy, MENU.Phrase("help.server_settings_loading"), true)
         elseif not editable then
-            MENU.AddHelpText(policy, MENU.Phrase("help.server_settings_read_only"))
+            MENU.AddStateNotice(policy, MENU.Phrase("help.server_settings_read_only"), true)
         end
 
-        local combo = addLabeledCombo(policy, MENU.Phrase("control.addon_mode"), selectedMode)
-        combo:SetEnabled(editable)
+        local modeLabel = MENU.Phrase("control.addon_mode")
+        local combo, label = addLabeledCombo(policy, modeLabel, selectedMode)
+        if not editable then
+            label:SetText(MENU.PhraseFormat("state.unavailable_label", modeLabel))
+        end
+        MENU.SetControlLocked(combo, not editable)
         combo.OnSelect = function(_, _, _, data)
             selectedMode = data
         end

@@ -159,7 +159,263 @@ if CLIENT then
 
     MENU.AddHelpText = addHelpText
 
+    local controlStateWatches = {}
+
+    local function getControlStateWatch(cvarName)
+        local watch = controlStateWatches[cvarName]
+        if watch then return watch end
+
+        watch = {
+            controls = setmetatable({}, { __mode = "k" }),
+            listeners = setmetatable({}, { __mode = "k" })
+        }
+        controlStateWatches[cvarName] = watch
+
+        local callbackId = "BetterLights_MenuControlState_" .. cvarName
+        cvars.RemoveChangeCallback(cvarName, callbackId)
+        cvars.AddChangeCallback(cvarName, function()
+            timer.Simple(0, function()
+                for control in pairs(watch.controls) do
+                    if IsValid(control) and control.BetterLightsRefreshEnabledState then
+                        control:BetterLightsRefreshEnabledState()
+                    else
+                        watch.controls[control] = nil
+                    end
+                end
+
+                for owner, callback in pairs(watch.listeners) do
+                    if IsValid(owner) then
+                        callback()
+                    else
+                        watch.listeners[owner] = nil
+                    end
+                end
+            end)
+        end, callbackId)
+
+        return watch
+    end
+
+    local function getConVarBool(cvarName)
+        local cvar = GetConVar(cvarName)
+        return not cvar or cvar:GetBool()
+    end
+
+    local function refreshControlEnabledState(control)
+        if not IsValid(control) then return end
+
+        local enabled = control.BetterLightsControlLocked ~= true
+        local rules = control.BetterLightsControlStateRules
+
+        if enabled and rules then
+            for i = 1, #rules do
+                if not rules[i].predicate() then
+                    enabled = false
+                    break
+                end
+            end
+        end
+
+        control:SetEnabled(enabled)
+    end
+
+    local function bindControlTreeToState(control, cvarName, predicate)
+        if not IsValid(control) then return end
+
+        control.BetterLightsControlStateRules = control.BetterLightsControlStateRules or {}
+        control.BetterLightsControlStateRules[#control.BetterLightsControlStateRules + 1] = {
+            cvarName = cvarName,
+            predicate = predicate
+        }
+        control.BetterLightsRefreshEnabledState = refreshControlEnabledState
+        getControlStateWatch(cvarName).controls[control] = true
+        refreshControlEnabledState(control)
+
+        for _, child in ipairs(control:GetChildren()) do
+            bindControlTreeToState(child, cvarName, predicate)
+        end
+    end
+
+    local function bindControlToConVar(control, cvarName, predicate)
+        if not isstring(cvarName) or cvarName == "" then return control end
+
+        predicate = predicate or function()
+            return getConVarBool(cvarName)
+        end
+        bindControlTreeToState(control, cvarName, predicate)
+        return control
+    end
+
+    local function setControlTreeLocked(control, locked)
+        if not IsValid(control) then return end
+
+        control.BetterLightsControlLocked = locked == true
+        refreshControlEnabledState(control)
+
+        for _, child in ipairs(control:GetChildren()) do
+            setControlTreeLocked(child, locked)
+        end
+    end
+
+    local function addStateNotice(panel, text, highlighted)
+        local label = vgui.Create("DLabel")
+        label:SetTall(30)
+        label:SetText(text)
+        label:SetFont("DermaDefaultBold")
+        label:SetWrap(true)
+        label:SetAutoStretchVertical(true)
+        label:SetDark(true)
+        label:SetHighlight(highlighted == true)
+        label:DockMargin(8, 4, 8, 8)
+        label.BetterLightsAlwaysEnabled = true
+        panel:AddItem(label)
+        return label
+    end
+
+    local function watchControlState(cvarName, owner, callback)
+        if not (isstring(cvarName) and IsValid(owner) and isfunction(callback)) then return end
+
+        getControlStateWatch(cvarName).listeners[owner] = callback
+    end
+
+    local function refreshControlGroup(group)
+        if not (group and IsValid(group.container)) then return end
+
+        local enabled = group.predicate()
+        if IsValid(group.notice) then
+            group.notice:SetVisible(not enabled)
+        end
+
+        if group.container.BetterLightsBaseName then
+            group.container:SetName(phraseFormat(
+                enabled and "state.section_enabled" or group.disabledTitleKey,
+                group.container.BetterLightsBaseName
+            ))
+        end
+
+        group.container:InvalidateLayout(true)
+    end
+
+    local function beginControlGroup(container, cvarName, predicate, options)
+        if not (IsValid(container) and isstring(cvarName) and cvarName ~= "") then return end
+
+        options = options or {}
+        predicate = predicate or function()
+            return getConVarBool(cvarName)
+        end
+
+        container.BetterLightsAddingStateNotice = true
+        local notice = addStateNotice(
+            container,
+            phrase(options.disabledHelpKey or "state.feature_disabled_help"),
+            options.highlighted == true
+        )
+        container.BetterLightsAddingStateNotice = nil
+
+        local group = {
+            container = container,
+            cvarName = cvarName,
+            predicate = predicate,
+            notice = notice,
+            disabledTitleKey = options.disabledTitleKey or "state.section_disabled"
+        }
+        container.BetterLightsActiveControlGroup = group
+        container.BetterLightsHasFeatureGroup = true
+
+        watchControlState(cvarName, notice, function()
+            refreshControlGroup(group)
+        end)
+        refreshControlGroup(group)
+        return group
+    end
+
+    local function endControlGroup(container)
+        if IsValid(container) then
+            container.BetterLightsActiveControlGroup = nil
+        end
+    end
+
+    local function getAutomaticDependency(cvarName)
+        local prefix = string.match(cvarName, "^(.*)_models_elight_size_mult$")
+        if prefix then return prefix .. "_models_elight" end
+
+        prefix = string.match(cvarName, "^(.*)_pulse_amount$")
+            or string.match(cvarName, "^(.*)_pulse_speed$")
+        if prefix then return prefix .. "_pulse_enable" end
+
+        prefix = string.match(cvarName, "^(.*)_flicker_amount$")
+            or string.match(cvarName, "^(.*)_flicker_size_amount$")
+            or string.match(cvarName, "^(.*)_flicker_speed$")
+        if prefix and GetConVar(prefix .. "_flicker_enable") then
+            return prefix .. "_flicker_enable"
+        end
+    end
+
+    local function prepareControlContainer(panel)
+        if not IsValid(panel) then return end
+
+        panel.BetterLightsActiveControlGroup = nil
+        panel.BetterLightsHasFeatureGroup = nil
+        if panel.BetterLightsTracksControlState then return end
+
+        panel.BetterLightsTracksControlState = true
+        local originalAddItem = panel.AddItem
+        panel.AddItem = function(self, left, right)
+            originalAddItem(self, left, right)
+
+            local group = self.BetterLightsActiveControlGroup
+            if not group or self.BetterLightsAddingStateNotice then return end
+
+            if IsValid(left) and not left.BetterLightsAlwaysEnabled then
+                bindControlToConVar(left, group.cvarName, group.predicate)
+            end
+
+            if IsValid(right) and not right.BetterLightsAlwaysEnabled then
+                bindControlToConVar(right, group.cvarName, group.predicate)
+            end
+        end
+
+        local originalCheckBox = panel.CheckBox
+        if originalCheckBox then
+            panel.CheckBox = function(self, label, cvarName)
+                local checkbox = originalCheckBox(self, label, cvarName)
+                checkbox.BetterLightsConVarName = cvarName
+
+                if not self.BetterLightsSkipAutoState
+                    and not self.BetterLightsHasFeatureGroup
+                    and isstring(cvarName)
+                    and string.EndsWith(cvarName, "_enable") then
+                    beginControlGroup(self, cvarName)
+                end
+
+                return checkbox
+            end
+        end
+
+        local originalNumSlider = panel.NumSlider
+        if originalNumSlider then
+            panel.NumSlider = function(self, label, cvarName, minimum, maximum, decimals)
+                local slider = originalNumSlider(self, label, cvarName, minimum, maximum, decimals)
+                slider.BetterLightsConVarName = cvarName
+
+                local dependency = isstring(cvarName) and getAutomaticDependency(cvarName)
+                if dependency then
+                    bindControlToConVar(slider, dependency)
+                end
+
+                return slider
+            end
+        end
+    end
+
+    MENU.AddStateNotice = addStateNotice
+    MENU.BindControlToConVar = bindControlToConVar
+    MENU.SetControlLocked = setControlTreeLocked
+    MENU.WatchControlState = watchControlState
+    MENU.BeginControlGroup = beginControlGroup
+
     local function addResetButton(panel, defaults, label)
+        endControlGroup(panel)
         local btn = addStyledButton(panel, label or phrase("button.reset_defaults"), phrase("tooltip.reset_defaults"))
         btn.DoClick = function()
             local resetDefaults = BetterLights.ResolveClientResetDefaults(defaults)
@@ -171,6 +427,9 @@ if CLIENT then
 
     local function setupPage(panel, titleKey, subtitleKey)
         panel:Clear()
+        panel.BetterLightsHasServerControlledHelp = nil
+        panel.BetterLightsSkipAutoState = nil
+        prepareControlContainer(panel)
 
         local titleLabel = vgui.Create("DLabel")
         titleLabel:SetTall(20)
@@ -187,9 +446,12 @@ if CLIENT then
     MENU.SetupPage = setupPage
 
     local function addSection(panel, titleKey, subtitleKey, expanded)
+        endControlGroup(panel)
         local form = vgui.Create("DForm")
-        form:SetName(phrase(titleKey))
+        form.BetterLightsBaseName = phrase(titleKey)
+        form:SetName(form.BetterLightsBaseName)
         form:SetExpanded(expanded ~= false)
+        prepareControlContainer(form)
 
         if subtitleKey and subtitleKey ~= "" then
             addHelpText(form, phrase(subtitleKey))
@@ -202,9 +464,12 @@ if CLIENT then
     MENU.AddSection = addSection
 
     local function addRawSection(panel, title, subtitle, expanded)
+        endControlGroup(panel)
         local form = vgui.Create("DForm")
-        form:SetName(title)
+        form.BetterLightsBaseName = title
+        form:SetName(form.BetterLightsBaseName)
         form:SetExpanded(expanded ~= false)
+        prepareControlContainer(form)
 
         if subtitle and subtitle ~= "" then
             addHelpText(form, subtitle)
@@ -213,6 +478,76 @@ if CLIENT then
         panel:AddItem(form)
         return form
     end
+
+    local function addBulkToggleSection(panel, cvarNames, titleKey, subtitleKey)
+        if not istable(cvarNames) or #cvarNames == 0 then return end
+
+        local section = addSection(
+            panel,
+            titleKey or "section.quick_controls",
+            subtitleKey or "section.quick_controls.desc",
+            true
+        )
+        section.BetterLightsSkipAutoState = true
+
+        local summary = addHelpText(section, "")
+        local actions = vgui.Create("DPanel")
+        actions:SetTall(30)
+        actions.Paint = nil
+
+        local enableAll = styleButton(vgui.Create("DButton", actions))
+        enableAll:Dock(LEFT)
+        enableAll:SetText(phrase("button.enable_all"))
+
+        local disableAll = styleButton(vgui.Create("DButton", actions))
+        disableAll:Dock(FILL)
+        disableAll:DockMargin(6, 0, 0, 0)
+        disableAll:SetText(phrase("button.disable_all"))
+
+        actions.PerformLayout = function(_, width)
+            enableAll:SetWide(math.floor((width - 6) * 0.5))
+        end
+        section:AddItem(actions)
+
+        local function refresh()
+            local enabledCount = 0
+            for i = 1, #cvarNames do
+                if getConVarBool(cvarNames[i]) then
+                    enabledCount = enabledCount + 1
+                end
+            end
+
+            summary:SetText(phraseFormat("status.features_enabled_count", enabledCount, #cvarNames))
+            enableAll:SetEnabled(enabledCount < #cvarNames)
+            disableAll:SetEnabled(enabledCount > 0)
+        end
+
+        local function apply(value)
+            local settings = {}
+            for i = 1, #cvarNames do
+                settings[cvarNames[i]] = value
+            end
+
+            BetterLights.ApplyClientSettings(settings)
+            refresh()
+        end
+
+        enableAll.DoClick = function()
+            apply(1)
+        end
+        disableAll.DoClick = function()
+            apply(0)
+        end
+
+        for i = 1, #cvarNames do
+            watchControlState(cvarNames[i], section, refresh)
+        end
+
+        refresh()
+        return section
+    end
+
+    MENU.AddBulkToggleSection = addBulkToggleSection
 
     local function addModelElightControls(panel, prefix, labelKey)
         panel:CheckBox(labelKey and phrase(labelKey) or phrase("control.add_model_elight"), prefix .. "_models_elight")
@@ -245,7 +580,7 @@ if CLIENT then
 
     MENU.AddLightControls = addLightControls
 
-    local function addColorMixerControl(panel, labelKey, rCvar, gCvar, bCvar, defaultR, defaultG, defaultB)
+    local function addColorMixerControl(panel, labelKey, rCvar, gCvar, bCvar, defaultR, defaultG, defaultB, dependencyCvar)
         local mixer = vgui.Create("DColorMixer")
         mixer:SetTall(220)
         mixer:SetLabel(labelKey and labelKey ~= "" and phrase(labelKey) or nil)
@@ -278,6 +613,12 @@ if CLIENT then
         end
 
         panel:AddItem(reset)
+
+        if dependencyCvar then
+            bindControlToConVar(mixer, dependencyCvar)
+            bindControlToConVar(reset, dependencyCvar)
+        end
+
         return mixer
     end
 
@@ -420,6 +761,18 @@ if CLIENT then
     local populateFlashlightVisualPanel
     local activeFlashlightVisualPanel
     local activeFlashlightVisualFilter
+    local FLASHLIGHT_CONTROL_DEPENDENCIES = {
+        betterlights_flashlight_attachment_offset = "betterlights_flashlight_weapon_attachment",
+        betterlights_flashlight_flicker_amount = "betterlights_flashlight_flicker",
+        betterlights_flashlight_sway_intensity = "betterlights_flashlight_sway",
+        betterlights_flashlight_shadow_depth_bias = "betterlights_flashlight_shadows",
+        betterlights_flashlight_shadow_slope_scale_depth_bias = "betterlights_flashlight_shadows",
+        betterlights_flashlight_shadow_filter = "betterlights_flashlight_shadows",
+        betterlights_flashlight_flare_others = "betterlights_flashlight_flare_enable",
+        betterlights_flashlight_flare_size = "betterlights_flashlight_flare_enable",
+        betterlights_flashlight_flare_opacity = "betterlights_flashlight_flare_enable",
+        betterlights_flashlight_world_attachment_offset = "betterlights_flashlight_world_weapon_attachment"
+    }
 
     local function isFlashlightSettingForced(cvarName)
         return BetterLights.IsFlashlightSettingForced and BetterLights.IsFlashlightSettingForced(cvarName) or false
@@ -462,37 +815,64 @@ if CLIENT then
         if panel.BetterLightsHasServerControlledHelp then return end
 
         panel.BetterLightsHasServerControlledHelp = true
-        return addHelpText(panel, phrase("help.controlled_by_server"))
+        return addStateNotice(panel, phrase("help.controlled_by_server"), true)
+    end
+
+    local function bindFlashlightDependency(control, cvarName)
+        local dependency = FLASHLIGHT_CONTROL_DEPENDENCIES[cvarName]
+        if not dependency then return control end
+
+        return bindControlToConVar(control, dependency, function()
+            return getEffectiveFlashlightBool(dependency)
+        end)
     end
 
     local function addFlashlightCheckbox(panel, label, cvarName)
         if not isFlashlightSettingForced(cvarName) then
-            return panel:CheckBox(label, cvarName)
+            return bindFlashlightDependency(panel:CheckBox(label, cvarName), cvarName)
         end
 
         local row = vgui.Create("DCheckBoxLabel")
-        row:SetText(label)
+        row:SetText(phraseFormat("state.server_controlled_label", label))
         row:SetValue(getEffectiveFlashlightBool(cvarName) and 1 or 0)
         row:SizeToContents()
-        row:SetEnabled(false)
+        row:SetTooltip(phrase("help.controlled_by_server"))
+        setControlTreeLocked(row, true)
         panel:AddItem(row)
         addServerControlledHelp(panel)
+
+        if not panel.BetterLightsHasFeatureGroup and string.EndsWith(cvarName, "_enable") then
+            beginControlGroup(panel, cvarName, function()
+                return getEffectiveFlashlightBool(cvarName)
+            end, {
+                disabledHelpKey = "state.feature_disabled_by_server",
+                disabledTitleKey = "state.section_disabled_by_server",
+                highlighted = true
+            })
+        end
+
+        bindFlashlightDependency(row, cvarName)
         return row
     end
 
     local function addFlashlightSlider(panel, label, cvarName, minimum, maximum, decimals)
         if not isFlashlightSettingForced(cvarName) then
-            return panel:NumSlider(label, cvarName, minimum, maximum, decimals)
+            return bindFlashlightDependency(
+                panel:NumSlider(label, cvarName, minimum, maximum, decimals),
+                cvarName
+            )
         end
 
         local slider = vgui.Create("DNumSlider")
-        slider:SetText(label)
+        slider:SetText(phraseFormat("state.server_controlled_label", label))
         slider:SetMinMax(minimum, maximum)
         slider:SetDecimals(decimals)
         slider:SetValue(getEffectiveFlashlightNumber(cvarName))
-        slider:SetEnabled(false)
+        slider:SetTooltip(phrase("help.controlled_by_server"))
+        setControlTreeLocked(slider, true)
         panel:AddItem(slider)
         addServerControlledHelp(panel)
+        bindFlashlightDependency(slider, cvarName)
         return slider
     end
 
@@ -507,7 +887,7 @@ if CLIENT then
 
         local mixer = vgui.Create("DColorMixer")
         mixer:SetTall(220)
-        mixer:SetLabel(phrase(labelKey))
+        mixer:SetLabel(phraseFormat("state.server_controlled_label", phrase(labelKey)))
         mixer:SetPalette(true)
         mixer:SetAlphaBar(false)
         mixer:SetWangs(true)
@@ -516,7 +896,8 @@ if CLIENT then
             getEffectiveFlashlightNumber(gCvar),
             getEffectiveFlashlightNumber(bCvar)
         ))
-        mixer:SetEnabled(false)
+        mixer:SetTooltip(phrase("help.controlled_by_server"))
+        setControlTreeLocked(mixer, true)
         panel:AddItem(mixer)
         addServerControlledHelp(panel)
         return mixer
@@ -569,6 +950,14 @@ if CLIENT then
         addFlashlightSlider(beam, phrase("control.beam_length"), "betterlights_flashlight_distance", 128, 4096, 0)
 
         local advancedShadows = addSection(panel, "section.advanced_shadows", "section.advanced_shadows.desc", false)
+        local shadowsForced = isFlashlightSettingForced("betterlights_flashlight_shadows")
+        beginControlGroup(advancedShadows, "betterlights_flashlight_shadows", function()
+            return getEffectiveFlashlightBool("betterlights_flashlight_shadows")
+        end, shadowsForced and {
+            disabledHelpKey = "state.feature_disabled_by_server",
+            disabledTitleKey = "state.section_disabled_by_server",
+            highlighted = true
+        } or nil)
         addHelpText(advancedShadows, phrase("help.advanced_shadow_settings"))
         addFlashlightSlider(advancedShadows, phrase("control.shadow_depth_bias"), "betterlights_flashlight_shadow_depth_bias", 0, 0.005, 5)
         addFlashlightSlider(advancedShadows, phrase("control.shadow_slope_scale_depth_bias"), "betterlights_flashlight_shadow_slope_scale_depth_bias", 0, 8, 2)
@@ -748,6 +1137,13 @@ if CLIENT then
         local resetDefaults = {}
 
         local defs = BetterLights.GetWorldWeaponLightDefinitions()
+        local enableCvars = {}
+
+        for _, info in ipairs(defs) do
+            enableCvars[#enableCvars + 1] = "betterlights_world_weapon_" .. info.slug .. "_enable"
+        end
+
+        addBulkToggleSection(panel, enableCvars)
 
         for _, info in ipairs(defs) do
             local prefix = "betterlights_world_weapon_" .. info.slug
@@ -780,10 +1176,18 @@ if CLIENT then
 
         local resetDefaults = {}
         local defs = BetterLights.GetAmmoPickupLightDefinitions()
+        local enableCvars = {}
+
+        for _, info in ipairs(defs) do
+            enableCvars[#enableCvars + 1] = "betterlights_ammo_" .. info.slug .. "_enable"
+        end
+
+        addBulkToggleSection(panel, enableCvars, "section.ammo_quick_controls", "section.ammo_quick_controls.desc")
 
         for _, info in ipairs(defs) do
             local prefix = "betterlights_ammo_" .. info.slug
-            local form = info.nameKey and addSection(panel, info.nameKey, info.enable == 0 and "state.starts_disabled" or "state.starts_enabled", false) or addRawSection(panel, info.name, phrase(info.enable == 0 and "state.starts_disabled" or "state.starts_enabled"), false)
+            local form = info.nameKey and addSection(panel, info.nameKey, nil, false)
+                or addRawSection(panel, info.name, nil, false)
             addLightControls(form, prefix, {
                 radiusMax = 300,
                 brightnessMax = 2,
@@ -868,6 +1272,13 @@ if CLIENT then
         setupPage(panel, "page.combine_eye.title", "page.combine_eye.desc")
 
         local resetDefaults = {}
+        local enableCvars = {}
+
+        for _, info in ipairs(COMBINE_EYE_GLOW_DEFAULTS) do
+            enableCvars[#enableCvars + 1] = info.prefix .. "_enable"
+        end
+
+        addBulkToggleSection(panel, enableCvars)
 
         for _, info in ipairs(COMBINE_EYE_GLOW_DEFAULTS) do
             local prefix = info.prefix
@@ -889,57 +1300,90 @@ if CLIENT then
         addResetButton(panel, resetDefaults)
     end
 
-    local ROLLERMINE_DEFAULTS = {
-        {
-            titleKey = "page.rollermines.title",
-            subtitleKey = "page.rollermines.section_desc",
-            prefix = "betterlights_rollermine",
-            size = 110,
-            brightness = 0.6,
-            decay = 2000,
-            elight = 1,
-            elightMult = 1.0,
-            colors = {
-                { labelKey = "rollermine.default", suffix = "color", r = 110, g = 190, b = 255 },
-                { labelKey = "rollermine.hacked", suffix = "skin1_color", r = 255, g = 220, b = 60 },
-                { labelKey = "rollermine.hostile", suffix = "skin2_color", r = 255, g = 80, b = 80 }
-            }
-        }
-    }
-
     local function addRollerminePanel(panel)
         setupPage(panel, "page.rollermines.title", "page.rollermines.desc")
 
-        local resetDefaults = {}
+        addBulkToggleSection(panel, {
+            "betterlights_rollermine_enable",
+            "betterlights_rollermine_hacked_enable"
+        })
 
-        for _, info in ipairs(ROLLERMINE_DEFAULTS) do
-            local prefix = info.prefix
-            local form = addSection(panel, info.titleKey, info.subtitleKey, true)
-            addLightControls(form, prefix, {
-                radiusMax = 400,
-                modelElight = true,
-                modelElightLabel = "control.add_model_elight"
-            })
+        local standard = addSection(
+            panel,
+            "section.rollermine_standard",
+            "section.rollermine_standard.desc",
+            true
+        )
+        addLightControls(standard, "betterlights_rollermine", {
+            radiusMax = 400,
+            modelElight = true,
+            modelElightLabel = "control.add_model_elight"
+        })
+        addColorMixerControl(
+            standard,
+            "rollermine.default",
+            "betterlights_rollermine_color_r",
+            "betterlights_rollermine_color_g",
+            "betterlights_rollermine_color_b",
+            110,
+            190,
+            255
+        )
+        local hacked = addSection(
+            panel,
+            "section.rollermine_hacked",
+            "section.rollermine_hacked.desc",
+            true
+        )
+        addLightControls(hacked, "betterlights_rollermine_hacked", {
+            radiusMax = 400,
+            modelElight = true,
+            modelElightLabel = "control.add_model_elight"
+        })
+        addColorMixerControl(
+            hacked,
+            "rollermine.hacked",
+            "betterlights_rollermine_skin1_color_r",
+            "betterlights_rollermine_skin1_color_g",
+            "betterlights_rollermine_skin1_color_b",
+            255,
+            220,
+            60
+        )
+        addColorMixerControl(
+            hacked,
+            "rollermine.power_down",
+            "betterlights_rollermine_skin2_color_r",
+            "betterlights_rollermine_skin2_color_g",
+            "betterlights_rollermine_skin2_color_b",
+            255,
+            80,
+            80
+        )
 
-            resetDefaults[prefix .. "_enable"] = 1
-            resetDefaults[prefix .. "_size"] = info.size
-            resetDefaults[prefix .. "_brightness"] = info.brightness
-            resetDefaults[prefix .. "_decay"] = info.decay
-            resetDefaults[prefix .. "_models_elight"] = info.elight
-            resetDefaults[prefix .. "_models_elight_size_mult"] = info.elightMult
-
-            if info.colors then
-                for _, colorInfo in ipairs(info.colors) do
-                    local colorPrefix = prefix .. "_" .. colorInfo.suffix
-                    addColorMixerControl(form, colorInfo.labelKey, colorPrefix .. "_r", colorPrefix .. "_g", colorPrefix .. "_b", colorInfo.r, colorInfo.g, colorInfo.b)
-                    resetDefaults[colorPrefix .. "_r"] = colorInfo.r
-                    resetDefaults[colorPrefix .. "_g"] = colorInfo.g
-                    resetDefaults[colorPrefix .. "_b"] = colorInfo.b
-                end
-            end
-        end
-
-        addResetButton(panel, resetDefaults)
+        addResetButton(panel, {
+            betterlights_rollermine_enable = 1,
+            betterlights_rollermine_size = 110,
+            betterlights_rollermine_brightness = 0.6,
+            betterlights_rollermine_decay = 2000,
+            betterlights_rollermine_models_elight = 1,
+            betterlights_rollermine_models_elight_size_mult = 1.0,
+            betterlights_rollermine_hacked_enable = 1,
+            betterlights_rollermine_hacked_size = 110,
+            betterlights_rollermine_hacked_brightness = 0.6,
+            betterlights_rollermine_hacked_decay = 2000,
+            betterlights_rollermine_hacked_models_elight = 1,
+            betterlights_rollermine_hacked_models_elight_size_mult = 1.0,
+            betterlights_rollermine_color_r = 110,
+            betterlights_rollermine_color_g = 190,
+            betterlights_rollermine_color_b = 255,
+            betterlights_rollermine_skin1_color_r = 255,
+            betterlights_rollermine_skin1_color_g = 220,
+            betterlights_rollermine_skin1_color_b = 60,
+            betterlights_rollermine_skin2_color_r = 255,
+            betterlights_rollermine_skin2_color_g = 80,
+            betterlights_rollermine_skin2_color_b = 80,
+        })
     end
 
     local function addAntlionPanel(panel)
@@ -1039,6 +1483,7 @@ if CLIENT then
             addColorMixerControl(panel, "control.color", "betterlights_combineball_color_r", "betterlights_combineball_color_g", "betterlights_combineball_color_b")
 
             local targets = addSection(panel, "section.lighting_targets", "section.lighting_targets.desc", false)
+            targets.BetterLightsSkipAutoState = true
             targets:CheckBox(phrase("control.light_world"), "betterlights_combineball_world_light_enable")
             targets:CheckBox(phrase("control.light_models"), "betterlights_combineball_model_light_enable")
             targets:CheckBox(phrase("control.use_entity_light_for_models"), "betterlights_combineball_models_elight")

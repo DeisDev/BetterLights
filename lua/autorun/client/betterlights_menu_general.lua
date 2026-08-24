@@ -550,10 +550,18 @@ if CLIENT then
 
         local client = MENU.AddSection(panel, "section.client", "section.client.desc", true)
         local enabled = vgui.Create("DCheckBoxLabel")
-        enabled:SetText(phrase("control.enable_better_lights_client"))
+        local enabledLabel = phrase("control.enable_better_lights_client")
+        if not canChange then
+            enabledLabel = MENU.PhraseFormat(
+                serverStateReady and "state.server_controlled_label" or "state.locked_label",
+                enabledLabel
+            )
+        end
+
+        enabled:SetText(enabledLabel)
         enabled:SetValue(preference and 1 or 0)
         enabled:SizeToContents()
-        enabled:SetEnabled(canChange)
+        MENU.SetControlLocked(enabled, not canChange)
         client:AddItem(enabled)
 
         enabled.OnChange = function(_, value)
@@ -565,11 +573,11 @@ if CLIENT then
         end
 
         if not serverStateReady then
-            MENU.AddHelpText(client, phrase("help.server_settings_loading"))
+            MENU.AddStateNotice(client, phrase("help.server_settings_loading"), true)
         elseif mode == BetterLights.SERVER_MODE_ENABLED then
-            MENU.AddHelpText(client, phrase("help.client_policy_enabled"))
+            MENU.AddStateNotice(client, phrase("help.client_policy_enabled"), true)
         elseif mode == BetterLights.SERVER_MODE_DISABLED then
-            MENU.AddHelpText(client, phrase("help.client_policy_disabled"))
+            MENU.AddStateNotice(client, phrase("help.client_policy_disabled"), true)
         else
             MENU.AddHelpText(client, phrase("help.client_policy_player_choice"))
         end
@@ -648,6 +656,7 @@ if CLIENT then
         MENU.AddHelpText(limits, phrase("help.light_budget_headroom"))
 
         local distance = MENU.AddSection(panel, "section.light_culling", "section.light_culling.desc", true)
+        MENU.BeginControlGroup(distance, "betterlights_light_budget_enable")
         distance:NumSlider(phrase("control.maximum_light_distance"), "betterlights_light_budget_max_distance", 0, 20000, 0)
         distance:NumSlider(phrase("control.light_fade_distance"), "betterlights_light_budget_fade_distance", 0, 5000, 0)
         distance:CheckBox(phrase("control.deprioritize_offscreen_lights"), "betterlights_light_budget_offscreen_deprioritize")
