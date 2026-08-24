@@ -30,6 +30,19 @@ if CLIENT then
     }
 
     local TEXTURE_NAME = "betterlights_flashlight_texture"
+    local PLAYER_ENABLE_NAME = "betterlights_flashlight_player_enable"
+    local SETTING_DEPENDENCIES = {
+        betterlights_flashlight_attachment_offset = "betterlights_flashlight_weapon_attachment",
+        betterlights_flashlight_flicker_amount = "betterlights_flashlight_flicker",
+        betterlights_flashlight_sway_intensity = "betterlights_flashlight_sway",
+        betterlights_flashlight_shadow_depth_bias = "betterlights_flashlight_shadows",
+        betterlights_flashlight_shadow_slope_scale_depth_bias = "betterlights_flashlight_shadows",
+        betterlights_flashlight_shadow_filter = "betterlights_flashlight_shadows",
+        betterlights_flashlight_flare_others = "betterlights_flashlight_flare_enable",
+        betterlights_flashlight_flare_size = "betterlights_flashlight_flare_enable",
+        betterlights_flashlight_flare_opacity = "betterlights_flashlight_flare_enable",
+        betterlights_flashlight_world_attachment_offset = "betterlights_flashlight_world_weapon_attachment"
+    }
 
     local function canChangeServerSettings()
         local ply = LocalPlayer()
@@ -125,7 +138,7 @@ if CLIENT then
         addModeChoices(combo, selected)
 
         section:AddItem(row)
-        return combo
+        return combo, title
     end
 
     local function countLogicalOverrides(state)
@@ -149,28 +162,64 @@ if CLIENT then
         return count
     end
 
-    local function addBooleanSetting(section, def, staged, editable)
+    local function isForcedDisabled(staged, name)
+        return staged.overrides[name] and not staged.values[name]
+    end
+
+    local function isSettingRelevant(staged, name)
+        if name ~= PLAYER_ENABLE_NAME and isForcedDisabled(staged, PLAYER_ENABLE_NAME) then
+            return false
+        end
+
+        local dependency = SETTING_DEPENDENCIES[name]
+        return not dependency or not isForcedDisabled(staged, dependency)
+    end
+
+    local function refreshControlStates(refreshers)
+        for i = 1, #refreshers do
+            refreshers[i]()
+        end
+    end
+
+    local function hasFlashlightChanges(staged, baseline)
+        for i = 1, #BL.FLASHLIGHT_SETTING_DEFS do
+            local name = BL.FLASHLIGHT_SETTING_DEFS[i].name
+            if staged.overrides[name] ~= baseline.overrides[name]
+                or staged.values[name] ~= baseline.values[name] then
+                return true
+            end
+        end
+
+        return false
+    end
+
+    local function addBooleanSetting(section, def, staged, editable, refreshers, onChanged)
         local selected = BL.SERVER_MODE_PLAYER_CHOICE
         if staged.overrides[def.name] then
             selected = staged.values[def.name] and BL.SERVER_MODE_ENABLED or BL.SERVER_MODE_DISABLED
         end
 
-        local combo = addLabeledCombo(section, MENU.Phrase(def.serverLabelKey or def.labelKey), selected)
-        combo:SetEnabled(editable)
+        local combo, label = addLabeledCombo(section, MENU.Phrase(def.serverLabelKey or def.labelKey), selected)
+        refreshers[#refreshers + 1] = function()
+            local enabled = editable and isSettingRelevant(staged, def.name)
+            label:SetEnabled(enabled)
+            combo:SetEnabled(enabled)
+        end
         combo.OnSelect = function(_, _, _, data)
             staged.overrides[def.name] = data ~= BL.SERVER_MODE_PLAYER_CHOICE
             if data ~= BL.SERVER_MODE_PLAYER_CHOICE then
                 staged.values[def.name] = data == BL.SERVER_MODE_ENABLED
             end
+
+            onChanged()
         end
     end
 
-    local function addNumberSetting(section, def, staged, editable)
+    local function addNumberSetting(section, def, staged, editable, refreshers, onChanged)
         local override = vgui.Create("DCheckBoxLabel")
         override:SetText(MENU.PhraseFormat("control.override_setting", MENU.Phrase(def.labelKey)))
         override:SetValue(staged.overrides[def.name] and 1 or 0)
         override:SizeToContents()
-        override:SetEnabled(editable)
         section:AddItem(override)
 
         local slider = vgui.Create("DNumSlider")
@@ -178,20 +227,26 @@ if CLIENT then
         slider:SetMinMax(def.min, def.max)
         slider:SetDecimals(def.decimals or 0)
         slider:SetValue(tonumber(staged.values[def.name]) or def.default)
-        slider:SetEnabled(editable and staged.overrides[def.name])
         section:AddItem(slider)
+
+        refreshers[#refreshers + 1] = function()
+            local relevant = isSettingRelevant(staged, def.name)
+            override:SetEnabled(editable and relevant)
+            slider:SetEnabled(editable and relevant and staged.overrides[def.name])
+        end
 
         slider.OnValueChanged = function(_, value)
             staged.values[def.name] = tonumber(value) or def.default
+            onChanged()
         end
 
         override.OnChange = function(_, value)
             staged.overrides[def.name] = value
-            slider:SetEnabled(editable and value)
+            onChanged()
         end
     end
 
-    local function addColorSetting(section, staged, editable)
+    local function addColorSetting(section, staged, editable, refreshers, onChanged)
         local forced = staged.overrides[COLOR_NAMES.r]
             or staged.overrides[COLOR_NAMES.g]
             or staged.overrides[COLOR_NAMES.b]
@@ -200,7 +255,6 @@ if CLIENT then
         override:SetText(MENU.Phrase("control.override_flashlight_color"))
         override:SetValue(forced and 1 or 0)
         override:SizeToContents()
-        override:SetEnabled(editable)
         section:AddItem(override)
 
         local mixer = vgui.Create("DColorMixer")
@@ -214,13 +268,22 @@ if CLIENT then
             tonumber(staged.values[COLOR_NAMES.g]) or 245,
             tonumber(staged.values[COLOR_NAMES.b]) or 225
         ))
-        mixer:SetEnabled(editable and forced)
         section:AddItem(mixer)
+
+        refreshers[#refreshers + 1] = function()
+            local relevant = isSettingRelevant(staged, COLOR_NAMES.r)
+            local overridden = staged.overrides[COLOR_NAMES.r]
+                or staged.overrides[COLOR_NAMES.g]
+                or staged.overrides[COLOR_NAMES.b]
+            override:SetEnabled(editable and relevant)
+            mixer:SetEnabled(editable and relevant and overridden)
+        end
 
         mixer.ValueChanged = function(_, color)
             staged.values[COLOR_NAMES.r] = math.Clamp(math.Round(color.r), 0, 255)
             staged.values[COLOR_NAMES.g] = math.Clamp(math.Round(color.g), 0, 255)
             staged.values[COLOR_NAMES.b] = math.Clamp(math.Round(color.b), 0, 255)
+            onChanged()
         end
 
         override.OnChange = function(_, value)
@@ -228,24 +291,28 @@ if CLIENT then
                 staged.overrides[name] = value
             end
 
-            mixer:SetEnabled(editable and value)
+            onChanged()
         end
     end
 
-    local function addTextureSetting(section, staged, editable, rebuild)
+    local function addTextureSetting(section, staged, editable, refreshers, onChanged, rebuild)
         local lastValidValue = tostring(staged.values[TEXTURE_NAME] or "")
         local override = vgui.Create("DCheckBoxLabel")
         override:SetText(MENU.Phrase("control.override_flashlight_texture"))
         override:SetValue(staged.overrides[TEXTURE_NAME] and 1 or 0)
         override:SizeToContents()
-        override:SetEnabled(editable)
         section:AddItem(override)
 
         local entry = vgui.Create("DTextEntry")
         entry:SetText(tostring(staged.values[TEXTURE_NAME] or ""))
         entry:SetUpdateOnType(true)
-        entry:SetEnabled(editable and staged.overrides[TEXTURE_NAME])
         section:AddItem(entry)
+
+        refreshers[#refreshers + 1] = function()
+            local relevant = isSettingRelevant(staged, TEXTURE_NAME)
+            override:SetEnabled(editable and relevant)
+            entry:SetEnabled(editable and relevant and staged.overrides[TEXTURE_NAME])
+        end
 
         local validation = vgui.Create("DLabel")
         validation:SetWrap(true)
@@ -260,6 +327,7 @@ if CLIENT then
             if not normalized then
                 staged.textureInvalid = true
                 validation:SetText(MENU.Phrase("label.texture_path_invalid"))
+                onChanged()
                 return false
             end
 
@@ -272,6 +340,7 @@ if CLIENT then
                 validation:SetText(MENU.Phrase("label.texture_path_valid"))
             end
 
+            onChanged()
             return true
         end
 
@@ -289,12 +358,13 @@ if CLIENT then
 
         override.OnChange = function(_, value)
             staged.overrides[TEXTURE_NAME] = value
-            entry:SetEnabled(editable and value)
 
             if not value and staged.textureInvalid then
                 staged.textureInvalid = nil
                 entry:SetText(lastValidValue)
             end
+
+            onChanged()
         end
     end
 
@@ -313,7 +383,7 @@ if CLIENT then
 
     local buildGlobalFlashlightPage
 
-    local function addGlobalSection(panel, sectionName, staged, editable)
+    local function addGlobalSection(panel, sectionName, staged, editable, refreshers, onChanged)
         local definitions = getSectionDefinitions(sectionName)
         if #definitions == 0 then return end
 
@@ -325,12 +395,12 @@ if CLIENT then
         )
 
         if sectionName == "color" then
-            addColorSetting(section, staged, editable)
+            addColorSetting(section, staged, editable, refreshers, onChanged)
             return
         end
 
         if sectionName == "texture" then
-            addTextureSetting(section, staged, editable, function()
+            addTextureSetting(section, staged, editable, refreshers, onChanged, function()
                 buildGlobalFlashlightPage(panel, staged)
             end)
             return
@@ -339,9 +409,9 @@ if CLIENT then
         for i = 1, #definitions do
             local def = definitions[i]
             if def.type == "bool" then
-                addBooleanSetting(section, def, staged, editable)
+                addBooleanSetting(section, def, staged, editable, refreshers, onChanged)
             elseif def.type == "number" then
-                addNumberSetting(section, def, staged, editable)
+                addNumberSetting(section, def, staged, editable, refreshers, onChanged)
             end
         end
     end
@@ -386,12 +456,27 @@ if CLIENT then
 
     buildGlobalFlashlightPage = function(panel, staged)
         staged = staged or getServerState()
+        staged._baseline = staged._baseline or makeState(staged)
         local serverStateReady = hasServerSettingsState()
         local editable = serverStateReady and canChangeServerSettings()
+        local controlRefreshers = {}
+        local refreshPageState
+
+        local function onStagedChanged()
+            refreshControlStates(controlRefreshers)
+            if refreshPageState then
+                refreshPageState()
+            end
+        end
 
         MENU.SetupPage(panel, "page.global_flashlight.title", "page.global_flashlight.desc")
 
-        local overview = MENU.AddSection(panel, "section.global_flashlight_overview", nil, true)
+        local overview = MENU.AddSection(
+            panel,
+            "section.global_flashlight_overview",
+            "section.global_flashlight_overview.desc",
+            true
+        )
         local summary = MENU.AddHelpText(
             overview,
             MENU.PhraseFormat("label.server_overrides_count", countLogicalOverrides(staged))
@@ -421,25 +506,15 @@ if CLIENT then
             buildGlobalFlashlightPage(panel, staged)
         end
 
-        local lastCount = countLogicalOverrides(staged)
-        summary.Think = function()
-            local count = countLogicalOverrides(staged)
-            if count == lastCount then return end
-
-            lastCount = count
-            summary:SetText(MENU.PhraseFormat("label.server_overrides_count", count))
-            clearOverrides:SetEnabled(editable and count > 0)
-        end
-
         for i = 1, #SECTION_ORDER do
-            addGlobalSection(panel, SECTION_ORDER[i], staged, editable)
+            addGlobalSection(panel, SECTION_ORDER[i], staged, editable, controlRefreshers, onStagedChanged)
         end
 
         local applySection = MENU.AddSection(panel, "section.apply_server_settings", nil, true)
         MENU.AddHelpText(applySection, MENU.Phrase("help.server_settings_staged"))
+        local pending = MENU.AddHelpText(applySection, MENU.Phrase("label.server_settings_unchanged"))
 
         local apply = MENU.AddStyledButton(applySection, MENU.Phrase("button.apply_server_settings"))
-        apply:SetEnabled(editable)
         apply.DoClick = function()
             if staged.textureInvalid then
                 notify("notice.server_texture_invalid", NOTIFY_ERROR, 4)
@@ -470,6 +545,18 @@ if CLIENT then
                 MENU.Phrase("button.cancel")
             )
         end
+
+        refreshPageState = function()
+            local count = countLogicalOverrides(staged)
+            local changed = hasFlashlightChanges(staged, staged._baseline)
+
+            summary:SetText(MENU.PhraseFormat("label.server_overrides_count", count))
+            clearOverrides:SetEnabled(editable and count > 0)
+            pending:SetText(MENU.Phrase(changed and "label.server_settings_pending" or "label.server_settings_unchanged"))
+            apply:SetEnabled(editable and changed and not staged.textureInvalid)
+        end
+
+        onStagedChanged()
     end
 
     local function buildServerPolicyPage(panel)
