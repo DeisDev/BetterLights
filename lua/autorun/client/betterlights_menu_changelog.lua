@@ -52,10 +52,10 @@ if CLIENT then
         return true
     end
 
-    local function readChangelogJson()
+    local function readChangelog()
         if not file or not file.Read then return nil end
 
-        return file.Read("data_static/betterlights_changelog.json", "GAME")
+        return file.Read("data_static/betterlights_changelog.txt", "GAME")
     end
 
     local function createChangelogEntry(version)
@@ -67,39 +67,55 @@ if CLIENT then
         }
     end
 
-    local function parseChangelogJsonEntries(source)
-        if not source or source == "" or not util or not util.JSONToTable then return {} end
+    local function parseChangelogEntries(source)
+        if not source or source == "" then return {} end
 
-        local decoded = util.JSONToTable(source)
-        if not istable(decoded) then return {} end
+        source = string.gsub(source, "\r\n", "\n")
+        source = string.gsub(source, "\r", "\n")
 
         local entries = {}
-        for _, entry in ipairs(decoded) do
-            if istable(entry) then
-                local version = normalizeVersion(entry.version or entry.title)
-                local title = tostring(entry.title or phraseFormat("changelog.entry_title", version))
-                local items = {}
+        local currentEntry
+        local readingItems = false
 
-                if istable(entry.items) then
-                    for _, item in ipairs(entry.items) do
-                        table.insert(items, tostring(item))
-                    end
+        for line in string.gmatch(source .. "\n", "(.-)\n") do
+            line = string.Trim(line)
+
+            if line ~= "" then
+                if not currentEntry then
+                    local title = string.match(line, "^%[b%](.-)%[/b%]$")
+                    if not title or title == "" then return {} end
+
+                    currentEntry = {
+                        title = title,
+                        version = normalizeVersion(title),
+                        items = {}
+                    }
+                elseif not readingItems then
+                    if line ~= "[list]" then return {} end
+                    readingItems = true
+                elseif line == "[/list]" then
+                    table.insert(entries, currentEntry)
+                    currentEntry = nil
+                    readingItems = false
+                else
+                    local item = string.match(line, "^%[%*%](.+)$")
+                    if not item then return {} end
+
+                    item = string.Trim(item)
+                    if item == "" then return {} end
+                    table.insert(currentEntry.items, item)
                 end
-
-                table.insert(entries, {
-                    title = title,
-                    version = version,
-                    items = items
-                })
             end
         end
+
+        if currentEntry or readingItems then return {} end
 
         return entries
     end
 
     local function getChangelogEntries()
         local currentVersion = getCurrentVersion()
-        local entries = parseChangelogJsonEntries(readChangelogJson())
+        local entries = parseChangelogEntries(readChangelog())
 
         local currentIndex
 
