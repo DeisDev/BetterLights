@@ -132,7 +132,12 @@ if CLIENT then
     function MENU.AddSettingsAccessControls(panel, options)
         options = options or {}
 
-        local access = MENU.AddSection(panel, "section.settings_access", "section.settings_access.desc", true)
+        local access = MENU.AddSection(
+            panel,
+            "section.settings_access",
+            "section.settings_access.desc",
+            options.expanded ~= false
+        )
         if options.showOpenButton ~= false then
             addOpenSettingsButton(access)
         end
@@ -156,13 +161,17 @@ if CLIENT then
 
     function MENU.BuildQuickSettingsPanel(panel)
         MENU.TrackClientSettingsPanel(panel, MENU.BuildQuickSettingsPanel)
-        panel:Clear()
-
-        local moved = MENU.AddSection(panel, "section.settings_moved", "section.settings_moved.desc", true)
-        addOpenSettingsButton(moved)
+        MENU.SetupPage(panel, "page.quick_settings.title", "page.quick_settings.desc")
 
         MENU.AddClientPreferenceSection(panel)
-        MENU.AddSettingsAccessControls(panel, { showOpenButton = false })
+
+        local settings = MENU.AddSection(panel, "section.full_settings", "section.full_settings.desc", true)
+        addOpenSettingsButton(settings)
+
+        MENU.AddSettingsAccessControls(panel, {
+            showOpenButton = false,
+            expanded = false
+        })
     end
 
     local SETTINGS_PANEL = {}

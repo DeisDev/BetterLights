@@ -131,6 +131,13 @@ if CLIENT then
         spawnmenu.AddToolCategory(SPAWNMENU_TAB_ID, SPAWNMENU_CATEGORY_ID, phrase("addon.name"))
     end
 
+    local function buildAboutPanel(panel)
+        local page = MENU.GetRegisteredPage("BL_About")
+        if not page then return end
+
+        page.buildPanel(panel)
+    end
+
     local function spaceHelpText(label, leftMargin, rightMargin)
         if not IsValid(label) then return nil end
 
@@ -2247,6 +2254,16 @@ if CLIENT then
             "",
             "",
             MENU.BuildQuickSettingsPanel
+        )
+
+        spawnmenu.AddToolMenuOption(
+            SPAWNMENU_TAB_ID,
+            SPAWNMENU_CATEGORY_ID,
+            "BL_About",
+            phrase("menu.about"),
+            "",
+            "",
+            buildAboutPanel
         )
     end)
 end
