@@ -25,14 +25,8 @@ if CLIENT then
     end
 
     local function getSelectedProfile(list)
-        local selected = list:GetSelectedLine()
-        if not selected then
-            notify("notice.profile_select_first", NOTIFY_ERROR, 3)
-            return nil
-        end
-
-        local row = list:GetLine(selected)
-        if not row then
+        local _, row = list:GetSelectedLine()
+        if not IsValid(row) then
             notify("notice.profile_select_first", NOTIFY_ERROR, 3)
             return nil
         end
@@ -46,14 +40,36 @@ if CLIENT then
         return profile
     end
 
-    local function refreshProfileList(list)
+    local function refreshProfileList(list, preferredProfileId)
+        local _, selectedRow = list:GetSelectedLine()
+        local selectedProfileId = preferredProfileId
+            or (IsValid(selectedRow) and selectedRow.BetterLightsProfileId)
+
         list:Clear()
 
         local profiles = BetterLights.Profiles.GetSorted()
+        local firstRow
+        local rowToSelect
+
         for i = 1, #profiles do
             local profile = profiles[i]
             local row = list:AddLine(profile.name, getProfileVersion(profile), formatProfileTime(profile.updatedAt))
             row.BetterLightsProfileId = profile.id
+
+            firstRow = firstRow or row
+            if profile.id == selectedProfileId then
+                rowToSelect = row
+            end
+        end
+
+        list.BetterLightsProfileCount = #profiles
+        rowToSelect = rowToSelect or firstRow
+        if IsValid(rowToSelect) then
+            list:SelectItem(rowToSelect)
+        end
+
+        if list.BetterLightsRefreshState then
+            list.BetterLightsRefreshState()
         end
     end
 
@@ -94,6 +110,18 @@ if CLIENT then
         end
 
         notifyProfileLoadResult(result)
+    end
+
+    local function confirmLoadProfile(profile)
+        Derma_Query(
+            MENU.PhraseFormat("dialog.profile_load.message", profile.name),
+            MENU.Phrase("dialog.profile_load.title"),
+            MENU.Phrase("button.load_profile"),
+            function()
+                loadProfile(profile)
+            end,
+            MENU.Phrase("button.cancel")
+        )
     end
 
     local function copyProfileText(text, successKey)
@@ -232,7 +260,7 @@ if CLIENT then
             return
         end
 
-        refreshProfileList(list)
+        refreshProfileList(list, profile.id)
         notify("notice.profile_imported", NOTIFY_GENERIC, 3)
 
         if IsValid(frame) then
@@ -254,6 +282,7 @@ if CLIENT then
         entry:DockMargin(10, 10, 10, 8)
         entry:SetMultiline(true)
         entry:SetPlaceholderText(MENU.Phrase("placeholder.profile_json"))
+        entry:SetUpdateOnType(true)
 
         local footer = vgui.Create("DPanel", frame)
         footer:Dock(BOTTOM)
@@ -274,6 +303,7 @@ if CLIENT then
         import:DockMargin(0, 0, 8, 0)
         import:SetWide(110)
         import:SetText(MENU.Phrase("button.import_profile"))
+        import:SetEnabled(false)
         import.DoClick = function()
             local imported, errorKey = BetterLights.Profiles.DecodeExport(entry:GetText())
             if not imported then
@@ -297,6 +327,10 @@ if CLIENT then
 
             saveImportedProfile(imported, nil, list, frame)
         end
+
+        entry.OnValueChange = function(_, value)
+            import:SetEnabled(string.Trim(value or "") ~= "")
+        end
     end
 
     local function saveCurrentSettings(list)
@@ -314,7 +348,7 @@ if CLIENT then
                             return
                         end
 
-                        refreshProfileList(list)
+                        refreshProfileList(list, profile.id)
                         notify("notice.profile_overwritten", NOTIFY_GENERIC, 3)
                     end,
                     MENU.Phrase("button.cancel")
@@ -322,22 +356,14 @@ if CLIENT then
                 return
             end
 
-            Derma_Query(
-                MENU.PhraseFormat("dialog.profile_save.message", name),
-                MENU.Phrase("dialog.profile_save.title"),
-                MENU.Phrase("button.save_profile"),
-                function()
-                    local profile, errorKey = BetterLights.Profiles.Create(name)
-                    if not profile then
-                        notify(errorKey, NOTIFY_ERROR, 4)
-                        return
-                    end
+            local profile, errorKey = BetterLights.Profiles.Create(name)
+            if not profile then
+                notify(errorKey, NOTIFY_ERROR, 4)
+                return
+            end
 
-                    refreshProfileList(list)
-                    notify("notice.profile_saved", NOTIFY_GENERIC, 3)
-                end,
-                MENU.Phrase("button.cancel")
-            )
+            refreshProfileList(list, profile.id)
+            notify("notice.profile_saved", NOTIFY_GENERIC, 3)
         end)
     end
 
@@ -359,10 +385,11 @@ if CLIENT then
         list:AddColumn(phrase("label.saved_version"))
         list:AddColumn(phrase("label.updated"))
         profilesSection:AddItem(list)
+        local profileStatus = addHelpText(profilesSection, "")
         addHelpText(profilesSection, phrase("help.profile_selection"))
-        refreshProfileList(list)
 
         local profileActions = addSection(panel, "section.profile_actions", nil, true)
+        local selectedProfileButtons = {}
 
         local save = addStyledButton(profileActions, phrase("button.save_current_profile"))
         save.DoClick = function()
@@ -370,22 +397,16 @@ if CLIENT then
         end
 
         local load = addStyledButton(profileActions, phrase("button.load_selected_profile"))
+        selectedProfileButtons[#selectedProfileButtons + 1] = load
         load.DoClick = function()
             local profile = getSelectedProfile(list)
             if not profile then return end
 
-            Derma_Query(
-                MENU.PhraseFormat("dialog.profile_load.message", profile.name),
-                MENU.Phrase("dialog.profile_load.title"),
-                MENU.Phrase("button.load_profile"),
-                function()
-                    loadProfile(profile)
-                end,
-                MENU.Phrase("button.cancel")
-            )
+            confirmLoadProfile(profile)
         end
 
         local overwrite = addStyledButton(profileActions, phrase("button.overwrite_selected_profile"))
+        selectedProfileButtons[#selectedProfileButtons + 1] = overwrite
         overwrite.DoClick = function()
             local profile = getSelectedProfile(list)
             if not profile then return end
@@ -401,7 +422,7 @@ if CLIENT then
                         return
                     end
 
-                    refreshProfileList(list)
+                    refreshProfileList(list, updated.id)
                     notify("notice.profile_overwritten", NOTIFY_GENERIC, 3)
                 end,
                 MENU.Phrase("button.cancel")
@@ -409,6 +430,7 @@ if CLIENT then
         end
 
         local rename = addStyledButton(profileActions, phrase("button.rename_profile"))
+        selectedProfileButtons[#selectedProfileButtons + 1] = rename
         rename.DoClick = function()
             local profile = getSelectedProfile(list)
             if not profile then return end
@@ -426,12 +448,13 @@ if CLIENT then
                     return
                 end
 
-                refreshProfileList(list)
+                refreshProfileList(list, updated.id)
                 notify("notice.profile_renamed", NOTIFY_GENERIC, 3)
             end)
         end
 
         local delete = addStyledButton(profileActions, phrase("button.delete_profile"))
+        selectedProfileButtons[#selectedProfileButtons + 1] = delete
         delete.DoClick = function()
             local profile = getSelectedProfile(list)
             if not profile then return end
@@ -457,6 +480,7 @@ if CLIENT then
         local sharing = addSection(panel, "section.profile_sharing", nil, true)
 
         local exportSelected = addStyledButton(sharing, phrase("button.export_selected_profile"))
+        selectedProfileButtons[#selectedProfileButtons + 1] = exportSelected
         exportSelected.DoClick = function()
             local profile = getSelectedProfile(list)
             if not profile then return end
@@ -471,6 +495,37 @@ if CLIENT then
         importProfile.DoClick = function()
             openImportWindow(list)
         end
+
+        list.BetterLightsRefreshState = function()
+            local count = list.BetterLightsProfileCount or 0
+            if count > 0 then
+                profileStatus:SetText(MENU.PhraseFormat("label.saved_profiles_count", count))
+            else
+                profileStatus:SetText(phrase("help.profile_empty"))
+            end
+
+            local _, row = list:GetSelectedLine()
+            local hasSelection = IsValid(row)
+                and BetterLights.Profiles.GetById(row.BetterLightsProfileId) ~= nil
+
+            for i = 1, #selectedProfileButtons do
+                selectedProfileButtons[i]:SetEnabled(hasSelection)
+            end
+        end
+
+        list.OnRowSelected = function()
+            list.BetterLightsRefreshState()
+        end
+
+        list.DoDoubleClick = function(_, _, row)
+            local profile = IsValid(row)
+                and BetterLights.Profiles.GetById(row.BetterLightsProfileId)
+            if profile then
+                confirmLoadProfile(profile)
+            end
+        end
+
+        refreshProfileList(list)
 
     end
 
