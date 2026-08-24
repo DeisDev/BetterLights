@@ -8,6 +8,7 @@ if CLIENT then
     local MAX_CLASSES = 512
     local BUILTIN_CLASSES = {
         has_hands = true,
+        weapon_crossbow = true,
         weapon_crowbar = true
     }
 

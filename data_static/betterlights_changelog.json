@@ -5,7 +5,8 @@
     "items": [
       "Added an optional third-person flashlight spill light to imitate reflected light around players.",
       "Improved the global flashlight settings menu with clearer override states and unapplied-change feedback.",
-      "Improved settings profiles with clearer selection states, quicker saving, and double-click loading."
+      "Improved settings profiles with clearer selection states, quicker saving, and double-click loading.",
+      "Fixed flashlight placement on the Crossbow by preventing it from using weapon attachments."
     ]
   },
   {
