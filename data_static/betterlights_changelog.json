@@ -1,5 +1,13 @@
 [
   {
+    "version": "v1.6.0-beta18",
+    "title": "Better Lights v1.6.0-beta18",
+    "items": [
+      "Fixed player models sometimes blocking their own flashlight beams in third person or when viewed by other players.",
+      "Added separate flashlight attachment and position controls for first person, third person, and other players."
+    ]
+  },
+  {
     "version": "v1.6.0-beta17",
     "title": "Better Lights v1.6.0-beta17",
     "items": [

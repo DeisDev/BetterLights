@@ -11,7 +11,7 @@ BL.NET_SERVER_SETTINGS_STATE = "BetterLights_ServerSettings"
 BL.SERVER_MODE_DISABLED = 0
 BL.SERVER_MODE_ENABLED = 1
 BL.SERVER_MODE_PLAYER_CHOICE = 2
-BL.SERVER_SETTINGS_PROTOCOL_VERSION = 1
+BL.SERVER_SETTINGS_PROTOCOL_VERSION = 2
 
 BL.NET_MUZZLE_FLASH = 1
 BL.NET_BULLET_IMPACT = 2
@@ -64,8 +64,8 @@ do
             name = "betterlights_flashlight_weapon_attachment",
             type = "bool",
             default = true,
-            section = "position",
-            sectionKey = "section.origin",
+            section = "position_first_person",
+            sectionKey = "section.flashlight_position_first_person",
             labelKey = "control.attach_beam_to_weapon"
         },
         {
@@ -77,8 +77,8 @@ do
             min = -32,
             max = 96,
             decimals = 1,
-            section = "position",
-            sectionKey = "section.origin",
+            section = "position_first_person",
+            sectionKey = "section.flashlight_position_first_person",
             labelKey = "control.forward_offset"
         },
         {
@@ -90,8 +90,8 @@ do
             min = -24,
             max = 24,
             decimals = 1,
-            section = "position",
-            sectionKey = "section.origin",
+            section = "position_first_person",
+            sectionKey = "section.flashlight_position_first_person",
             labelKey = "control.attached_side_offset"
         },
         {
@@ -103,8 +103,8 @@ do
             min = -24,
             max = 24,
             decimals = 1,
-            section = "position",
-            sectionKey = "section.origin",
+            section = "position_first_person",
+            sectionKey = "section.flashlight_position_first_person",
             labelKey = "control.view_origin_side_offset"
         },
         {
@@ -340,6 +340,55 @@ do
             sectionKey = "section.texture",
             labelKey = "section.texture",
             texture = true
+        },
+        {
+            id = 26,
+            order = 26,
+            name = "betterlights_flashlight_world_weapon_attachment",
+            type = "bool",
+            default = true,
+            section = "position_world",
+            sectionKey = "section.flashlight_position_world",
+            labelKey = "control.attach_beam_to_weapon"
+        },
+        {
+            id = 27,
+            order = 27,
+            name = "betterlights_flashlight_world_forward_offset",
+            type = "number",
+            default = 16,
+            min = -32,
+            max = 96,
+            decimals = 1,
+            section = "position_world",
+            sectionKey = "section.flashlight_position_world",
+            labelKey = "control.forward_offset"
+        },
+        {
+            id = 28,
+            order = 28,
+            name = "betterlights_flashlight_world_attachment_offset",
+            type = "number",
+            default = 2,
+            min = -24,
+            max = 24,
+            decimals = 1,
+            section = "position_world",
+            sectionKey = "section.flashlight_position_world",
+            labelKey = "control.attached_side_offset"
+        },
+        {
+            id = 29,
+            order = 29,
+            name = "betterlights_flashlight_world_fallback_offset",
+            type = "number",
+            default = 0,
+            min = -24,
+            max = 24,
+            decimals = 1,
+            section = "position_world",
+            sectionKey = "section.flashlight_position_world",
+            labelKey = "control.view_origin_side_offset"
         }
     }
 

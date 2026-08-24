@@ -4,7 +4,8 @@ if CLIENT then
 
     local SECTION_ORDER = {
         "behavior",
-        "position",
+        "position_first_person",
+        "position_world",
         "beam",
         "advanced_shadows",
         "flare",
@@ -13,6 +14,8 @@ if CLIENT then
     }
 
     local SECTION_DESCRIPTIONS = {
+        position_first_person = "section.flashlight_position_first_person.desc",
+        position_world = "section.flashlight_position_world.desc",
         beam = "section.beam.desc",
         advanced_shadows = "section.advanced_shadows.desc",
         flare = "section.flare.desc",

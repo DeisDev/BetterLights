@@ -1370,20 +1370,45 @@ if CLIENT then
 
     registerPage("Flashlight", "BL_FlashlightPosition", "menu.position", function(panel)
             setupPage(panel, "page.flashlight_position.title", "page.flashlight_position.desc")
-            local origin = addSection(panel, "section.origin", nil, true)
-            addFlashlightCheckbox(origin, phrase("control.attach_beam_to_weapon"), "betterlights_flashlight_weapon_attachment")
-            addHelpText(origin, phrase("help.attach_beam_to_weapon"))
-            addFlashlightSlider(origin, phrase("control.forward_offset"), "betterlights_flashlight_forward_offset", -32, 96, 1)
-            addHelpText(origin, phrase("help.forward_offset"))
-            addFlashlightSlider(origin, phrase("control.attached_side_offset"), "betterlights_flashlight_attachment_offset", -24, 24, 1)
-            addHelpText(origin, phrase("help.attached_side_offset"))
-            addFlashlightSlider(origin, phrase("control.view_origin_side_offset"), "betterlights_flashlight_fallback_offset", -24, 24, 1)
-            addHelpText(origin, phrase("help.view_origin_side_offset"))
+            local firstPerson = addSection(
+                panel,
+                "section.flashlight_position_first_person",
+                "section.flashlight_position_first_person.desc",
+                true
+            )
+            addFlashlightCheckbox(firstPerson, phrase("control.attach_beam_to_weapon"), "betterlights_flashlight_weapon_attachment")
+            addHelpText(firstPerson, phrase("help.attach_beam_to_weapon"))
+            addFlashlightSlider(firstPerson, phrase("control.forward_offset"), "betterlights_flashlight_forward_offset", -32, 96, 1)
+            addHelpText(firstPerson, phrase("help.forward_offset"))
+            addFlashlightSlider(firstPerson, phrase("control.attached_side_offset"), "betterlights_flashlight_attachment_offset", -24, 24, 1)
+            addHelpText(firstPerson, phrase("help.attached_side_offset"))
+            addFlashlightSlider(firstPerson, phrase("control.view_origin_side_offset"), "betterlights_flashlight_fallback_offset", -24, 24, 1)
+            addHelpText(firstPerson, phrase("help.view_origin_side_offset"))
+
+            local world = addSection(
+                panel,
+                "section.flashlight_position_world",
+                "section.flashlight_position_world.desc",
+                true
+            )
+            addFlashlightCheckbox(world, phrase("control.attach_beam_to_weapon"), "betterlights_flashlight_world_weapon_attachment")
+            addHelpText(world, phrase("help.attach_beam_to_weapon"))
+            addFlashlightSlider(world, phrase("control.forward_offset"), "betterlights_flashlight_world_forward_offset", -32, 96, 1)
+            addHelpText(world, phrase("help.forward_offset"))
+            addFlashlightSlider(world, phrase("control.attached_side_offset"), "betterlights_flashlight_world_attachment_offset", -24, 24, 1)
+            addHelpText(world, phrase("help.attached_side_offset"))
+            addFlashlightSlider(world, phrase("control.view_origin_side_offset"), "betterlights_flashlight_world_fallback_offset", -24, 24, 1)
+            addHelpText(world, phrase("help.view_origin_side_offset"))
+
             addFlashlightResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
                 betterlights_flashlight_forward_offset = 0,
                 betterlights_flashlight_attachment_offset = 2,
                 betterlights_flashlight_fallback_offset = 0,
+                betterlights_flashlight_world_weapon_attachment = 1,
+                betterlights_flashlight_world_forward_offset = 16,
+                betterlights_flashlight_world_attachment_offset = 2,
+                betterlights_flashlight_world_fallback_offset = 0,
             })
 
             local blacklist = addSection(

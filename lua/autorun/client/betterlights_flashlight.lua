@@ -109,6 +109,10 @@ if CLIENT then
     local cvar_forward_offset = BL.CreateClientConVar("betterlights_flashlight_forward_offset", "0", true, false, "Extra forward offset for the flashlight beam")
     local cvar_attachment_offset = BL.CreateClientConVar("betterlights_flashlight_attachment_offset", "2", true, false, "Side offset for weapon-attached flashlights")
     local cvar_view_origin_offset = BL.CreateClientConVar("betterlights_flashlight_fallback_offset", "0", true, false, "Side offset for view-origin flashlights")
+    local cvar_world_attachment = BL.CreateClientConVar("betterlights_flashlight_world_weapon_attachment", "1", true, false, "Use world weapon muzzle attachments for third-person and other-player flashlights", 0, 1)
+    local cvar_world_forward_offset = BL.CreateClientConVar("betterlights_flashlight_world_forward_offset", "16", true, false, "Extra forward offset for third-person and other-player flashlight beams", -32, 96)
+    local cvar_world_attachment_offset = BL.CreateClientConVar("betterlights_flashlight_world_attachment_offset", "2", true, false, "Side offset for world-weapon-attached flashlights", -24, 24)
+    local cvar_world_view_origin_offset = BL.CreateClientConVar("betterlights_flashlight_world_fallback_offset", "0", true, false, "Side offset for third-person and other-player view-origin flashlights", -24, 24)
     local cvar_brightness = BL.CreateClientConVar("betterlights_flashlight_brightness", "1.35", true, false, "Flashlight brightness")
     local cvar_color_r = BL.CreateClientConVar("betterlights_flashlight_color_r", "255", true, false, "Flashlight color - red (0-255)")
     local cvar_color_g = BL.CreateClientConVar("betterlights_flashlight_color_g", "245", true, false, "Flashlight color - green (0-255)")
@@ -172,6 +176,18 @@ if CLIENT then
     -- Common SWEP attachment conventions. This list is intentionally broad for flashlight compatibility.
     local ATTACHMENT_NAMES = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
     local PLAYER_EYE_ATTACHMENT_NAMES = { "eyes" }
+    local FIRST_PERSON_PLACEMENT = {
+        attachment = cvar_attachment,
+        forwardOffset = cvar_forward_offset,
+        attachmentOffset = cvar_attachment_offset,
+        viewOriginOffset = cvar_view_origin_offset
+    }
+    local WORLD_PLACEMENT = {
+        attachment = cvar_world_attachment,
+        forwardOffset = cvar_world_forward_offset,
+        attachmentOffset = cvar_world_attachment_offset,
+        viewOriginOffset = cvar_world_view_origin_offset
+    }
 
     local projectors = {}
     local projectorData = {}
@@ -364,15 +380,23 @@ if CLIENT then
         end
     end, "BetterLights_FlashlightTextureRecent")
 
-    local function applyAttachmentOffset(pos, ang)
+    local function isFirstPersonView(ply, localPlayer)
+        return ply == localPlayer and not ply:ShouldDrawLocalPlayer()
+    end
+
+    local function getPlacementSettings(ply, localPlayer)
+        return isFirstPersonView(ply, localPlayer) and FIRST_PERSON_PLACEMENT or WORLD_PLACEMENT
+    end
+
+    local function applyAttachmentOffset(pos, ang, settings)
         return pos
-            + ang:Forward() * (ATTACHMENT_OFFSET_FORWARD + math.Clamp(getEffectiveNumber(cvar_forward_offset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
-            + ang:Right() * getEffectiveNumber(cvar_attachment_offset)
+            + ang:Forward() * (ATTACHMENT_OFFSET_FORWARD + math.Clamp(getEffectiveNumber(settings.forwardOffset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
+            + ang:Right() * getEffectiveNumber(settings.attachmentOffset)
             - ang:Up() * ATTACHMENT_OFFSET_DOWN
     end
 
     local function isFirstPersonZooming(ply, localPlayer)
-        if ply ~= localPlayer or ply:ShouldDrawLocalPlayer() then return false end
+        if not isFirstPersonView(ply, localPlayer) then return false end
         if not ply.KeyDown or not ply:KeyDown(IN_ZOOM) then return false end
         if not ply.GetCanZoom then return true end
 
@@ -380,7 +404,7 @@ if CLIENT then
     end
 
     local function getWeaponAttachmentSource(ply, localPlayer, activeWeapon)
-        if ply == localPlayer and not ply:ShouldDrawLocalPlayer() then
+        if isFirstPersonView(ply, localPlayer) then
             return ply:GetViewModel()
         end
 
@@ -410,8 +434,8 @@ if CLIENT then
         return false
     end
 
-    local function getWeaponAttachmentTransform(ply, localPlayer)
-        if not getEffectiveBool(cvar_attachment) then return end
+    local function getWeaponAttachmentTransform(ply, localPlayer, settings)
+        if not getEffectiveBool(settings.attachment) then return end
         if ply.InVehicle and ply:InVehicle() then return end
         if isFirstPersonZooming(ply, localPlayer) then return end
 
@@ -429,11 +453,11 @@ if CLIENT then
         if not (attachment and attachment.Pos and attachment.Ang) then return end
 
         -- Keep projector offsets separate so the visible flare stays on the attachment.
-        return applyAttachmentOffset(attachment.Pos, attachment.Ang), attachment.Ang, attachment.Pos, attachment.Ang
+        return applyAttachmentOffset(attachment.Pos, attachment.Ang, settings), attachment.Ang, attachment.Pos, attachment.Ang
     end
 
-    local function getViewOriginTransform(ply, localPlayer)
-        local useMainView = ply == localPlayer and not ply:ShouldDrawLocalPlayer()
+    local function getViewOriginTransform(ply, localPlayer, settings)
+        local useMainView = isFirstPersonView(ply, localPlayer)
         local useMainViewAngles = useMainView and MainEyeAngles
         local aim = not useMainViewAngles and ply.GetAimVector and ply:GetAimVector() or nil
         local ang = useMainViewAngles and MainEyeAngles() or (aim and aim:Angle() or ply:EyeAngles())
@@ -443,8 +467,8 @@ if CLIENT then
         local downOffset = inVehicle and VEHICLE_OFFSET_DOWN or 0
 
         pos = pos
-            + ang:Forward() * (forwardOffset + math.Clamp(getEffectiveNumber(cvar_forward_offset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
-            + ang:Right() * getEffectiveNumber(cvar_view_origin_offset)
+            + ang:Forward() * (forwardOffset + math.Clamp(getEffectiveNumber(settings.forwardOffset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
+            + ang:Right() * getEffectiveNumber(settings.viewOriginOffset)
             - ang:Up() * downOffset
 
         if not inVehicle and not useMainViewAngles and ply.GetViewPunchAngles then
@@ -460,10 +484,11 @@ if CLIENT then
     end
 
     local function getFlashlightOriginTransform(ply, localPlayer)
-        local pos, ang, flarePos, flareAng = getWeaponAttachmentTransform(ply, localPlayer)
+        local settings = getPlacementSettings(ply, localPlayer)
+        local pos, ang, flarePos, flareAng = getWeaponAttachmentTransform(ply, localPlayer, settings)
         if pos then return pos, ang, flarePos, flareAng end
 
-        return getViewOriginTransform(ply, localPlayer)
+        return getViewOriginTransform(ply, localPlayer, settings)
     end
 
     local function getWallDistance(ply, pos, ang)
