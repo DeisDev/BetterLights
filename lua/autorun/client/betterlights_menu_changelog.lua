@@ -5,9 +5,10 @@ if CLIENT then
 
     local AUTO_OPEN_TIMER = "BetterLights_AutoOpenChangelog"
     local SEEN_VERSION_COOKIE = "betterlights_changelog_seen_version"
+    local AUTO_OPEN_CVAR = "betterlights_changelog_auto_open"
     local cvar_auto_open = BL.CreateClientConVar(
-        "betterlights_changelog_auto_open",
-        "0",
+        AUTO_OPEN_CVAR,
+        "1",
         true,
         false,
         "Show the Better Lights changelog once after the addon updates",
@@ -149,7 +150,7 @@ if CLIENT then
     end
 
     local function addChangelogItem(parent, text)
-        return addChangelogText(parent, text, "DermaDefault", 10)
+        return addChangelogText(parent, "•  " .. text, "DermaDefault", 10)
     end
 
     local function populateChangelogDetail(panel, entry)
@@ -163,8 +164,8 @@ if CLIENT then
 
         local header = vgui.Create("DPanel", panel)
         header:Dock(TOP)
-        header:DockMargin(0, 0, 8, 12)
-        header:SetTall(68)
+        header:DockMargin(0, 0, 8, 10)
+        header:SetTall(64)
         header.Paint = nil
 
         local title = vgui.Create("DLabel", header)
@@ -179,7 +180,10 @@ if CLIENT then
         subtitle:Dock(TOP)
         subtitle:DockMargin(0, 4, 16, 0)
         subtitle:SetTall(24)
-        subtitle:SetText(entry.version ~= "" and phraseFormat("changelog.release_notes_for", entry.version) or phrase("changelog.release_notes"))
+        local itemCount = #entry.items
+        local summaryKey = itemCount == 1 and "changelog.change_count_one" or "changelog.change_count_many"
+        subtitle:SetText(phraseFormat(summaryKey, itemCount))
+        subtitle:SetFont("DermaDefaultBold")
         subtitle:SetDark(true)
 
         if entry.placeholder then
@@ -202,7 +206,7 @@ if CLIENT then
 
         local frame = vgui.Create("DFrame")
         frame:SetTitle(phrase("window.changelog_title"))
-        frame:SetSize(math.min(ScrW() - 80, 780), math.min(ScrH() - 80, 560))
+        frame:SetSize(math.min(ScrW() - 80, 840), math.min(ScrH() - 80, 520))
         frame:Center()
         frame:MakePopup()
         markVersionSeen(currentVersion)
@@ -210,17 +214,52 @@ if CLIENT then
         local body = vgui.Create("DPanel", frame)
         body:Dock(FILL)
         body:DockMargin(10, 10, 10, 10)
-        body.Paint = nil
 
-        local footer = vgui.Create("DPanel", frame)
+        local versions = vgui.Create("DListView", body)
+        versions:Dock(LEFT)
+        versions:DockMargin(12, 12, 0, 12)
+        versions:SetWide(196)
+        versions:SetMultiSelect(false)
+        versions:SetSortable(false)
+        versions:SetHeaderHeight(28)
+        versions:SetDataHeight(28)
+        versions:AddColumn(phrase("label.versions"))
+
+        local release = vgui.Create("DPanel", body)
+        release:Dock(FILL)
+        release:DockMargin(14, 12, 12, 12)
+        release.Paint = nil
+
+        local footer = vgui.Create("DPanel", release)
         footer:Dock(BOTTOM)
-        footer:DockMargin(10, 0, 10, 10)
+        footer:DockMargin(0, 8, 0, 0)
         footer:SetTall(32)
         footer.Paint = nil
 
-        local styleButton = MENU.StyleButton
-        local workshopChangelog = styleButton(vgui.Create("DButton", footer))
+        local neverShow = vgui.Create("DCheckBoxLabel", footer)
+        neverShow:Dock(LEFT)
+        neverShow:DockMargin(0, 7, 0, 0)
+        neverShow:SetText(phrase("control.never_show_changelog"))
+        neverShow:SetTooltip(phrase("tooltip.never_show_changelog"))
+        neverShow:SetValue(cvar_auto_open:GetBool() and 0 or 1)
+        neverShow:SetDark(true)
+        neverShow:SizeToContents()
+        neverShow.OnChange = function(_, value)
+            BL.ApplyClientSetting(AUTO_OPEN_CVAR, value and 0 or 1)
+        end
+
+        local close = vgui.Create("DButton", footer)
+        close:Dock(RIGHT)
+        close:SetWide(112)
+        close:SetText(phrase("button.close"))
+        close:SetFont("DermaDefaultBold")
+        close.DoClick = function()
+            frame:Close()
+        end
+
+        local workshopChangelog = vgui.Create("DButton", footer)
         workshopChangelog:Dock(RIGHT)
+        workshopChangelog:DockMargin(0, 0, 8, 0)
         workshopChangelog:SetWide(190)
         workshopChangelog:SetText(phrase("button.workshop_changelog"))
         workshopChangelog:SetTooltip(phrase("tooltip.workshop_changelog"))
@@ -228,26 +267,10 @@ if CLIENT then
             gui.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/changelog/3597784225")
         end
 
-        local versions = vgui.Create("DScrollPanel", body)
-        versions:Dock(LEFT)
-        versions:DockMargin(10, 10, 0, 10)
-        versions:SetWide(196)
-        versions.Paint = nil
-        versions:GetCanvas():DockPadding(8, 8, 8, 8)
-
-        local versionTitle = vgui.Create("DLabel", versions)
-        versionTitle:Dock(TOP)
-        versionTitle:DockMargin(0, 0, 0, 8)
-        versionTitle:SetTall(20)
-        versionTitle:SetText(phrase("label.versions"))
-        versionTitle:SetFont("DermaDefaultBold")
-        versionTitle:SetDark(true)
-
-        local detail = vgui.Create("DScrollPanel", body)
+        local detail = vgui.Create("DScrollPanel", release)
         detail:Dock(FILL)
-        detail:DockMargin(10, 10, 10, 10)
         detail.Paint = nil
-        detail:GetCanvas():DockPadding(12, 12, 12, 12)
+        detail:GetCanvas():DockPadding(8, 8, 8, 8)
 
         if #entries == 0 then
             populateChangelogDetail(detail, {
@@ -257,59 +280,34 @@ if CLIENT then
             return
         end
 
-        local selectedButton
-        local function versionButtonText(entry, selected)
+        local function versionRowText(entry)
             local text = entry.version ~= "" and entry.version or entry.title
             if entry.version == currentVersion then
-                text = text .. " - " .. phrase("label.current")
+                return phraseFormat("changelog.current_version", text)
             end
 
-            return selected and "> " .. text or text
+            return text
         end
 
-        local function selectEntry(entry, button)
-            if IsValid(selectedButton) then
-                selectedButton.BetterLightsSelected = false
-                if selectedButton.BetterLightsEntry then
-                    selectedButton:SetText(versionButtonText(selectedButton.BetterLightsEntry, false))
-                end
-            end
-
-            selectedButton = button
-            if IsValid(selectedButton) then
-                selectedButton.BetterLightsSelected = true
-                if selectedButton.BetterLightsEntry then
-                    selectedButton:SetText(versionButtonText(selectedButton.BetterLightsEntry, true))
-                end
-            end
-
-            populateChangelogDetail(detail, entry)
+        versions.OnRowSelected = function(_, _, row)
+            populateChangelogDetail(detail, row.BetterLightsEntry)
         end
 
-        local firstButton
-        local currentButton
-        local currentEntry
+        local firstRow
+        local currentRow
 
         for _, entry in ipairs(entries) do
-            local button = vgui.Create("DButton", versions)
-            button:Dock(TOP)
-            button:DockMargin(0, 0, 0, 6)
-            button:SetTall(42)
-            button.BetterLightsEntry = entry
-            button:SetText(versionButtonText(entry, false))
-            button:SetTooltip(entry.title)
-            button.DoClick = function()
-                selectEntry(entry, button)
-            end
+            local row = versions:AddLine(versionRowText(entry))
+            row.BetterLightsEntry = entry
+            row:SetTooltip(entry.title)
 
-            firstButton = firstButton or button
+            firstRow = firstRow or row
             if entry.version == currentVersion then
-                currentButton = button
-                currentEntry = entry
+                currentRow = row
             end
         end
 
-        selectEntry(currentEntry or entries[1], currentButton or firstButton)
+        versions:SelectItem(currentRow or firstRow)
     end
 
     local function checkForUpdatedChangelog()
@@ -317,7 +315,7 @@ if CLIENT then
         if currentVersion == "" then return end
 
         local seenVersion = normalizeVersion(cookie.GetString(SEEN_VERSION_COOKIE, ""))
-        if not cvar_auto_open:GetBool() or seenVersion == "" then
+        if not cvar_auto_open:GetBool() then
             markVersionSeen(currentVersion)
             return
         end

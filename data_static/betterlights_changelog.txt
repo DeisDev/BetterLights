@@ -1,9 +1,13 @@
 [b]Better Lights v1.6.0[/b]
 
 [list]
+[*]Added a dedicated, searchable settings window with an optional key bind, desktop shortcut, and quick access from the Spawn Menu.
 [*]Added an optional third-person flashlight spill light to imitate reflected light around players.
+[*]Improved settings pages with clearer enabled, disabled, locked, and server-controlled states, plus quick controls for groups of effects.
 [*]Improved the global flashlight settings menu with clearer override states and unapplied-change feedback.
 [*]Improved settings profiles with clearer selection states, quicker saving, and double-click loading.
+[*]Improved Rollermine lights and settings for regular, hacked, and temporary power-down states.
+[*]Polished the in-game changelog, which now opens after updates by default and includes a Never show again option.
 [*]Fixed flashlight placement on the Crossbow by preventing it from using weapon attachments.
 [/list]
 
