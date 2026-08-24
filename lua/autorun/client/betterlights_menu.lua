@@ -1,7 +1,12 @@
 if CLIENT then
-    local TAB_ID = "Better Lights"
+    local SPAWNMENU_TAB_ID = "Utilities"
+    local SPAWNMENU_CATEGORY_ID = "BetterLights"
     BetterLights.Menu = BetterLights.Menu or {}
     local MENU = BetterLights.Menu
+    local registeredPages = {}
+    local registeredPagesById = {}
+    local registeringPages = false
+    local addClientPanels
 
     local function isDeveloperMode()
         local developer = GetConVar("developer")
@@ -61,13 +66,61 @@ if CLIENT then
     MENU.IsDeveloperMode = isDeveloperMode
 
     function MENU.RegisterPage(category, id, titleKey, buildPanel)
-        spawnmenu.AddToolMenuOption(TAB_ID, category, id, phrase(titleKey), "", "", buildPanel)
+        if not (isstring(category) and isstring(id) and isstring(titleKey) and isfunction(buildPanel)) then return end
+
+        local page = registeredPagesById[id]
+        if page then
+            page.category = category
+            page.titleKey = titleKey
+            page.buildPanel = buildPanel
+            return page
+        end
+
+        page = {
+            category = category,
+            id = id,
+            titleKey = titleKey,
+            buildPanel = buildPanel
+        }
+        registeredPagesById[id] = page
+        registeredPages[#registeredPages + 1] = page
+        return page
     end
 
     function MENU.RefreshSettingsPanel()
         timer.Simple(0, function()
-            RunConsoleCommand("spawnmenu_reload")
+            MENU.RefreshSettingsWindow()
         end)
+    end
+
+    function MENU.GetCategoryDefinitions()
+        return CATEGORY_DEFS
+    end
+
+    function MENU.EnsurePagesRegistered()
+        if registeringPages then return registeredPages end
+
+        registeringPages = true
+        MENU.RegisterGeneralPanel()
+        MENU.RegisterGunfirePanels()
+        MENU.RegisterWeaponPanels()
+        addClientPanels()
+        MENU.RegisterNPCLightPanels()
+        MENU.RegisterIntegrationPanels()
+        MENU.RegisterDeveloperPanel()
+        MENU.RegisterAboutPanel()
+        registeringPages = false
+
+        return registeredPages
+    end
+
+    function MENU.GetRegisteredPages()
+        return MENU.EnsurePagesRegistered()
+    end
+
+    function MENU.GetRegisteredPage(id)
+        MENU.EnsurePagesRegistered()
+        return registeredPagesById[id]
     end
 
     local function registerPage(category, id, titleKey, buildPanel)
@@ -75,11 +128,7 @@ if CLIENT then
     end
 
     local function registerCategories()
-        for _, category in ipairs(CATEGORY_DEFS) do
-            if not category.developer or isDeveloperMode() then
-                spawnmenu.AddToolCategory(TAB_ID, category[1], phrase(category[2]))
-            end
-        end
+        spawnmenu.AddToolCategory(SPAWNMENU_TAB_ID, SPAWNMENU_CATEGORY_ID, phrase("addon.name"))
     end
 
     local function spaceHelpText(label, leftMargin, rightMargin)
@@ -121,7 +170,7 @@ if CLIENT then
     MENU.AddResetButton = addResetButton
 
     local function setupPage(panel, titleKey, subtitleKey)
-        panel:ClearControls()
+        panel:Clear()
 
         local titleLabel = vgui.Create("DLabel")
         titleLabel:SetTall(20)
@@ -980,7 +1029,7 @@ if CLIENT then
         })
     end
 
-    local function addClientPanels()
+    addClientPanels = function()
         registerPage("Projectiles", "BL_CombineBall", "menu.combine_ball", function(panel)
             setupPage(panel, "page.combine_ball.title", "page.combine_ball.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_combineball_enable")
@@ -1738,22 +1787,21 @@ if CLIENT then
 
     end
 
-    hook.Add("AddToolMenuTabs", "BetterLights_AddTab", function()
-        spawnmenu.AddToolTab(TAB_ID, phrase("addon.name"), "icon16/lightbulb.png")
-    end)
+    hook.Remove("AddToolMenuTabs", "BetterLights_AddTab")
 
     hook.Add("AddToolMenuCategories", "BetterLights_AddCategories", function()
         registerCategories()
     end)
 
     hook.Add("PopulateToolMenu", "BetterLights_Populate", function()
-        BetterLights.Menu.RegisterGeneralPanel()
-        BetterLights.Menu.RegisterGunfirePanels()
-        BetterLights.Menu.RegisterWeaponPanels()
-        addClientPanels()
-        BetterLights.Menu.RegisterNPCLightPanels()
-        BetterLights.Menu.RegisterIntegrationPanels()
-        BetterLights.Menu.RegisterDeveloperPanel()
-        BetterLights.Menu.RegisterAboutPanel()
+        spawnmenu.AddToolMenuOption(
+            SPAWNMENU_TAB_ID,
+            SPAWNMENU_CATEGORY_ID,
+            "BL_QuickSettings",
+            phrase("menu.quick_settings"),
+            "",
+            "",
+            MENU.BuildQuickSettingsPanel
+        )
     end)
 end

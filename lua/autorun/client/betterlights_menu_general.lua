@@ -1,7 +1,7 @@
 if CLIENT then
 
     local MENU = BetterLights.Menu
-    local activeClientPanel
+    local activeClientPanels = setmetatable({}, { __mode = "k" })
 
     local function notify(key, kind, duration, ...)
         local text = select("#", ...) > 0 and MENU.PhraseFormat(key, ...) or MENU.Phrase(key)
@@ -529,9 +529,7 @@ if CLIENT then
 
     end
 
-    local function buildClientPage(panel)
-        activeClientPanel = panel
-
+    local function addClientPreferenceSection(panel)
         local phrase = MENU.Phrase
         local serverStateReady = BetterLights.HasServerSettingsState
             and BetterLights.HasServerSettingsState()
@@ -549,8 +547,6 @@ if CLIENT then
                 canChange = mode == BetterLights.SERVER_MODE_PLAYER_CHOICE
             end
         end
-
-        MENU.SetupPage(panel, "page.client.title", "page.client.desc")
 
         local client = MENU.AddSection(panel, "section.client", "section.client.desc", true)
         local enabled = vgui.Create("DCheckBoxLabel")
@@ -584,7 +580,24 @@ if CLIENT then
                 or "help.client_effective_disabled"
             MENU.AddHelpText(client, phrase(effectiveKey))
         end
-        MENU.AddHelpText(client, phrase("help.optional_bind"))
+
+        return client
+    end
+
+    MENU.AddClientPreferenceSection = addClientPreferenceSection
+
+    function MENU.TrackClientSettingsPanel(panel, buildPanel)
+        if not (IsValid(panel) and isfunction(buildPanel)) then return end
+        activeClientPanels[panel] = buildPanel
+    end
+
+    local function buildClientPage(panel)
+        MENU.TrackClientSettingsPanel(panel, buildClientPage)
+        MENU.SetupPage(panel, "page.client.title", "page.client.desc")
+        addClientPreferenceSection(panel)
+        MENU.AddSettingsAccessControls(panel, { showOpenButton = false })
+
+        local phrase = MENU.Phrase
 
         local updates = MENU.AddSection(panel, "section.changelog_updates", "section.changelog_updates.desc", true)
         updates:CheckBox(phrase("control.auto_open_changelog"), "betterlights_changelog_auto_open")
@@ -652,13 +665,18 @@ if CLIENT then
         })
     end
 
-    hook.Add("BetterLights_ClientEnabledPreferenceChanged", "BetterLights_RefreshClientSettingsPage", function()
+    local function refreshClientSettingsPanels()
         timer.Simple(0, function()
-            if IsValid(activeClientPanel) then
-                buildClientPage(activeClientPanel)
+            for panel, buildPanel in pairs(activeClientPanels) do
+                if IsValid(panel) then
+                    buildPanel(panel)
+                end
             end
         end)
-    end)
+    end
+
+    hook.Add("BetterLights_ClientEnabledPreferenceChanged", "BetterLights_RefreshClientSettingsPage", refreshClientSettingsPanels)
+    hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_RefreshClientSettingsPolicy", refreshClientSettingsPanels)
 
     function MENU.RegisterGeneralPanel()
         local registerPage = MENU.RegisterPage
