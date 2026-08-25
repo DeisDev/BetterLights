@@ -6,6 +6,7 @@ if CLIENT then
         "behavior",
         "position_first_person",
         "position_world",
+        "world_spill",
         "beam",
         "advanced_shadows",
         "flare",
@@ -16,6 +17,7 @@ if CLIENT then
     local SECTION_DESCRIPTIONS = {
         position_first_person = "section.flashlight_position_first_person.desc",
         position_world = "section.flashlight_position_world.desc",
+        world_spill = "section.flashlight_world_spill.desc",
         beam = "section.beam.desc",
         advanced_shadows = "section.advanced_shadows.desc",
         flare = "section.flare.desc",
@@ -28,9 +30,21 @@ if CLIENT then
         g = "betterlights_flashlight_color_g",
         b = "betterlights_flashlight_color_b"
     }
+    local SPILL_COLOR_NAMES = {
+        r = "betterlights_flashlight_world_spill_color_r",
+        g = "betterlights_flashlight_world_spill_color_g",
+        b = "betterlights_flashlight_world_spill_color_b"
+    }
 
     local TEXTURE_NAME = "betterlights_flashlight_texture"
     local PLAYER_ENABLE_NAME = "betterlights_flashlight_player_enable"
+    local SPILL_ENABLED_DEPENDENCIES = {
+        { name = "betterlights_flashlight_world_spill", expected = true }
+    }
+    local SPILL_CUSTOM_DEPENDENCIES = {
+        { name = "betterlights_flashlight_world_spill", expected = true },
+        { name = "betterlights_flashlight_world_spill_match", expected = false }
+    }
     local SETTING_DEPENDENCIES = {
         betterlights_flashlight_attachment_offset = "betterlights_flashlight_weapon_attachment",
         betterlights_flashlight_flicker_amount = "betterlights_flashlight_flicker",
@@ -41,7 +55,13 @@ if CLIENT then
         betterlights_flashlight_flare_others = "betterlights_flashlight_flare_enable",
         betterlights_flashlight_flare_size = "betterlights_flashlight_flare_enable",
         betterlights_flashlight_flare_opacity = "betterlights_flashlight_flare_enable",
-        betterlights_flashlight_world_attachment_offset = "betterlights_flashlight_world_weapon_attachment"
+        betterlights_flashlight_world_attachment_offset = "betterlights_flashlight_world_weapon_attachment",
+        betterlights_flashlight_world_spill_match = SPILL_ENABLED_DEPENDENCIES,
+        betterlights_flashlight_world_spill_size = SPILL_ENABLED_DEPENDENCIES,
+        betterlights_flashlight_world_spill_brightness = SPILL_CUSTOM_DEPENDENCIES,
+        betterlights_flashlight_world_spill_color_r = SPILL_CUSTOM_DEPENDENCIES,
+        betterlights_flashlight_world_spill_color_g = SPILL_CUSTOM_DEPENDENCIES,
+        betterlights_flashlight_world_spill_color_b = SPILL_CUSTOM_DEPENDENCIES
     }
 
     local function canChangeServerSettings()
@@ -143,14 +163,15 @@ if CLIENT then
 
     local function countLogicalOverrides(state)
         local count = 0
-        local countedColor = false
+        local countedColorGroups = {}
 
         for i = 1, #BL.FLASHLIGHT_SETTING_DEFS do
             local def = BL.FLASHLIGHT_SETTING_DEFS[i]
             if state.overrides[def.name] then
                 if def.colorChannel then
-                    if not countedColor then
-                        countedColor = true
+                    local colorGroup = def.colorGroup or "flashlight"
+                    if not countedColorGroups[colorGroup] then
+                        countedColorGroups[colorGroup] = true
                         count = count + 1
                     end
                 else
@@ -171,8 +192,19 @@ if CLIENT then
             return false
         end
 
-        local dependency = SETTING_DEPENDENCIES[name]
-        return not dependency or not isForcedDisabled(staged, dependency)
+        local dependencies = SETTING_DEPENDENCIES[name]
+        if not dependencies then return true end
+        if isstring(dependencies) then return not isForcedDisabled(staged, dependencies) end
+
+        for i = 1, #dependencies do
+            local dependency = dependencies[i]
+            if staged.overrides[dependency.name]
+                and staged.values[dependency.name] ~= dependency.expected then
+                return false
+            end
+        end
+
+        return true
     end
 
     local function refreshControlStates(refreshers)
@@ -261,14 +293,17 @@ if CLIENT then
         end
     end
 
-    local function addColorSetting(section, staged, editable, refreshers, onChanged)
-        local forced = staged.overrides[COLOR_NAMES.r]
-            or staged.overrides[COLOR_NAMES.g]
-            or staged.overrides[COLOR_NAMES.b]
+    local function addColorSetting(section, staged, editable, refreshers, onChanged, names, options)
+        names = names or COLOR_NAMES
+        options = options or {}
+
+        local forced = staged.overrides[names.r]
+            or staged.overrides[names.g]
+            or staged.overrides[names.b]
 
         local override = vgui.Create("DCheckBoxLabel")
-        local overrideLabel = MENU.Phrase("control.override_flashlight_color")
-        local mixerLabel = MENU.Phrase("control.flashlight_color")
+        local overrideLabel = MENU.Phrase(options.overrideLabelKey or "control.override_flashlight_color")
+        local mixerLabel = MENU.Phrase(options.labelKey or "control.flashlight_color")
         override:SetText(overrideLabel)
         override:SetValue(forced and 1 or 0)
         override:SizeToContents()
@@ -281,17 +316,17 @@ if CLIENT then
         mixer:SetAlphaBar(false)
         mixer:SetWangs(true)
         mixer:SetColor(Color(
-            tonumber(staged.values[COLOR_NAMES.r]) or 255,
-            tonumber(staged.values[COLOR_NAMES.g]) or 245,
-            tonumber(staged.values[COLOR_NAMES.b]) or 225
+            tonumber(staged.values[names.r]) or options.defaultR or 255,
+            tonumber(staged.values[names.g]) or options.defaultG or 245,
+            tonumber(staged.values[names.b]) or options.defaultB or 225
         ))
         section:AddItem(mixer)
 
         refreshers[#refreshers + 1] = function()
-            local relevant = isSettingRelevant(staged, COLOR_NAMES.r)
-            local overridden = staged.overrides[COLOR_NAMES.r]
-                or staged.overrides[COLOR_NAMES.g]
-                or staged.overrides[COLOR_NAMES.b]
+            local relevant = isSettingRelevant(staged, names.r)
+            local overridden = staged.overrides[names.r]
+                or staged.overrides[names.g]
+                or staged.overrides[names.b]
             local canOverride = editable and relevant
             local valueActive = canOverride and overridden
             override:SetText(canOverride and overrideLabel or MENU.PhraseFormat("state.unavailable_label", overrideLabel))
@@ -308,14 +343,14 @@ if CLIENT then
         end
 
         mixer.ValueChanged = function(_, color)
-            staged.values[COLOR_NAMES.r] = math.Clamp(math.Round(color.r), 0, 255)
-            staged.values[COLOR_NAMES.g] = math.Clamp(math.Round(color.g), 0, 255)
-            staged.values[COLOR_NAMES.b] = math.Clamp(math.Round(color.b), 0, 255)
+            staged.values[names.r] = math.Clamp(math.Round(color.r), 0, 255)
+            staged.values[names.g] = math.Clamp(math.Round(color.g), 0, 255)
+            staged.values[names.b] = math.Clamp(math.Round(color.b), 0, 255)
             onChanged()
         end
 
         override.OnChange = function(_, value)
-            for _, name in pairs(COLOR_NAMES) do
+            for _, name in pairs(names) do
                 staged.overrides[name] = value
             end
 
@@ -427,7 +462,7 @@ if CLIENT then
         )
 
         if sectionName == "color" then
-            addColorSetting(section, staged, editable, refreshers, onChanged)
+            addColorSetting(section, staged, editable, refreshers, onChanged, COLOR_NAMES)
             return
         end
 
@@ -440,11 +475,23 @@ if CLIENT then
 
         for i = 1, #definitions do
             local def = definitions[i]
-            if def.type == "bool" then
-                addBooleanSetting(section, def, staged, editable, refreshers, onChanged)
-            elseif def.type == "number" then
-                addNumberSetting(section, def, staged, editable, refreshers, onChanged)
+            if not def.colorChannel then
+                if def.type == "bool" then
+                    addBooleanSetting(section, def, staged, editable, refreshers, onChanged)
+                elseif def.type == "number" then
+                    addNumberSetting(section, def, staged, editable, refreshers, onChanged)
+                end
             end
+        end
+
+        if sectionName == "world_spill" then
+            addColorSetting(section, staged, editable, refreshers, onChanged, SPILL_COLOR_NAMES, {
+                overrideLabelKey = "control.override_flashlight_world_spill_color",
+                labelKey = "control.flashlight_world_spill_color",
+                defaultR = 255,
+                defaultG = 245,
+                defaultB = 225
+            })
         end
     end
 

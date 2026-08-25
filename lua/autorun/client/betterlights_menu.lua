@@ -628,7 +628,7 @@ if CLIENT then
             bindControlToConVar(reset, dependencyCvar)
         end
 
-        return mixer
+        return mixer, reset
     end
 
     MENU.AddColorMixerControl = addColorMixerControl
@@ -770,6 +770,10 @@ if CLIENT then
     local populateFlashlightVisualPanel
     local activeFlashlightVisualPanel
     local activeFlashlightVisualFilter
+    local SPILL_CUSTOM_DEPENDENCY = {
+        name = "betterlights_flashlight_world_spill_match",
+        expected = false
+    }
     local FLASHLIGHT_CONTROL_DEPENDENCIES = {
         betterlights_flashlight_attachment_offset = "betterlights_flashlight_weapon_attachment",
         betterlights_flashlight_flicker_amount = "betterlights_flashlight_flicker",
@@ -780,7 +784,11 @@ if CLIENT then
         betterlights_flashlight_flare_others = "betterlights_flashlight_flare_enable",
         betterlights_flashlight_flare_size = "betterlights_flashlight_flare_enable",
         betterlights_flashlight_flare_opacity = "betterlights_flashlight_flare_enable",
-        betterlights_flashlight_world_attachment_offset = "betterlights_flashlight_world_weapon_attachment"
+        betterlights_flashlight_world_attachment_offset = "betterlights_flashlight_world_weapon_attachment",
+        betterlights_flashlight_world_spill_brightness = SPILL_CUSTOM_DEPENDENCY,
+        betterlights_flashlight_world_spill_color_r = SPILL_CUSTOM_DEPENDENCY,
+        betterlights_flashlight_world_spill_color_g = SPILL_CUSTOM_DEPENDENCY,
+        betterlights_flashlight_world_spill_color_b = SPILL_CUSTOM_DEPENDENCY
     }
 
     local function isFlashlightSettingForced(cvarName)
@@ -831,8 +839,10 @@ if CLIENT then
         local dependency = FLASHLIGHT_CONTROL_DEPENDENCIES[cvarName]
         if not dependency then return control end
 
-        return bindControlToConVar(control, dependency, function()
-            return getEffectiveFlashlightBool(dependency)
+        local dependencyName = isstring(dependency) and dependency or dependency.name
+        local expected = isstring(dependency) or dependency.expected ~= false
+        return bindControlToConVar(control, dependencyName, function()
+            return getEffectiveFlashlightBool(dependencyName) == expected
         end)
     end
 
@@ -885,13 +895,25 @@ if CLIENT then
         return slider
     end
 
-    local function addFlashlightColorMixer(panel, labelKey, rCvar, gCvar, bCvar)
+    local function addFlashlightColorMixer(panel, labelKey, rCvar, gCvar, bCvar, defaultR, defaultG, defaultB)
         local forced = isFlashlightSettingForced(rCvar)
             or isFlashlightSettingForced(gCvar)
             or isFlashlightSettingForced(bCvar)
 
         if not forced then
-            return addColorMixerControl(panel, labelKey, rCvar, gCvar, bCvar, 255, 245, 225)
+            local mixer, reset = addColorMixerControl(
+                panel,
+                labelKey,
+                rCvar,
+                gCvar,
+                bCvar,
+                defaultR or 255,
+                defaultG or 245,
+                defaultB or 225
+            )
+            bindFlashlightDependency(mixer, rCvar)
+            bindFlashlightDependency(reset, rCvar)
+            return mixer
         end
 
         local mixer = vgui.Create("DColorMixer")
@@ -909,21 +931,28 @@ if CLIENT then
         setControlTreeLocked(mixer, true)
         panel:AddItem(mixer)
         addServerControlledHelp(panel)
+        bindFlashlightDependency(mixer, rCvar)
         return mixer
     end
 
     local function addFlashlightResetButton(panel, defaults, label)
         local resettable = {}
-        local colorForced = isFlashlightSettingForced("betterlights_flashlight_color_r")
-            or isFlashlightSettingForced("betterlights_flashlight_color_g")
-            or isFlashlightSettingForced("betterlights_flashlight_color_b")
+        local forcedColorGroups = {}
+
+        for i = 1, #BetterLights.FLASHLIGHT_SETTING_DEFS do
+            local def = BetterLights.FLASHLIGHT_SETTING_DEFS[i]
+            if def.colorChannel and isFlashlightSettingForced(def.name) then
+                forcedColorGroups[def.colorGroup or "flashlight"] = true
+            end
+        end
 
         for cvarName, value in pairs(defaults) do
-            local colorSetting = cvarName == "betterlights_flashlight_color_r"
-                or cvarName == "betterlights_flashlight_color_g"
-                or cvarName == "betterlights_flashlight_color_b"
+            local def = BetterLights.FLASHLIGHT_SETTING_BY_NAME[cvarName]
+            local colorForced = def
+                and def.colorChannel
+                and forcedColorGroups[def.colorGroup or "flashlight"]
 
-            if not isFlashlightSettingForced(cvarName) and not (colorSetting and colorForced) then
+            if not isFlashlightSettingForced(cvarName) and not colorForced then
                 resettable[cvarName] = value
             end
         end
@@ -1902,8 +1931,36 @@ if CLIENT then
             addHelpText(world, phrase("help.attached_side_offset"))
             addFlashlightSlider(world, phrase("control.view_origin_side_offset"), "betterlights_flashlight_world_fallback_offset", -24, 24, 1)
             addHelpText(world, phrase("help.view_origin_side_offset"))
-            addFlashlightCheckbox(world, phrase("control.flashlight_world_spill"), "betterlights_flashlight_world_spill")
-            addHelpText(world, phrase("help.flashlight_world_spill"))
+
+            local spill = addSection(
+                panel,
+                "section.flashlight_world_spill",
+                "section.flashlight_world_spill.desc",
+                true
+            )
+            addFlashlightCheckbox(spill, phrase("control.flashlight_world_spill"), "betterlights_flashlight_world_spill")
+            local spillForced = isFlashlightSettingForced("betterlights_flashlight_world_spill")
+            beginControlGroup(spill, "betterlights_flashlight_world_spill", function()
+                return getEffectiveFlashlightBool("betterlights_flashlight_world_spill")
+            end, spillForced and {
+                disabledHelpKey = "state.feature_disabled_by_server",
+                disabledTitleKey = "state.section_disabled_by_server",
+                highlighted = true
+            } or nil)
+            addFlashlightCheckbox(spill, phrase("control.flashlight_world_spill_match"), "betterlights_flashlight_world_spill_match")
+            addHelpText(spill, phrase("help.flashlight_world_spill_match"))
+            addFlashlightSlider(spill, phrase("control.flashlight_world_spill_size"), "betterlights_flashlight_world_spill_size", 32, 512, 0)
+            addFlashlightSlider(spill, phrase("control.flashlight_world_spill_brightness"), "betterlights_flashlight_world_spill_brightness", 0.1, 5, 2)
+            addFlashlightColorMixer(
+                spill,
+                "control.flashlight_world_spill_color",
+                "betterlights_flashlight_world_spill_color_r",
+                "betterlights_flashlight_world_spill_color_g",
+                "betterlights_flashlight_world_spill_color_b",
+                255,
+                245,
+                225
+            )
 
             addFlashlightResetButton(panel, {
                 betterlights_flashlight_weapon_attachment = 1,
@@ -1915,6 +1972,12 @@ if CLIENT then
                 betterlights_flashlight_world_attachment_offset = 2,
                 betterlights_flashlight_world_fallback_offset = 0,
                 betterlights_flashlight_world_spill = 0,
+                betterlights_flashlight_world_spill_match = 1,
+                betterlights_flashlight_world_spill_size = 128,
+                betterlights_flashlight_world_spill_brightness = 0.47,
+                betterlights_flashlight_world_spill_color_r = 255,
+                betterlights_flashlight_world_spill_color_g = 245,
+                betterlights_flashlight_world_spill_color_b = 225,
             })
 
             local blacklist = addSection(

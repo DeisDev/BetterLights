@@ -11,7 +11,7 @@ BL.NET_SERVER_SETTINGS_STATE = "BetterLights_ServerSettings"
 BL.SERVER_MODE_DISABLED = 0
 BL.SERVER_MODE_ENABLED = 1
 BL.SERVER_MODE_PLAYER_CHOICE = 2
-BL.SERVER_SETTINGS_PROTOCOL_VERSION = 3
+BL.SERVER_SETTINGS_PROTOCOL_VERSION = 4
 
 BL.NET_MUZZLE_FLASH = 1
 BL.NET_BULLET_IMPACT = 2
@@ -397,9 +397,90 @@ do
             name = "betterlights_flashlight_world_spill",
             type = "bool",
             default = false,
-            section = "position_world",
-            sectionKey = "section.flashlight_position_world",
+            section = "world_spill",
+            sectionKey = "section.flashlight_world_spill",
             labelKey = "control.flashlight_world_spill"
+        },
+        {
+            id = 31,
+            order = 31,
+            name = "betterlights_flashlight_world_spill_match",
+            type = "bool",
+            default = true,
+            section = "world_spill",
+            sectionKey = "section.flashlight_world_spill",
+            labelKey = "control.flashlight_world_spill_match"
+        },
+        {
+            id = 32,
+            order = 32,
+            name = "betterlights_flashlight_world_spill_size",
+            type = "number",
+            default = 128,
+            min = 32,
+            max = 512,
+            decimals = 0,
+            section = "world_spill",
+            sectionKey = "section.flashlight_world_spill",
+            labelKey = "control.flashlight_world_spill_size"
+        },
+        {
+            id = 33,
+            order = 33,
+            name = "betterlights_flashlight_world_spill_brightness",
+            type = "number",
+            default = 0.47,
+            min = 0.1,
+            max = 5,
+            decimals = 2,
+            section = "world_spill",
+            sectionKey = "section.flashlight_world_spill",
+            labelKey = "control.flashlight_world_spill_brightness"
+        },
+        {
+            id = 34,
+            order = 34,
+            name = "betterlights_flashlight_world_spill_color_r",
+            type = "number",
+            default = 255,
+            min = 0,
+            max = 255,
+            decimals = 0,
+            section = "world_spill",
+            sectionKey = "section.flashlight_world_spill",
+            labelKey = "control.flashlight_world_spill_color",
+            colorChannel = "r",
+            colorGroup = "world_spill"
+        },
+        {
+            id = 35,
+            order = 35,
+            name = "betterlights_flashlight_world_spill_color_g",
+            type = "number",
+            default = 245,
+            min = 0,
+            max = 255,
+            decimals = 0,
+            section = "world_spill",
+            sectionKey = "section.flashlight_world_spill",
+            labelKey = "control.flashlight_world_spill_color",
+            colorChannel = "g",
+            colorGroup = "world_spill"
+        },
+        {
+            id = 36,
+            order = 36,
+            name = "betterlights_flashlight_world_spill_color_b",
+            type = "number",
+            default = 225,
+            min = 0,
+            max = 255,
+            decimals = 0,
+            section = "world_spill",
+            sectionKey = "section.flashlight_world_spill",
+            labelKey = "control.flashlight_world_spill_color",
+            colorChannel = "b",
+            colorGroup = "world_spill"
         }
     }
 

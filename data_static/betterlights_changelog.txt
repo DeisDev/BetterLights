@@ -8,7 +8,7 @@
 [*]Fixed supported NPC ragdoll lights sometimes being missed in multiplayer.
 [*]Fixed Scanner and Hunter Chopper searchlights so they follow the real spotlight state and direction.
 [*]Added a dedicated, searchable settings window with an optional key bind, desktop shortcut, and quick access from the Spawn Menu.
-[*]Added an optional third-person flashlight spill light to imitate reflected light around players.
+[*]Added a configurable third-person flashlight spill light with adjustable radius and either beam-matched or custom brightness and color.
 [*]Improved settings pages with clearer enabled, disabled, locked, and server-controlled states, plus quick controls for groups of effects.
 [*]Improved the global flashlight settings menu with clearer override states and unapplied-change feedback.
 [*]Improved settings profiles with clearer selection states, quicker saving, and double-click loading.

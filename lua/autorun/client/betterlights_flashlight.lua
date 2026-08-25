@@ -114,6 +114,12 @@ if CLIENT then
     local cvar_world_attachment_offset = BL.CreateClientConVar("betterlights_flashlight_world_attachment_offset", "2", true, false, "Side offset for world-weapon-attached flashlights", -24, 24)
     local cvar_world_view_origin_offset = BL.CreateClientConVar("betterlights_flashlight_world_fallback_offset", "0", true, false, "Side offset for third-person and other-player view-origin flashlights", -24, 24)
     local cvar_world_spill = BL.CreateClientConVar("betterlights_flashlight_world_spill", "0", true, false, "Add a point light at third-person and other-player flashlight sources", 0, 1)
+    local cvar_world_spill_match = BL.CreateClientConVar("betterlights_flashlight_world_spill_match", "1", true, false, "Match spill light color and brightness to the flashlight beam", 0, 1)
+    local cvar_world_spill_size = BL.CreateClientConVar("betterlights_flashlight_world_spill_size", "128", true, false, "Flashlight spill light radius", 32, 512)
+    local cvar_world_spill_brightness = BL.CreateClientConVar("betterlights_flashlight_world_spill_brightness", "0.47", true, false, "Custom flashlight spill light brightness", 0.1, 5)
+    local cvar_world_spill_color_r = BL.CreateClientConVar("betterlights_flashlight_world_spill_color_r", "255", true, false, "Custom flashlight spill light color - red (0-255)", 0, 255)
+    local cvar_world_spill_color_g = BL.CreateClientConVar("betterlights_flashlight_world_spill_color_g", "245", true, false, "Custom flashlight spill light color - green (0-255)", 0, 255)
+    local cvar_world_spill_color_b = BL.CreateClientConVar("betterlights_flashlight_world_spill_color_b", "225", true, false, "Custom flashlight spill light color - blue (0-255)", 0, 255)
     local cvar_brightness = BL.CreateClientConVar("betterlights_flashlight_brightness", "1.35", true, false, "Flashlight brightness")
     local cvar_color_r = BL.CreateClientConVar("betterlights_flashlight_color_r", "255", true, false, "Flashlight color - red (0-255)")
     local cvar_color_g = BL.CreateClientConVar("betterlights_flashlight_color_g", "245", true, false, "Flashlight color - green (0-255)")
@@ -174,7 +180,10 @@ if CLIENT then
     local ATTACHMENT_OFFSET_DOWN = 2
     local VEHICLE_OFFSET_FORWARD = 18
     local VEHICLE_OFFSET_DOWN = 1
-    local WORLD_SPILL_SIZE = 128
+    local MIN_WORLD_SPILL_SIZE = 32
+    local MAX_WORLD_SPILL_SIZE = 512
+    local MIN_WORLD_SPILL_BRIGHTNESS = 0.1
+    local MAX_WORLD_SPILL_BRIGHTNESS = 5
     local WORLD_SPILL_BRIGHTNESS_SCALE = 0.35
     local WORLD_SPILL_LIGHT_OPTIONS = {
         priority = BL.LIGHT_PRIORITY_AMBIENT
@@ -529,15 +538,31 @@ if CLIENT then
         if isFirstPersonView(ply, localPlayer) then return end
         if not getEffectiveBool(cvar_world_spill) then return end
 
+        local r = color.r
+        local g = color.g
+        local b = color.b
+        local spillBrightness = brightness * WORLD_SPILL_BRIGHTNESS_SCALE
+
+        if not getEffectiveBool(cvar_world_spill_match) then
+            r = math.Clamp(getEffectiveNumber(cvar_world_spill_color_r), 0, 255)
+            g = math.Clamp(getEffectiveNumber(cvar_world_spill_color_g), 0, 255)
+            b = math.Clamp(getEffectiveNumber(cvar_world_spill_color_b), 0, 255)
+            spillBrightness = math.Clamp(
+                getEffectiveNumber(cvar_world_spill_brightness),
+                MIN_WORLD_SPILL_BRIGHTNESS,
+                MAX_WORLD_SPILL_BRIGHTNESS
+            )
+        end
+
         BL.CreateDLight(
             getWorldSpillLightId(ply),
             pos,
-            color.r,
-            color.g,
-            color.b,
-            brightness * WORLD_SPILL_BRIGHTNESS_SCALE,
+            r,
+            g,
+            b,
+            spillBrightness,
             0,
-            WORLD_SPILL_SIZE,
+            math.Clamp(getEffectiveNumber(cvar_world_spill_size), MIN_WORLD_SPILL_SIZE, MAX_WORLD_SPILL_SIZE),
             false,
             WORLD_SPILL_LIGHT_OPTIONS
         )
