@@ -2,7 +2,6 @@ if CLIENT then
     local BL = BetterLights
     local MF = BL.MuzzleFlash
 
-    local RULES_PATH = "betterlights/muzzle_flash_rules.json"
     local DEFAULT_ATTACHMENTS = { "muzzle", "Muzzle", "barrel", "muzzle_flash", "1" }
     local FLASH_BASE_ID = 61000
     local LOCAL_ECHO_WINDOW = 0.2
@@ -17,7 +16,6 @@ if CLIENT then
     local cvar_show_others = BL.CreateClientConVar("betterlights_muzzle_show_others", "1", true, false, "Show muzzle flashes from other players and NPCs")
     local profileMetadata = { includeInProfiles = false }
     local cvar_debug = BL.CreateClientConVar("betterlights_muzzle_debug", "0", true, false, "Print developer muzzle flash resolver messages", nil, nil, profileMetadata)
-    BL.CreateClientConVar("betterlights_muzzle_advanced", "0", true, false, "Show advanced muzzle flash editor when developer mode is enabled", nil, nil, profileMetadata)
 
     BL.CreateClientConVar("betterlights_muzzle_ar2_enable", "1", true, false, "Use blue tint for AR2 muzzle flashes")
     BL.CreateClientConVar("betterlights_muzzle_ar2_size", "250", true, false, "AR2 muzzle flash radius")
@@ -30,8 +28,6 @@ if CLIENT then
     BL.CreateClientConVar("betterlights_muzzle_ar2_color_g", "190", true, false, "AR2 muzzle flash color - green (0-255)")
     BL.CreateClientConVar("betterlights_muzzle_ar2_color_b", "255", true, false, "AR2 muzzle flash color - blue (0-255)")
 
-    MF.UserRules = MF.UserRules or {}
-    MF.UserColorTags = MF.UserColorTags or {}
     MF._localPredictedShots = MF._localPredictedShots or {}
     MF._lastLocalFrame = MF._lastLocalFrame or {}
     MF._lastLocalFrameNumber = MF._lastLocalFrameNumber or -1
@@ -67,30 +63,6 @@ if CLIENT then
 
     local function clampColorChannel(value)
         return math.Clamp(math.floor((tonumber(value) or 255) + 0.5), 0, 255)
-    end
-
-    local function copySequence(value)
-        if type(value) ~= "table" then return nil end
-
-        local out = {}
-        for i = 1, #value do
-            out[i] = value[i]
-        end
-
-        return out
-    end
-
-    local function splitList(text)
-        local out = {}
-        for token in string.gmatch(tostring(text or ""), "[^,%s]+") do
-            out[#out + 1] = token
-        end
-        return out
-    end
-
-    local function joinList(values)
-        if type(values) ~= "table" then return "" end
-        return table.concat(values, ", ")
     end
 
     local function currentFrameKey()
@@ -807,275 +779,15 @@ if CLIENT then
         })
     end
 
-    local function registerUserData()
-        MF.ClearRulesBySource("user")
-        MF.ClearColorTagsBySource("user")
-
-        for tag, color in pairs(MF.UserColorTags) do
-            MF.RegisterColorTag(tag, {
-                r = color.r,
-                g = color.g,
-                b = color.b,
-                source = "user"
-            })
-        end
-
-        for i = 1, #MF.UserRules do
-            local rule = MF.UserRules[i]
-            local def = {}
-            for k, v in pairs(rule) do
-                def[k] = v
-            end
-            def.source = "user"
-            MF.RegisterWeaponRule(def)
-        end
-    end
-
-    local function normalizeStoredRules(rules)
-        local out = {}
-        if type(rules) ~= "table" then return out end
-
-        for i = 1, #rules do
-            local rule = rules[i]
-            if type(rule) == "table" then
-                out[#out + 1] = {
-                    class = tostring(rule.class or ""),
-                    base = tostring(rule.base or ""),
-                    profile = tostring(rule.profile or "default"),
-                    colorTag = tostring(rule.colorTag or ""),
-                    priority = tonumber(rule.priority) or 0,
-                    attachments = copySequence(rule.attachments) or splitList(rule.attachments)
-                }
-            end
-        end
-
-        return out
-    end
-
-    function MF.LoadUserRules()
-        local source = file.Read(RULES_PATH, "DATA")
-        if not source or source == "" then
-            MF.UserRules = {}
-            MF.UserColorTags = {}
-            registerUserData()
-            return
-        end
-
-        local decoded = util.JSONToTable(source)
-        if type(decoded) ~= "table" then
-            debugPrint("could not read saved advanced rules")
-            return
-        end
-
-        MF.UserColorTags = {}
-        if type(decoded.colorTags) == "table" then
-            for tag, color in pairs(decoded.colorTags) do
-                if type(color) == "table" then
-                    MF.UserColorTags[tostring(tag)] = {
-                        r = clampColorChannel(color.r),
-                        g = clampColorChannel(color.g),
-                        b = clampColorChannel(color.b)
-                    }
-                end
-            end
-        end
-
-        MF.UserRules = normalizeStoredRules(decoded.rules)
-        registerUserData()
-    end
-
-    function MF.SaveUserRules()
-        local encoded = util.TableToJSON({
-            colorTags = MF.UserColorTags,
-            rules = MF.UserRules
-        }, true)
-        if not encoded then return false end
-
-        file.CreateDir("betterlights")
-        return file.Write(RULES_PATH, encoded) == true
-    end
-
-    function MF.ResetUserRules()
-        local oldRules = MF.UserRules
-        local oldColorTags = MF.UserColorTags
-
-        MF.UserRules = {}
-        MF.UserColorTags = {}
-        registerUserData()
-
-        if not MF.SaveUserRules() then
-            MF.UserRules = oldRules
-            MF.UserColorTags = oldColorTags
-            registerUserData()
-            return false
-        end
-
-        return true
-    end
+    -- Remove user-defined data and APIs left behind by auto refresh.
+    MF.ClearRulesBySource("user")
+    MF.ClearColorTagsBySource("user")
+    MF.UserRules = nil
+    MF.UserColorTags = nil
+    MF.LoadUserRules = nil
+    MF.SaveUserRules = nil
+    MF.ResetUserRules = nil
+    MF.BuildAdvancedEditor = nil
 
     registerBuiltIns()
-    MF.LoadUserRules()
-
-    local function refreshColorList(list)
-        list:Clear()
-        for tag, color in pairs(MF.UserColorTags) do
-            list:AddLine(tag, tostring(color.r), tostring(color.g), tostring(color.b))
-        end
-    end
-
-    local function refreshRuleList(list)
-        list:Clear()
-        for i = 1, #MF.UserRules do
-            local rule = MF.UserRules[i]
-            list:AddLine(rule.class or "", rule.profile or "", tostring(rule.priority or 0), joinList(rule.attachments))
-        end
-    end
-
-    local function addTextEntry(parent, placeholder)
-        local entry = vgui.Create("DTextEntry")
-        entry:SetTall(24)
-        entry:SetPlaceholderText(placeholder)
-        parent:AddItem(entry)
-        return entry
-    end
-
-    function MF.BuildAdvancedEditor(panel)
-        if not isDeveloperEnabled() then return end
-
-        local phrase = BetterLights.Menu.Phrase
-        local addButton = BetterLights.Menu.AddStyledButton
-
-        local colors = vgui.Create("DForm")
-        colors:SetName(phrase("section.muzzle_advanced_colors"))
-        panel:AddItem(colors)
-
-        local colorList = vgui.Create("DListView")
-        colorList:SetTall(110)
-        colorList:AddColumn(phrase("label.tag"))
-        colorList:AddColumn("R")
-        colorList:AddColumn("G")
-        colorList:AddColumn("B")
-        colors:AddItem(colorList)
-
-        local tagEntry = addTextEntry(colors, phrase("placeholder.color_tag"))
-        local rEntry = addTextEntry(colors, "255")
-        local gEntry = addTextEntry(colors, "170")
-        local bEntry = addTextEntry(colors, "90")
-        local addColor = addButton(colors, phrase("button.add_color_tag"))
-        addColor.DoClick = function()
-            local tag = tagEntry:GetValue()
-            if tag == "" then return end
-
-            MF.UserColorTags[tag] = {
-                r = clampColorChannel(rEntry:GetValue()),
-                g = clampColorChannel(gEntry:GetValue()),
-                b = clampColorChannel(bEntry:GetValue())
-            }
-            registerUserData()
-            refreshColorList(colorList)
-        end
-
-        local removeColor = addButton(colors, phrase("button.remove_selected"))
-        removeColor.DoClick = function()
-            local line = colorList:GetSelectedLine()
-            if not line then return end
-
-            local row = colorList:GetLine(line)
-            if not row then return end
-
-            MF.UserColorTags[row:GetColumnText(1)] = nil
-            registerUserData()
-            refreshColorList(colorList)
-        end
-
-        colorList.OnRowSelected = function(_, _, row)
-            tagEntry:SetValue(row:GetColumnText(1))
-            rEntry:SetValue(row:GetColumnText(2))
-            gEntry:SetValue(row:GetColumnText(3))
-            bEntry:SetValue(row:GetColumnText(4))
-        end
-
-        local rules = vgui.Create("DForm")
-        rules:SetName(phrase("section.muzzle_advanced_rules"))
-        panel:AddItem(rules)
-
-        local ruleList = vgui.Create("DListView")
-        ruleList:SetTall(130)
-        ruleList:AddColumn(phrase("label.class"))
-        ruleList:AddColumn(phrase("label.profile"))
-        ruleList:AddColumn(phrase("label.priority"))
-        ruleList:AddColumn(phrase("label.attachments"))
-        rules:AddItem(ruleList)
-
-        local classEntry = addTextEntry(rules, phrase("placeholder.weapon_class"))
-        local profileEntry = addTextEntry(rules, phrase("placeholder.profile"))
-        local colorTagEntry = addTextEntry(rules, phrase("placeholder.color_tag_optional"))
-        local priorityEntry = addTextEntry(rules, "0")
-        local attachmentEntry = addTextEntry(rules, phrase("placeholder.attachments"))
-        local addRule = addButton(rules, phrase("button.add_rule"))
-        addRule.DoClick = function()
-            MF.UserRules[#MF.UserRules + 1] = {
-                class = classEntry:GetValue(),
-                profile = profileEntry:GetValue() ~= "" and profileEntry:GetValue() or "default",
-                colorTag = colorTagEntry:GetValue(),
-                priority = tonumber(priorityEntry:GetValue()) or 0,
-                attachments = splitList(attachmentEntry:GetValue())
-            }
-            registerUserData()
-            refreshRuleList(ruleList)
-        end
-
-        local removeRule = addButton(rules, phrase("button.remove_selected"))
-        removeRule.DoClick = function()
-            local line = ruleList:GetSelectedLine()
-            if not line then return end
-
-            table.remove(MF.UserRules, line)
-            registerUserData()
-            refreshRuleList(ruleList)
-        end
-
-        ruleList.OnRowSelected = function(_, line)
-            local rule = MF.UserRules[line]
-            if not rule then return end
-
-            classEntry:SetValue(rule.class or "")
-            profileEntry:SetValue(rule.profile or "")
-            colorTagEntry:SetValue(rule.colorTag or "")
-            priorityEntry:SetValue(tostring(rule.priority or 0))
-            attachmentEntry:SetValue(joinList(rule.attachments))
-        end
-
-        local actions = vgui.Create("DForm")
-        actions:SetName(phrase("section.muzzle_advanced_actions"))
-        panel:AddItem(actions)
-
-        local save = addButton(actions, phrase("button.save_rules"))
-        save.DoClick = function()
-            if MF.SaveUserRules() then
-                notification.AddLegacy(phrase("notice.muzzle_rules_saved"), NOTIFY_GENERIC, 3)
-            else
-                notification.AddLegacy(phrase("notice.muzzle_rules_save_failed"), NOTIFY_ERROR, 4)
-            end
-        end
-
-        local reload = addButton(actions, phrase("button.reload_rules"))
-        reload.DoClick = function()
-            MF.LoadUserRules()
-            refreshColorList(colorList)
-            refreshRuleList(ruleList)
-        end
-
-        local reset = addButton(actions, phrase("button.reset_rules"))
-        reset.DoClick = function()
-            if not MF.ResetUserRules() then
-                notification.AddLegacy(phrase("notice.muzzle_rules_save_failed"), NOTIFY_ERROR, 4)
-            end
-            refreshColorList(colorList)
-            refreshRuleList(ruleList)
-        end
-
-        refreshColorList(colorList)
-        refreshRuleList(ruleList)
-    end
 end

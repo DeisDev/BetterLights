@@ -23,6 +23,11 @@ if CLIENT then
                 refreshSettingsPanel()
             end
 
+            local diagnostics = addSection(panel, "section.developer_diagnostics", "section.developer_diagnostics.desc", true)
+            diagnostics:CheckBox(phrase("control.debug_muzzle_flash"), "betterlights_muzzle_debug")
+            diagnostics:CheckBox(phrase("control.debug_combine_mine_detection"), "betterlights_combine_mine_debug")
+            diagnostics:CheckBox(phrase("control.debug_antlion_guardian_detection"), "betterlights_antlion_guardian_debug")
+
             local lightOrigins = addSection(panel, "section.dynamic_light_origins", "section.dynamic_light_origins.desc", true)
             lightOrigins:CheckBox(phrase("control.show_light_origins"), "betterlights_debug_light_origins_enable")
             lightOrigins:NumSlider(phrase("control.origin_marker_size"), "betterlights_debug_light_origins_radius", 1, 64, 0)
@@ -40,6 +45,9 @@ if CLIENT then
                 betterlights_debug_light_origins_radius = 8,
                 betterlights_debug_light_origins_elights = 1,
                 betterlights_debug_light_origins_depth = 0,
+                betterlights_muzzle_debug = 0,
+                betterlights_combine_mine_debug = 0,
+                betterlights_antlion_guardian_debug = 0,
             })
         end
 

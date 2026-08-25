@@ -8,11 +8,16 @@
 [*]Fixed supported NPC ragdoll lights sometimes being missed in multiplayer.
 [*]Fixed Scanner and Hunter Chopper searchlights so they follow the real spotlight state and direction.
 [*]Added a dedicated, searchable settings window with an optional key bind, desktop shortcut, and quick access from the Spawn Menu.
+[*]Added settings window appearance and navigation options for opacity, icons, and compact spacing.
+[*]Improved settings search, keyboard navigation, page restoration, and small-screen layout.
+[*]Fixed settings pages flickering when switching or refreshing.
+[*]The Sandbox desktop shortcut now toggles the settings window open and closed.
 [*]Added a configurable third-person flashlight spill light with adjustable radius and either beam-matched or custom brightness and color.
 [*]Improved settings pages with clearer enabled, disabled, locked, and server-controlled states, plus quick controls for groups of effects.
 [*]Improved the global flashlight settings menu with clearer override states and unapplied-change feedback.
 [*]Improved settings profiles with clearer selection states, quicker saving, and double-click loading.
 [*]Improved Rollermine lights and settings for regular, hacked, and temporary power-down states.
+[*]Added separate green lighting controls for hacked Manhacks.
 [*]Polished the in-game changelog, which now opens after updates by default and includes a Never show again option.
 [*]Fixed flashlight placement on the Crossbow by preventing it from using weapon attachments.
 [*]Fixed player models sometimes blocking their own flashlight beams in third person or when viewed by other players.

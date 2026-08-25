@@ -1128,7 +1128,7 @@ if CLIENT then
                 window:Close()
             end
 
-            MENU.OpenSettings()
+            MENU.ToggleSettings()
         end
     })
 end

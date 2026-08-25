@@ -35,7 +35,9 @@ TOOL.ClientConVar = CLIENT_CONVAR_DEFAULTS
 local RESULT_MESSAGE = "BetterLights_ModelLookup_Result"
 local HELD_WEAPON_MESSAGE = "BetterLights_ModelLookup_HeldWeapon"
 local TOOL_CVAR_PREFIX = "betterlights_model_lookup_"
+local MAX_REPORT_BYTES = 60000
 local deliverReport
+local sendPlayerEntityReport
 
 if SERVER then
     util.AddNetworkString(RESULT_MESSAGE)
@@ -46,9 +48,13 @@ if CLIENT then
     language.Add("tool.betterlights_model_lookup.name", language.GetPhrase("betterlights.tool.model_lookup.name"))
     language.Add("tool.betterlights_model_lookup.desc", language.GetPhrase("betterlights.tool.model_lookup.desc"))
     language.Add("tool.betterlights_model_lookup.left", language.GetPhrase("betterlights.tool.model_lookup.left"))
+    language.Add("tool.betterlights_model_lookup.right", language.GetPhrase("betterlights.tool.model_lookup.right"))
+    language.Add("tool.betterlights_model_lookup.reload", language.GetPhrase("betterlights.tool.model_lookup.reload"))
 
     TOOL.Information = {
-        { name = "left" }
+        { name = "left" },
+        { name = "right" },
+        { name = "reload" }
     }
 end
 
@@ -413,6 +419,11 @@ local function buildEntityTrace(ent)
 end
 
 local function sendReport(owner, report, output)
+    if #report > MAX_REPORT_BYTES then
+        local suffix = "\n[BetterLights] Report truncated to fit the network message."
+        report = string.sub(report, 1, MAX_REPORT_BYTES - #suffix) .. suffix
+    end
+
     net.Start(RESULT_MESSAGE)
     net.WriteString(report)
     net.WriteString(output)
@@ -420,6 +431,8 @@ local function sendReport(owner, report, output)
 end
 
 if SERVER then
+    local nextPanelRequest = setmetatable({}, { __mode = "k" })
+
     local function getPlayerToolInfo(ply, name, defaultValue)
         if not (IsValid(ply) and ply.GetInfo) then return defaultValue end
 
@@ -434,14 +447,11 @@ if SERVER then
         return ply:GetInfoNum(TOOL_CVAR_PREFIX .. name, tonumber(defaultValue) or 0)
     end
 
-    net.Receive(HELD_WEAPON_MESSAGE, function(_, ply)
-        if not isDeveloperMode() then return end
-        if not IsValid(ply) then return end
-
-        local weapon = ply:GetActiveWeapon()
-        if not IsValid(weapon) then
-            sendReport(ply, "[BetterLights] No held weapon to inspect.", "console")
-            return
+    sendPlayerEntityReport = function(ply, ent, invalidMessage)
+        if not IsValid(ply) then return false end
+        if not IsValid(ent) then
+            sendReport(ply, invalidMessage, "console")
+            return false
         end
 
         local output = getValidatedOutput(getPlayerToolInfo(ply, "output", CLIENT_CONVAR_DEFAULTS.output))
@@ -449,7 +459,19 @@ if SERVER then
             return getPlayerToolNumber(ply, name, defaultValue)
         end)
 
-        sendReport(ply, buildReport(buildEntityTrace(weapon), options), output)
+        sendReport(ply, buildReport(buildEntityTrace(ent), options), output)
+        return true
+    end
+
+    net.Receive(HELD_WEAPON_MESSAGE, function(_, ply)
+        if not isDeveloperMode() then return end
+        if not IsValid(ply) then return end
+
+        local now = CurTime()
+        if now < (nextPanelRequest[ply] or 0) then return end
+        nextPanelRequest[ply] = now + 0.25
+
+        sendPlayerEntityReport(ply, ply:GetActiveWeapon(), "[BetterLights] No held weapon to inspect.")
     end)
 end
 
@@ -496,11 +518,23 @@ function TOOL:LeftClick(trace)
 end
 
 function TOOL:RightClick()
-    return false
+    if CLIENT then return true end
+    if not isDeveloperMode() then return false end
+
+    local owner = self:GetOwner()
+    if not IsValid(owner) then return false end
+
+    return sendPlayerEntityReport(owner, owner:GetActiveWeapon(), "[BetterLights] No held weapon to inspect.")
 end
 
 function TOOL:Reload()
-    return false
+    if CLIENT then return true end
+    if not isDeveloperMode() then return false end
+
+    local owner = self:GetOwner()
+    if not IsValid(owner) then return false end
+
+    return sendPlayerEntityReport(owner, owner:GetViewModel(), "[BetterLights] No viewmodel to inspect.")
 end
 
 if CLIENT then
@@ -542,8 +576,8 @@ if CLIENT then
         combo:AddChoice(language.GetPhrase(labelKey), value, value == currentValue)
     end
 
-    local function setToolBool(name, enabled)
-        RunConsoleCommand(TOOL_CVAR_PREFIX .. name, enabled and "1" or "0")
+    local function setToolValue(name, value)
+        RunConsoleCommand(TOOL_CVAR_PREFIX .. name, tostring(value))
     end
 
     local function applyPreset(name)
@@ -551,19 +585,40 @@ if CLIENT then
         if not preset then return end
 
         for _, optionName in ipairs(LOOKUP_OPTION_NAMES) do
-            setToolBool(optionName, preset[optionName] == true)
+            setToolValue(optionName, preset[optionName] == true and 1 or 0)
         end
     end
 
-    local function addPresetButton(panel, labelKey, presetName)
+    local function applyDefaults()
+        for name, value in pairs(CLIENT_CONVAR_DEFAULTS) do
+            setToolValue(name, value)
+        end
+    end
+
+    local function createButton(labelKey, tooltipKey)
         local button = vgui.Create("DButton")
         button:SetTall(28)
         button:SetText(language.GetPhrase(labelKey))
+        if tooltipKey then
+            button:SetTooltip(language.GetPhrase(tooltipKey))
+        end
+        return button
+    end
+
+    local function createPresetButton(labelKey, presetName)
+        local button = createButton(labelKey)
         button.DoClick = function()
             applyPreset(presetName)
         end
-        panel:AddItem(button)
         return button
+    end
+
+    local function createForm(panel, titleKey, expanded)
+        local form = vgui.Create("DForm")
+        form:SetLabel(language.GetPhrase(titleKey))
+        form:SetExpanded(expanded ~= false)
+        panel:AddItem(form)
+        return form
     end
 
     local function addOptionCheckbox(panel, labelKey, convarName)
@@ -571,64 +626,60 @@ if CLIENT then
     end
 
     function TOOL.BuildCPanel(panel)
-        panel:ClearControls()
-        panel:Help(language.GetPhrase("betterlights.tool.model_lookup.desc"))
+        panel:Clear()
+        panel:Help(language.GetPhrase("betterlights.tool.model_lookup.help"))
 
-        local actions = vgui.Create("DForm")
-        actions:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.actions"))
-        actions:SetExpanded(true)
-        panel:AddItem(actions)
+        local actions = createForm(panel, "betterlights.tool.model_lookup.section.actions")
 
-        local inspectHeldWeapon = vgui.Create("DButton")
-        inspectHeldWeapon:SetTall(28)
-        inspectHeldWeapon:SetText(language.GetPhrase("betterlights.tool.model_lookup.inspect_held_weapon"))
-        inspectHeldWeapon:SetTooltip(language.GetPhrase("betterlights.tool.model_lookup.inspect_held_weapon.help"))
+        local inspectHeldWeapon = createButton(
+            "betterlights.tool.model_lookup.inspect_held_weapon",
+            "betterlights.tool.model_lookup.inspect_held_weapon.help"
+        )
         inspectHeldWeapon.DoClick = function()
             net.Start(HELD_WEAPON_MESSAGE)
             net.SendToServer()
         end
-        actions:AddItem(inspectHeldWeapon)
 
-        local inspectViewModelButton = vgui.Create("DButton")
-        inspectViewModelButton:SetTall(28)
-        inspectViewModelButton:SetText(language.GetPhrase("betterlights.tool.model_lookup.inspect_viewmodel"))
-        inspectViewModelButton:SetTooltip(language.GetPhrase("betterlights.tool.model_lookup.inspect_viewmodel.help"))
+        local inspectViewModelButton = createButton(
+            "betterlights.tool.model_lookup.inspect_viewmodel",
+            "betterlights.tool.model_lookup.inspect_viewmodel.help"
+        )
         inspectViewModelButton.DoClick = inspectViewModel
+        actions:AddItem(inspectHeldWeapon)
         actions:AddItem(inspectViewModelButton)
 
-        local presets = vgui.Create("DForm")
-        presets:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.presets"))
-        presets:SetExpanded(true)
-        panel:AddItem(presets)
+        local presets = createForm(panel, "betterlights.tool.model_lookup.section.presets")
 
-        addPresetButton(presets, "betterlights.tool.model_lookup.preset.model_only", "model_only")
-        addPresetButton(presets, "betterlights.tool.model_lookup.preset.summary", "summary")
-        addPresetButton(presets, "betterlights.tool.model_lookup.preset.full", "full")
+        local modelOnly = createPresetButton("betterlights.tool.model_lookup.preset.model_only", "model_only")
+        local summary = createPresetButton("betterlights.tool.model_lookup.preset.summary", "summary")
+        presets:AddItem(modelOnly)
+        presets:AddItem(summary)
 
-        local output = vgui.Create("DForm")
-        output:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.output"))
-        output:SetExpanded(true)
-        panel:AddItem(output)
+        local full = createPresetButton("betterlights.tool.model_lookup.preset.full", "full")
+        local reset = createButton(
+            "betterlights.tool.model_lookup.reset",
+            "betterlights.tool.model_lookup.reset.help"
+        )
+        reset.DoClick = applyDefaults
+        presets:AddItem(full)
+        presets:AddItem(reset)
+
+        local output = createForm(panel, "betterlights.tool.model_lookup.section.output")
 
         local outputCombo = output:ComboBox(language.GetPhrase("betterlights.tool.model_lookup.output"), "betterlights_model_lookup_output")
+        outputCombo:SetSortItems(false)
         local currentOutput = getToolConVarValue("output", CLIENT_CONVAR_DEFAULTS.output)
         addChoice(outputCombo, "betterlights.tool.model_lookup.output.console", "console", currentOutput)
         addChoice(outputCombo, "betterlights.tool.model_lookup.output.clipboard", "clipboard", currentOutput)
         addChoice(outputCombo, "betterlights.tool.model_lookup.output.both", "both", currentOutput)
 
-        local formatting = vgui.Create("DForm")
-        formatting:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.formatting"))
-        formatting:SetExpanded(false)
-        panel:AddItem(formatting)
+        local formatting = createForm(panel, "betterlights.tool.model_lookup.section.formatting", false)
 
         addOptionCheckbox(formatting, "betterlights.tool.model_lookup.field.labels", "labels")
         addOptionCheckbox(formatting, "betterlights.tool.model_lookup.field.header", "header")
         addOptionCheckbox(formatting, "betterlights.tool.model_lookup.field.compact_lines", "compact_lines")
 
-        local fields = vgui.Create("DForm")
-        fields:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.fields"))
-        fields:SetExpanded(true)
-        panel:AddItem(fields)
+        local fields = createForm(panel, "betterlights.tool.model_lookup.section.fields")
 
         addOptionCheckbox(fields, "betterlights.tool.model_lookup.field.entity_index", "entity_index")
         addOptionCheckbox(fields, "betterlights.tool.model_lookup.field.entity_class", "entity_class")
@@ -639,18 +690,12 @@ if CLIENT then
         addOptionCheckbox(fields, "betterlights.tool.model_lookup.field.angles", "angles")
         addOptionCheckbox(fields, "betterlights.tool.model_lookup.field.bounds", "bounds")
 
-        local traceFields = vgui.Create("DForm")
-        traceFields:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.trace"))
-        traceFields:SetExpanded(false)
-        panel:AddItem(traceFields)
+        local traceFields = createForm(panel, "betterlights.tool.model_lookup.section.trace", false)
 
         addOptionCheckbox(traceFields, "betterlights.tool.model_lookup.field.trace", "trace")
         addOptionCheckbox(traceFields, "betterlights.tool.model_lookup.field.trace_vectors", "trace_vectors")
 
-        local expanded = vgui.Create("DForm")
-        expanded:SetName(language.GetPhrase("betterlights.tool.model_lookup.section.expanded_fields"))
-        expanded:SetExpanded(false)
-        panel:AddItem(expanded)
+        local expanded = createForm(panel, "betterlights.tool.model_lookup.section.expanded_fields", false)
 
         addOptionCheckbox(expanded, "betterlights.tool.model_lookup.field.attachments", "attachments")
         addOptionCheckbox(expanded, "betterlights.tool.model_lookup.field.attachment_vectors", "attachment_vectors")
@@ -658,6 +703,5 @@ if CLIENT then
         addOptionCheckbox(expanded, "betterlights.tool.model_lookup.field.bone_vectors", "bone_vectors")
         addOptionCheckbox(expanded, "betterlights.tool.model_lookup.field.skins_bodygroups", "skins_bodygroups")
         addOptionCheckbox(expanded, "betterlights.tool.model_lookup.field.materials", "materials")
-        expanded:Help(language.GetPhrase("betterlights.tool.model_lookup.help"))
     end
 end

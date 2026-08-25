@@ -74,15 +74,6 @@ if CLIENT then
             local blacklist = addSection(panel, "section.muzzle_blacklist", "section.muzzle_blacklist.desc", false)
             BetterLights.MuzzleFlash.BuildWeaponBlacklistEditor(blacklist)
 
-            if MENU.IsDeveloperMode() then
-                local advanced = addSection(panel, "section.muzzle_advanced", "section.muzzle_advanced.desc", false)
-                advanced:CheckBox(MENU.Phrase("control.show_advanced_editor"), "betterlights_muzzle_advanced")
-                advanced:CheckBox(MENU.Phrase("control.debug_logging"), "betterlights_muzzle_debug")
-                if GetConVar("betterlights_muzzle_advanced") and GetConVar("betterlights_muzzle_advanced"):GetBool() and BetterLights.MuzzleFlash.BuildAdvancedEditor then
-                    BetterLights.MuzzleFlash.BuildAdvancedEditor(advanced)
-                end
-            end
-
             addResetButton(panel, {
                 betterlights_muzzle_enable = 1,
                 betterlights_muzzle_size = 250,
@@ -90,7 +81,6 @@ if CLIENT then
                 betterlights_muzzle_time = 0.08,
                 betterlights_muzzle_show_others = 1,
                 betterlights_muzzle_debug = 0,
-                betterlights_muzzle_advanced = 0,
                 betterlights_muzzle_ar2_enable = 1,
                 betterlights_muzzle_ar2_size = 250,
                 betterlights_muzzle_ar2_brightness = 2.0,
