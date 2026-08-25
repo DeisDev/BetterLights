@@ -7,6 +7,7 @@ if CLIENT then
         local setupPage = MENU.SetupPage
         local addSection = MENU.AddSection
         local addStyledButton = MENU.AddStyledButton
+        local addResetButton = MENU.AddResetButton
         local registerPage = MENU.RegisterPage
         local refreshSettingsPanel = MENU.RefreshSettingsPanel
         local isDeveloperMode = MENU.IsDeveloperMode
@@ -33,6 +34,13 @@ if CLIENT then
             testTip.DoClick = function()
                 BetterLights.ShowFlashlightOnboardingTip(true)
             end
+
+            addResetButton(panel, {
+                betterlights_debug_light_origins_enable = 0,
+                betterlights_debug_light_origins_radius = 8,
+                betterlights_debug_light_origins_elights = 1,
+                betterlights_debug_light_origins_depth = 0,
+            })
         end
 
         registerPage("Developer", "BL_DeveloperTools", "menu.developer_tools", buildDeveloperToolsPanel)

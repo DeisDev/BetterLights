@@ -1468,7 +1468,7 @@ if CLIENT then
         worker:NumSlider(phrase("control.decay"), "betterlights_antlion_worker_decay", 0, 5000, 0)
         addColorMixerControl(worker, "control.color", "betterlights_antlion_worker_color_r", "betterlights_antlion_worker_color_g", "betterlights_antlion_worker_color_b")
 
-        local spitGlow = addSection(panel, "category.projectiles", nil, true)
+        local spitGlow = addSection(panel, "section.spit_projectile", "section.spit_projectile.desc", true)
         spitGlow:CheckBox(phrase("control.enable_glow"), "betterlights_antlion_spit_enable")
         spitGlow:NumSlider(phrase("control.radius"), "betterlights_antlion_spit_size", 0, 400, 0)
         spitGlow:NumSlider(phrase("control.brightness"), "betterlights_antlion_spit_brightness", 0, 5, 2)
@@ -1799,7 +1799,7 @@ if CLIENT then
             })
         end)
 
-    registerPage("Environment", "BL_Explosions", "menu.explosion_flash", function(panel)
+    registerPage("Projectiles", "BL_Explosions", "menu.explosion_flash", function(panel)
         setupPage(panel, "page.explosion_flash.title", "page.explosion_flash.desc")
         panel:CheckBox(phrase("control.enable"), "betterlights_explosion_flash_enable")
         panel:NumSlider(phrase("control.radius"), "betterlights_explosion_flash_size", 0, 800, 0)

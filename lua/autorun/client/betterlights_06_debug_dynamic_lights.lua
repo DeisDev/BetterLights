@@ -1,10 +1,11 @@
 if CLIENT then
     local BL = BetterLights
 
-    local cvar_enable = BL.CreateClientConVar("betterlights_debug_light_origins_enable", "0", true, false, "Draw wireframe spheres at active Better Lights dynamic light origins")
-    local cvar_radius = BL.CreateClientConVar("betterlights_debug_light_origins_radius", "8", true, false, "Wireframe sphere radius for active Better Lights dynamic light origins", 1, 128)
-    local cvar_elights = BL.CreateClientConVar("betterlights_debug_light_origins_elights", "1", true, false, "Include Better Lights entity lights in the dynamic light origin debug view")
-    local cvar_depth = BL.CreateClientConVar("betterlights_debug_light_origins_depth", "0", true, false, "Depth-test Better Lights dynamic light origin wireframes")
+    local profileMetadata = { includeInProfiles = false }
+    local cvar_enable = BL.CreateClientConVar("betterlights_debug_light_origins_enable", "0", true, false, "Draw wireframe spheres at active Better Lights dynamic light origins", nil, nil, profileMetadata)
+    local cvar_radius = BL.CreateClientConVar("betterlights_debug_light_origins_radius", "8", true, false, "Wireframe sphere radius for active Better Lights dynamic light origins", 1, 128, profileMetadata)
+    local cvar_elights = BL.CreateClientConVar("betterlights_debug_light_origins_elights", "1", true, false, "Include Better Lights entity lights in the dynamic light origin debug view", nil, nil, profileMetadata)
+    local cvar_depth = BL.CreateClientConVar("betterlights_debug_light_origins_depth", "0", true, false, "Depth-test Better Lights dynamic light origin wireframes", nil, nil, profileMetadata)
 
     local drawColor = Color(255, 255, 255, 220)
 

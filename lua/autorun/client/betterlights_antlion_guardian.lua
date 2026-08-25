@@ -6,7 +6,7 @@ if CLIENT then
     local cvar_brightness = BL.CreateClientConVar("betterlights_antlion_guardian_brightness", "0.6", true, false, "Guardian light brightness")
     local cvar_decay = BL.CreateClientConVar("betterlights_antlion_guardian_decay", "2000", true, false, "Guardian light decay")
 
-    local cvar_debug = BL.CreateClientConVar("betterlights_antlion_guardian_debug", "0", false, false, "Debug guardian detection prints")
+    local cvar_debug = BL.CreateClientConVar("betterlights_antlion_guardian_debug", "0", false, false, "Debug guardian detection prints", nil, nil, { includeInProfiles = false })
 
     local cvar_col_r = BL.CreateClientConVar("betterlights_antlion_guardian_color_r", "120", true, false, "Antlion Guardian color - red (0-255)")
     local cvar_col_g = BL.CreateClientConVar("betterlights_antlion_guardian_color_g", "255", true, false, "Antlion Guardian color - green (0-255)")

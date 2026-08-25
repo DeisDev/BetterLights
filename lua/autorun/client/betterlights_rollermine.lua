@@ -13,7 +13,7 @@ if CLIENT then
     local cvar_h_decay = BL.CreateClientConVar("betterlights_rollermine_hacked_decay", "2000", true, false, "Dynamic light decay for Hacked Rollermines")
     local cvar_h_models_elight = BL.CreateClientConVar("betterlights_rollermine_hacked_models_elight", "1", true, false, "Also add an entity light (elight) to light the hacked rollermine model directly")
     local cvar_h_models_elight_mult = BL.CreateClientConVar("betterlights_rollermine_hacked_models_elight_size_mult", "1.0", true, false, "Multiplier for hacked rollermine elight radius")
-    local cvar_debug = BL.CreateClientConVar("betterlights_rollermine_debug", "0", true, false, "Debug hacked rollermine detection (prints to console)")
+    local cvar_debug = BL.CreateClientConVar("betterlights_rollermine_debug", "0", true, false, "Debug hacked rollermine detection (prints to console)", nil, nil, { includeInProfiles = false })
 
     local rm0_r = BL.CreateClientConVar("betterlights_rollermine_color_r", "110", true, false, "Rollermine skin0 (default) color - red (0-255)")
     local rm0_g = BL.CreateClientConVar("betterlights_rollermine_color_g", "190", true, false, "Rollermine skin0 (default) color - green (0-255)")

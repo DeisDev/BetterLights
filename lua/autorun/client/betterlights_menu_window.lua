@@ -71,6 +71,16 @@ if CLIENT then
         return getOptionalPhrase(page and page.descriptionKey)
     end
 
+    local function sortPagesByTitle(pages)
+        table.sort(pages, function(a, b)
+            local aTitle = string.lower(phrase(a.titleKey))
+            local bTitle = string.lower(phrase(b.titleKey))
+            if aTitle ~= bTitle then return aTitle < bTitle end
+
+            return a.id < b.id
+        end)
+    end
+
     local function getPageFullTitle(page)
         if page and page.descriptionKey then
             local titleKey = string.gsub(page.descriptionKey, "%.desc$", ".title")
@@ -563,6 +573,8 @@ if CLIENT then
     function SETTINGS_PANEL:AddCategoryNode(categoryId, category, title, pages, query, selectedPageId)
         if #pages == 0 then return end
 
+        self.FirstVisiblePage = self.FirstVisiblePage or pages[1]
+
         local categoryNode = self.Tree:AddNode(title, category.icon or CATEGORY_ICON)
         local selectedCategory = false
         self.CategoryNodes[categoryId] = categoryNode
@@ -626,7 +638,6 @@ if CLIENT then
                     categorizedPages[page.category] = categorizedPages[page.category] or {}
                     categorizedPages[page.category][#categorizedPages[page.category] + 1] = page
                     matchCount = matchCount + 1
-                    self.FirstVisiblePage = self.FirstVisiblePage or page
                 end
             end
         end
@@ -634,6 +645,7 @@ if CLIENT then
         for i = 1, #self.CategoryDefinitions do
             local category = self.CategoryDefinitions[i]
             if not category.developer or MENU.IsDeveloperMode() then
+                sortPagesByTitle(categorizedPages[category[1]])
                 self:AddCategoryNode(
                     category[1],
                     category,
@@ -655,6 +667,7 @@ if CLIENT then
 
         for i = 1, #extraCategories do
             local categoryId = extraCategories[i]
+            sortPagesByTitle(categorizedPages[categoryId])
             self:AddCategoryNode(
                 categoryId,
                 {},

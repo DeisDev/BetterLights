@@ -15,8 +15,9 @@ if CLIENT then
     BL.CreateClientConVar("betterlights_muzzle_brightness", "2.00", true, false, "Muzzle flash brightness")
     BL.CreateClientConVar("betterlights_muzzle_time", "0.08", true, false, "Muzzle flash duration")
     local cvar_show_others = BL.CreateClientConVar("betterlights_muzzle_show_others", "1", true, false, "Show muzzle flashes from other players and NPCs")
-    local cvar_debug = BL.CreateClientConVar("betterlights_muzzle_debug", "0", true, false, "Print developer muzzle flash resolver messages")
-    BL.CreateClientConVar("betterlights_muzzle_advanced", "0", true, false, "Show advanced muzzle flash editor when developer mode is enabled")
+    local profileMetadata = { includeInProfiles = false }
+    local cvar_debug = BL.CreateClientConVar("betterlights_muzzle_debug", "0", true, false, "Print developer muzzle flash resolver messages", nil, nil, profileMetadata)
+    BL.CreateClientConVar("betterlights_muzzle_advanced", "0", true, false, "Show advanced muzzle flash editor when developer mode is enabled", nil, nil, profileMetadata)
 
     BL.CreateClientConVar("betterlights_muzzle_ar2_enable", "1", true, false, "Use blue tint for AR2 muzzle flashes")
     BL.CreateClientConVar("betterlights_muzzle_ar2_size", "250", true, false, "AR2 muzzle flash radius")

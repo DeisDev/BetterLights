@@ -34,7 +34,7 @@ if CLIENT then
     local cvar_res_g = BL.CreateClientConVar("betterlights_combine_mine_resistance_color_g", "255", true, false, "Resistance mine color - green (0-255)")
     local cvar_res_b = BL.CreateClientConVar("betterlights_combine_mine_resistance_color_b", "100", true, false, "Resistance mine color - blue (0-255)")
 
-    local cvar_debug = BL.CreateClientConVar("betterlights_combine_mine_debug", "0", true, false, "Debug mine type detection (prints to console)")
+    local cvar_debug = BL.CreateClientConVar("betterlights_combine_mine_debug", "0", true, false, "Debug mine type detection (prints to console)", nil, nil, { includeInProfiles = false })
 
     local function isFriendlyMine(ent)
         return BL.DetectEntityVariant(ent, {

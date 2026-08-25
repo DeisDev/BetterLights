@@ -107,7 +107,7 @@ if CLIENT then
             })
         end)
 
-        registerPage("Weapons", "BL_StunStick", "menu.stunstick", function(panel)
+        registerPage("Gunfire", "BL_StunStick", "menu.stunstick", function(panel)
             setupPage(panel, "page.stunstick.title", "page.stunstick.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_stunstick_impact_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_stunstick_impact_size", 0, 400, 0)
