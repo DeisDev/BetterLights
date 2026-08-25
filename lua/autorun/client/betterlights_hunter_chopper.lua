@@ -3,6 +3,8 @@ if CLIENT then
 
     local CHOPPER_CLASS = "npc_helicopter"
     local SPOTLIGHT_ATTACHMENT = { "Spotlight" }
+    local SPOTLIGHT_STATE_KEY = "BetterLights_HunterChopperSpotlightActive"
+    local SPOTLIGHT_TARGET_KEY = "BetterLights_HunterChopperSpotlightTarget"
 
     BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_enable", "1", true, false, "Enable blue muzzle flash light for Hunter Choppers")
     BL.CreateClientConVar("betterlights_hunter_chopper_muzzle_flash_size", "260", true, false, "Hunter Chopper muzzle flash radius")
@@ -67,9 +69,19 @@ if CLIENT then
             if not IsValid(ent) then return end
 
             if not spotlightEnabled then return end
+            if not ent:GetNW2Bool(SPOTLIGHT_STATE_KEY, false) then return end
+
+            local spotlightTarget = ent:GetNW2Entity(SPOTLIGHT_TARGET_KEY, NULL)
+            if not IsValid(spotlightTarget) then return end
 
             local attachment = getSpotlightAttachment(ent)
             if not (attachment and attachment.Pos and attachment.Ang) then return end
+
+            local spotlightAngle = attachment.Ang
+            local direction = spotlightTarget:GetPos() - attachment.Pos
+            if direction:LengthSqr() > 1 then
+                spotlightAngle = direction:Angle()
+            end
 
             local lamp = BL.GetOrCreateProjectedTexture(chopperProjectors, ent, "effects/flashlight001")
             if not lamp then return end
@@ -77,7 +89,7 @@ if CLIENT then
             local r, g, b = BL.GetColorFromCvars(cvar_spotlight_r, cvar_spotlight_g, cvar_spotlight_b)
             if BL.UpdateProjectedTexture(lamp, {
                 pos = attachment.Pos,
-                ang = attachment.Ang,
+                ang = spotlightAngle,
                 nearZ = math.max(0.1, cvar_spotlight_near:GetFloat()),
                 farZ = math.max(1, cvar_spotlight_distance:GetFloat()),
                 fov = math.Clamp(cvar_spotlight_fov:GetFloat(), 1, 175),

@@ -1,7 +1,7 @@
 if SERVER then
     local BL = BetterLights
     local EXP = BL.Explosions
-    local WRAPPER_VERSION = 2
+    local WRAPPER_VERSION = 3
     local SUPPRESSION_DISTANCE_SQR = 160 * 160
     local SUPPRESSION_AGE = 0.12
     local DAMAGE_REMOVAL_WINDOW = 0.35
@@ -10,6 +10,7 @@ if SERVER then
 
     local recentExplosions = {}
     local damageRemovalCandidates = {}
+    local blastDamageDepth = 0
 
     local function isUsableVector(pos)
         return isvector(pos) and pos ~= vector_origin
@@ -147,14 +148,14 @@ if SERVER then
     end
 
     local function resolveDamagePosition(target, dmginfo, inflictor)
-        local pos = getEntityCenter(inflictor)
-        if isUsableVector(pos) then return pos end
+        local pos = readDamageVector(dmginfo, "GetReportedPosition")
+        if pos then return pos end
 
         pos = readDamageVector(dmginfo, "GetDamagePosition")
         if pos then return pos end
 
-        pos = readDamageVector(dmginfo, "GetReportedPosition")
-        if pos then return pos end
+        pos = getEntityCenter(inflictor)
+        if isUsableVector(pos) then return pos end
 
         return getEntityCenter(target)
     end
@@ -166,6 +167,7 @@ if SERVER then
             maybeMarkDamageRemovalCandidate(target)
             return
         end
+        if blastDamageDepth > 0 then return end
 
         local inflictor = dmginfo.GetInflictor and dmginfo:GetInflictor() or nil
         local profileId = resolveEntityProfile(inflictor) or "generic"
@@ -194,9 +196,16 @@ if SERVER then
         util.BetterLightsBlastDamageWrapperVersion = WRAPPER_VERSION
 
         util.BlastDamage = function(inflictor, attacker, damageOrigin, damageRadius, damage)
-            local ret = original(inflictor, attacker, damageOrigin, damageRadius, damage)
-            local profileId = resolveEntityProfile(inflictor) or "generic"
-            EXP.Emit(profileId, damageOrigin, BL.EXPLOSION_SOURCE_DAMAGE)
+            local outermost = blastDamageDepth == 0
+            blastDamageDepth = blastDamageDepth + 1
+            local ok, ret = pcall(original, inflictor, attacker, damageOrigin, damageRadius, damage)
+            blastDamageDepth = math.max(0, blastDamageDepth - 1)
+            if not ok then error(ret, 0) end
+
+            if outermost then
+                local profileId = resolveEntityProfile(inflictor) or "generic"
+                EXP.Emit(profileId, damageOrigin, BL.EXPLOSION_SOURCE_DAMAGE)
+            end
             return ret
         end
     end
@@ -210,10 +219,17 @@ if SERVER then
         util.BetterLightsBlastDamageInfoWrapperVersion = WRAPPER_VERSION
 
         util.BlastDamageInfo = function(dmginfo, damageOrigin, damageRadius)
-            local ret = original(dmginfo, damageOrigin, damageRadius)
-            local inflictor = dmginfo and dmginfo.GetInflictor and dmginfo:GetInflictor() or nil
-            local profileId = resolveEntityProfile(inflictor) or "generic"
-            EXP.Emit(profileId, damageOrigin, BL.EXPLOSION_SOURCE_DAMAGE)
+            local outermost = blastDamageDepth == 0
+            blastDamageDepth = blastDamageDepth + 1
+            local ok, ret = pcall(original, dmginfo, damageOrigin, damageRadius)
+            blastDamageDepth = math.max(0, blastDamageDepth - 1)
+            if not ok then error(ret, 0) end
+
+            if outermost then
+                local inflictor = dmginfo and dmginfo.GetInflictor and dmginfo:GetInflictor() or nil
+                local profileId = resolveEntityProfile(inflictor) or "generic"
+                EXP.Emit(profileId, damageOrigin, BL.EXPLOSION_SOURCE_DAMAGE)
+            end
             return ret
         end
     end

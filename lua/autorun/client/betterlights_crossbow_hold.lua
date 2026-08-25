@@ -11,6 +11,14 @@ if CLIENT then
     local cvar_col_b = BL.CreateClientConVar("betterlights_crossbow_hold_color_b", "40", true, false, "Crossbow (held) color - blue (0-255)")
 
     local SURFACE_LIGHT = { key = "xbow_hold", distance = 48, missDistance = 24, hitOffset = 6 }
+    local CLIP_INTERNAL_VARIABLE = "m_iClip1"
+
+    local function isCrossbowLoaded(weapon)
+        if not (IsValid(weapon) and weapon.GetInternalVariable) then return false end
+
+        local clip = weapon:GetInternalVariable(CLIP_INTERNAL_VARIABLE)
+        return isnumber(clip) and clip > 0
+    end
 
     BL.AddThink("BetterLights_CrossbowHold_DLight", function()
         if not cvar_enable:GetBool() then return end
@@ -26,31 +34,7 @@ if CLIENT then
 
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
 
-        if cvar_require_loaded:GetBool() then
-            local loaded = false
-
-            if wep.Clip1 then
-                local clip = wep:Clip1()
-                if isnumber(clip) then
-                    loaded = clip > 0
-                end
-            end
-
-            if not loaded then
-                local inReload = false
-                if wep.GetActivity then
-                    local ok, act = pcall(wep.GetActivity, wep)
-                    if ok and act ~= nil and _G.ACT_VM_RELOAD ~= nil then
-                        inReload = (act == _G.ACT_VM_RELOAD)
-                    end
-                end
-                if not inReload and wep.HasAmmo and wep:HasAmmo() then
-                    loaded = true
-                end
-            end
-
-            if not loaded then return end
-        end
+        if cvar_require_loaded:GetBool() and not isCrossbowLoaded(wep) then return end
 
         BL.CreateHeldWeaponSurfaceLight(ply, wep, SURFACE_LIGHT, ply:EntIndex() + 1337, r, g, b, brightness, decay, size, false)
     end)

@@ -548,7 +548,7 @@ if CLIENT then
         })
     end
 
-    hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_ClientPrediction", handleLocalFireBullets)
+    hook.Remove("EntityFireBullets", "BetterLights_MuzzleFlash_ClientPrediction")
     hook.Add("PostEntityFireBullets", "BetterLights_MuzzleFlash_ClientPrediction_Post", handleLocalFireBullets)
 
     local function handleLocalMuzzleFlash(ent)
@@ -575,19 +575,18 @@ if CLIENT then
         })
     end
 
-    local function wrapEntityFireBullets()
+    local function removeLegacyEntityFireBulletsWrapper()
         local meta = FindMetaTable("Entity")
         if not (meta and isfunction(meta.FireBullets)) then return end
-        if meta.BetterLightsFireBulletsWrapperVersion == WRAPPER_VERSION then return end
+        if not isfunction(meta.BetterLightsFireBulletsOriginal) then return end
 
-        local original = meta.BetterLightsFireBulletsOriginal or meta.FireBullets
-        meta.BetterLightsFireBulletsWrapperVersion = WRAPPER_VERSION
-        meta.BetterLightsFireBulletsOriginal = original
-        meta.FireBullets = function(self, bullet, suppressHostEvents)
-            local ret = original(self, bullet, suppressHostEvents)
-            handleLocalFireBullets(self, bullet)
-            return ret
-        end
+        local wrapperInfo = debug and debug.getinfo and debug.getinfo(meta.FireBullets, "S") or nil
+        local wrapperSource = string.lower(tostring(wrapperInfo and wrapperInfo.source or ""))
+        if not string.find(wrapperSource, "betterlights_muzzle_flash.lua", 1, true) then return end
+
+        meta.FireBullets = meta.BetterLightsFireBulletsOriginal
+        meta.BetterLightsFireBulletsWrapperVersion = nil
+        meta.BetterLightsFireBulletsOriginal = nil
     end
 
     local function wrapEntityMuzzleFlash()
@@ -605,7 +604,7 @@ if CLIENT then
         end
     end
 
-    wrapEntityFireBullets()
+    removeLegacyEntityFireBulletsWrapper()
     wrapEntityMuzzleFlash()
 
     concommand.Add("betterlights_muzzle_status", function()
@@ -622,7 +621,7 @@ if CLIENT then
         MsgC(Color(220, 220, 220), "  enabled: " .. tostring(cvar_enable:GetBool()) .. "\n")
         MsgC(Color(220, 220, 220), "  show others: " .. tostring(cvar_show_others:GetBool()) .. "\n")
         MsgC(Color(220, 220, 220), "  debug: " .. tostring(cvar_debug:GetBool()) .. "\n")
-        MsgC(Color(220, 220, 220), "  FireBullets wrapper: " .. tostring(meta and meta.BetterLightsFireBulletsWrapperVersion or "missing") .. "\n")
+        MsgC(Color(220, 220, 220), "  FireBullets detection: PostEntityFireBullets\n")
         MsgC(Color(220, 220, 220), "  MuzzleFlash wrapper: " .. tostring(meta and meta.BetterLightsMuzzleFlashWrapperVersion or "missing") .. "\n")
         MsgC(Color(220, 220, 220), "  rule count: " .. tostring(#MF.WeaponRules) .. "\n")
         MsgC(Color(220, 220, 220), "  active weapon: " .. tostring(IsValid(weapon) and weapon:GetClass() or "none") .. "\n")

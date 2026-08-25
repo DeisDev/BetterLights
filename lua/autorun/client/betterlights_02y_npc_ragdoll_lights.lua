@@ -188,6 +188,9 @@ if CLIENT then
 
     hook.Add("CreateClientsideRagdoll", "BetterLights_NPCRagdollLights_Client", trackRagdoll)
     hook.Add("CreateEntityRagdoll", "BetterLights_NPCRagdollLights_ServerEntity", trackRagdoll)
+    local fallbackScheduled = setmetatable({}, { __mode = "k" })
+    local FALLBACK_RETRY_DELAYS = { 0, 0.1, 0.25, 0.5, 1 }
+
     local function tryTrackRagdollFallback(ragdoll)
         if not (IsValid(ragdoll) and ragdoll.GetRagdollOwner) then return end
 
@@ -203,16 +206,39 @@ if CLIENT then
         end
     end
 
-    hook.Add("OnEntityCreated", "BetterLights_NPCRagdollLights_OwnerFallback", function(ragdoll)
-        if not (ragdoll.GetClass and ragdoll:GetClass() == "prop_ragdoll") then return end
+    local function scheduleRagdollFallback(ragdoll)
+        if not (IsValid(ragdoll) and ragdoll.GetClass and ragdoll:GetClass() == "prop_ragdoll") then return end
+        if fallbackScheduled[ragdoll] then return end
 
-        for _, delay in ipairs({ 0, 0.1, 0.25, 0.5, 1 }) do
+        fallbackScheduled[ragdoll] = true
+
+        for index, delay in ipairs(FALLBACK_RETRY_DELAYS) do
+            local attempt = index
             timer.Simple(delay, function()
-                if records[ragdoll] then return end
-                tryTrackRagdollFallback(ragdoll)
+                if records[ragdoll] then
+                    fallbackScheduled[ragdoll] = nil
+                    return
+                end
+
+                if IsValid(ragdoll) then
+                    tryTrackRagdollFallback(ragdoll)
+                end
+
+                if attempt == #FALLBACK_RETRY_DELAYS then
+                    fallbackScheduled[ragdoll] = nil
+                end
             end)
         end
+    end
+
+    hook.Add("OnEntityCreated", "BetterLights_NPCRagdollLights_OwnerFallback", function(ragdoll)
+        timer.Simple(0, function()
+            if not IsValid(ragdoll) then return end
+            scheduleRagdollFallback(ragdoll)
+        end)
     end)
+
+    hook.Add("NetworkEntityCreated", "BetterLights_NPCRagdollLights_NetworkFallback", scheduleRagdollFallback)
 
     local function updateRagdoll(ragdoll)
         local record = records[ragdoll]

@@ -8,6 +8,12 @@ if SERVER then
     local HUNTER_CHOPPER_CLASS = "npc_helicopter"
     local FLOOR_TURRET_CLASS = "npc_turret_floor"
     local STUNSTICK_CLASS = "weapon_stunstick"
+    local ANTLION_SPIT_CLASS = "grenade_spit"
+    local ANTLION_SPIT_HIT_SOUND = "grenadespit.hit"
+    local STUNSTICK_HIT_SOUNDS = {
+        ["weapon_stunstick.melee_hit"] = true,
+        ["weapon_stunstick.melee_hitworld"] = true
+    }
     local STUNSTICK_TRACE_DISTANCE = 96
     local STUNSTICK_TRACE_MINS = Vector(-8, -8, -8)
     local STUNSTICK_TRACE_MAXS = Vector(8, 8, 8)
@@ -15,7 +21,7 @@ if SERVER then
         [STRIDER_CLASS] = BL.NET_STRIDER_BULLET_IMPACT,
         [HUNTER_CHOPPER_CLASS] = BL.NET_HUNTER_CHOPPER_BULLET_IMPACT
     }
-    local WRAPPER_VERSION = 3
+    local WRAPPER_VERSION = 4
     local recentMuzzleShots = {}
     local recentMuzzleFrame
     local recentStunstickImpacts = {}
@@ -296,7 +302,7 @@ if SERVER then
         sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, adapterId, rule.attachments)
     end
 
-    hook.Add("EntityFireBullets", "BetterLights_MuzzleFlash_Server", handleMuzzleFireBullets)
+    hook.Remove("EntityFireBullets", "BetterLights_MuzzleFlash_Server")
     hook.Add("PostEntityFireBullets", "BetterLights_MuzzleFlash_Server_Post", handleMuzzleFireBullets)
 
     local function handleMuzzleFlashCall(ent)
@@ -317,6 +323,41 @@ if SERVER then
         sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, adapterId, rule.attachments)
     end
 
+    local function installBulletImpactCallback(ent, bullet)
+        if not BL.IsServerEnabled() then return end
+        if not IsValid(ent) then return end
+        if not bullet then return end
+
+        local shooter, weapon = resolveShooterAndWeapon(ent)
+        if isIgnoredSource(shooter, weapon) then return end
+
+        local prev = bullet.Callback
+        bullet.Callback = function(att, tr, dmginfo)
+            local ret
+            if isfunction(prev) then ret = prev(att, tr, dmginfo) end
+            if not BL.IsServerEnabled() then return ret end
+            if type(ret) == "table" and ret.effects == false then return ret end
+            if not (dmginfo and dmginfo.GetDamage and dmginfo:GetDamage() > 0) then return ret end
+            if not tr or not tr.Hit or not tr.HitPos then return ret end
+
+            local pos = tr.HitPos
+            if tr.HitNormal then
+                pos = pos + tr.HitNormal * 2
+            end
+
+            net.Start(BL.NET_EVENT_MESSAGE)
+                local specialMessage = getSpecialImpactMessage(ent)
+                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
+                net.WriteVector(pos)
+                if not specialMessage then
+                    net.WriteBool(isAR2Shot(att, bullet))
+                end
+            net.SendPVS(pos)
+
+            return ret
+        end
+    end
+
     local function wrapEntityFireBullets()
         local meta = FindMetaTable("Entity")
         if not (meta and isfunction(meta.FireBullets)) then return end
@@ -326,9 +367,8 @@ if SERVER then
         meta.BetterLightsFireBulletsWrapperVersion = WRAPPER_VERSION
         meta.BetterLightsFireBulletsOriginal = original
         meta.FireBullets = function(self, bullet, suppressHostEvents)
-            local ret = original(self, bullet, suppressHostEvents)
-            handleMuzzleFireBullets(self, bullet)
-            return ret
+            installBulletImpactCallback(self, bullet)
+            return original(self, bullet, suppressHostEvents)
         end
     end
 
@@ -369,40 +409,7 @@ if SERVER then
 
     MF.SendAdapterMuzzleFlash = sendAdapterMuzzleFlash
 
-    hook.Add("EntityFireBullets", "BetterLights_BulletImpact_Server", function(ent, bullet)
-        if not BL.IsServerEnabled() then return end
-        if not IsValid(ent) then return end
-        if not bullet then return end
-
-        local shooter, weapon = resolveShooterAndWeapon(ent)
-        if isIgnoredSource(shooter, weapon) then return end
-
-        local prev = bullet.Callback
-        bullet.Callback = function(att, tr, dmginfo)
-            local ret
-            if isfunction(prev) then ret = prev(att, tr, dmginfo) end
-            if not BL.IsServerEnabled() then return ret end
-            if type(ret) == "table" and ret.effects == false then return ret end
-            if not (dmginfo and dmginfo.GetDamage and dmginfo:GetDamage() > 0) then return ret end
-            if not tr or not tr.Hit or not tr.HitPos then return ret end
-
-            local pos = tr.HitPos
-            if tr.HitNormal then
-                pos = pos + tr.HitNormal * 2
-            end
-
-            net.Start(BL.NET_EVENT_MESSAGE)
-                local specialMessage = getSpecialImpactMessage(ent)
-                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
-                net.WriteVector(pos)
-                if not specialMessage then
-                    net.WriteBool(isAR2Shot(att, bullet))
-                end
-            net.SendPVS(pos)
-
-            return ret
-        end
-    end)
+    hook.Remove("EntityFireBullets", "BetterLights_BulletImpact_Server")
 
     local function isStunstickDamage(attacker, inflictor)
         if IsValid(inflictor) and inflictor.GetClass and inflictor:GetClass() == STUNSTICK_CLASS then
@@ -490,8 +497,10 @@ if SERVER then
         sendStunstickImpact(pos)
     end
 
-    hook.Add("EntityTakeDamage", "BetterLights_StunstickImpact_Server", function(target, dmginfo)
+    hook.Remove("EntityTakeDamage", "BetterLights_StunstickImpact_Server")
+    hook.Add("PostEntityTakeDamage", "BetterLights_StunstickImpact_Server", function(target, dmginfo, took)
         if not BL.IsServerEnabled() then return end
+        if took == false then return end
         if not IsValid(target) then return end
         if not dmginfo then return end
 
@@ -506,19 +515,57 @@ if SERVER then
         sendStunstickImpact(pos)
     end)
 
-    hook.Add("KeyPress", "BetterLights_StunstickImpact_KeyPress", function(ply, key)
-        if key ~= IN_ATTACK then return end
+    local function getImpactSoundName(data)
+        if type(data) ~= "table" then return "" end
+
+        return string.lower(tostring(data.OriginalSoundName or data.SoundName or ""))
+    end
+
+    local function getSoundPosition(data)
+        if type(data) ~= "table" then return nil end
+        if isvector(data.Pos) then return data.Pos end
+
+        local ent = data.Entity
+        if not IsValid(ent) then return nil end
+        if ent.WorldSpaceCenter then return ent:WorldSpaceCenter() end
+        return ent:GetPos()
+    end
+
+    local function resolveStunstickSoundAttacker(ent)
+        if not IsValid(ent) then return nil end
+
+        if getEntityClass(ent) == STUNSTICK_CLASS then
+            local owner = ent.GetOwner and ent:GetOwner() or nil
+            if IsValid(owner) then return owner end
+            return nil
+        end
+
+        if getActiveStunstick(ent) then return ent end
+        return nil
+    end
+
+    hook.Remove("KeyPress", "BetterLights_StunstickImpact_KeyPress")
+    hook.Add("EntityEmitSound", "BetterLights_ConfirmedImpactSounds_Server", function(data)
         if not BL.IsServerEnabled() then return end
 
-        local weapon = getActiveStunstick(ply)
-        if not weapon then return end
+        local soundName = getImpactSoundName(data)
+        local ent = data and data.Entity or nil
 
-        timer.Simple(0, function()
-            if not BL.IsServerEnabled() then return end
-            if not IsValid(ply) then return end
-            if getActiveStunstick(ply) ~= weapon then return end
+        if soundName == ANTLION_SPIT_HIT_SOUND and getEntityClass(ent) == ANTLION_SPIT_CLASS then
+            local pos = getSoundPosition(data)
+            if not pos then return end
 
-            sendStunstickTraceImpact(ply)
-        end)
+            net.Start(BL.NET_EVENT_MESSAGE)
+                net.WriteUInt(BL.NET_ANTLION_SPIT_IMPACT, 4)
+                net.WriteVector(pos)
+            net.SendPVS(pos)
+            return
+        end
+
+        if not STUNSTICK_HIT_SOUNDS[soundName] then return end
+
+        local attacker = resolveStunstickSoundAttacker(ent)
+        if not attacker then return end
+        sendStunstickTraceImpact(attacker)
     end)
 end

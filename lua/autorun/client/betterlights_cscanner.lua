@@ -2,6 +2,8 @@ if CLIENT then
     local BL = BetterLights
 
     local IsValid = IsValid
+    local SPOTLIGHT_STATE_KEY = "BetterLights_ScannerSpotlightActive"
+    local SPOTLIGHT_TARGET_KEY = "BetterLights_ScannerSpotlightTarget"
 
     local function createScannerSettings(prefix, label, glowColor)
         return {
@@ -39,14 +41,12 @@ if CLIENT then
         npc_cscanner = {
             glow = { "eyes" },
             searchlight = { "light" },
-            searchlightAimAtLocalPlayer = true,
             searchlightNearZ = 1,
             settings = cityScanner
         },
         npc_clawscanner = {
             glow = { "eye" },
             searchlight = { "light" },
-            searchlightAimAtLocalPlayer = true,
             searchlightNearZ = 1,
             settings = shieldScanner
         }
@@ -55,17 +55,6 @@ if CLIENT then
     local function getScannerAttachments(ent)
         if not (IsValid(ent) and ent.GetClass) then return nil end
         return SCANNER_ATTACHMENTS[ent:GetClass()]
-    end
-
-    local function getPlayerAimAngle(pos)
-        local ply = LocalPlayer()
-        if not IsValid(ply) then return nil end
-
-        local target = (ply.WorldSpaceCenter and ply:WorldSpaceCenter()) or (ply.EyePos and ply:EyePos()) or ply:GetPos()
-        local direction = target - pos
-        if direction:LengthSqr() <= 1 then return nil end
-
-        return direction:Angle()
     end
 
     local function getFallbackSearchlightTransform(ent, attachments)
@@ -85,26 +74,21 @@ if CLIENT then
     end
 
     local function getSearchlightTransform(ent, attachments)
+        if not ent:GetNW2Bool(SPOTLIGHT_STATE_KEY, false) then return nil end
+
+        local target = ent:GetNW2Entity(SPOTLIGHT_TARGET_KEY, NULL)
+        if not IsValid(target) then return nil end
+
         local light = BL.GetAttachmentTransform(ent, attachments.searchlight) or getFallbackSearchlightTransform(ent, attachments)
         if not (light and light.Pos and light.Ang) then return nil end
 
-        local pos = light.Pos
-        local ang
-
-        if attachments.searchlightAimAtLocalPlayer then
-            ang = getPlayerAimAngle(pos)
+        local angle = light.Ang
+        local direction = target:GetPos() - light.Pos
+        if direction:LengthSqr() > 1 then
+            angle = direction:Angle()
         end
 
-        if not ang and ent.GetAimVector then
-            local aim = ent:GetAimVector()
-            if aim and aim ~= vector_origin then
-                ang = aim:Angle()
-            end
-        end
-
-        ang = ang or light.Ang
-
-        return pos, ang, attachments.searchlightNearZ
+        return light.Pos, angle, attachments.searchlightNearZ
     end
 
     local function createScannerGlow(ent, attachments, lightId, options)
