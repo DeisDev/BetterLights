@@ -37,7 +37,7 @@
 [*]Improved flashlight input compatibility with other addons.
 [*]Improved settings profile saving and sharing with smaller files and compact profile codes.
 [*]Existing profile JSON can still be imported, viewed, and copied.
-[*]Fixed profiles and advanced muzzle flash rules reporting success when their files could not be saved.
+[*]Fixed profiles reporting success when their files could not be saved.
 [*]Added server-wide flashlight settings.
 [*]Added a personal option to disable Better Lights.
 [*]Added a muzzle flash blacklist.
@@ -160,7 +160,7 @@
 [*]Improved flashlight input compatibility with other addons.
 [*]Improved settings profile saving and sharing with smaller files and compact profile codes.
 [*]Existing profile JSON can still be imported, viewed, and copied.
-[*]Fixed profiles and advanced muzzle flash rules reporting success when their files could not be saved.
+[*]Fixed profiles reporting success when their files could not be saved.
 [/list]
 
 [b]Better Lights v1.6.0-beta8[/b]

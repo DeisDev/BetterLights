@@ -706,6 +706,8 @@ if CLIENT then
         end
 
         if IsValid(self.PageForm) then
+            self.PageForm:SetVisible(false)
+            self.PageForm:SetParent(self)
             self.PageForm:Remove()
         end
 
@@ -728,14 +730,14 @@ if CLIENT then
             frame:SetTitle(MENU.PhraseFormat("window.settings.page_title", getPageFullTitle(page)))
         end
 
-        form:InvalidateLayout(true)
-        self.Content:GetCanvas():InvalidateLayout(true)
+        -- A scrollbar can narrow the canvas after the first pass and change wrapped control heights.
+        for _ = 1, 2 do
+            self.Content:InvalidateLayout(true)
+            form:InvalidateChildren(true)
+        end
+        self.Content:InvalidateLayout(true)
         local targetScroll = self.PageScrollPositions[page.id] or 0
-        local owner = self
-        timer.Simple(0, function()
-            if not IsValid(owner) or owner.CurrentPageId ~= page.id then return end
-            owner.Content:GetVBar():SetScroll(targetScroll)
-        end)
+        self.Content:GetVBar():SetScroll(targetScroll)
         return true
     end
 
