@@ -66,7 +66,15 @@ if CLIENT then
     MENU.AddStyledButton = addStyledButton
     MENU.IsDeveloperMode = isDeveloperMode
 
-    function MENU.RegisterPage(category, id, titleKey, buildPanel)
+    local function inferPageDescriptionKey(titleKey)
+        local pageKey = string.match(titleKey, "^(page%..+)%.title$")
+        if pageKey then return pageKey .. ".desc" end
+
+        local menuKey = string.match(titleKey, "^menu%.(.+)$")
+        if menuKey then return "page." .. menuKey .. ".desc" end
+    end
+
+    function MENU.RegisterPage(category, id, titleKey, buildPanel, descriptionKey)
         if not (isstring(category) and isstring(id) and isstring(titleKey) and isfunction(buildPanel)) then return end
 
         local page = registeredPagesById[id]
@@ -74,6 +82,7 @@ if CLIENT then
             page.category = category
             page.titleKey = titleKey
             page.buildPanel = buildPanel
+            page.descriptionKey = descriptionKey or inferPageDescriptionKey(titleKey)
             return page
         end
 
@@ -81,7 +90,8 @@ if CLIENT then
             category = category,
             id = id,
             titleKey = titleKey,
-            buildPanel = buildPanel
+            buildPanel = buildPanel,
+            descriptionKey = descriptionKey or inferPageDescriptionKey(titleKey)
         }
         registeredPagesById[id] = page
         registeredPages[#registeredPages + 1] = page
@@ -125,8 +135,8 @@ if CLIENT then
         return registeredPagesById[id]
     end
 
-    local function registerPage(category, id, titleKey, buildPanel)
-        MENU.RegisterPage(category, id, titleKey, buildPanel)
+    local function registerPage(category, id, titleKey, buildPanel, descriptionKey)
+        MENU.RegisterPage(category, id, titleKey, buildPanel, descriptionKey)
     end
 
     local function registerCategories()
@@ -429,6 +439,8 @@ if CLIENT then
         btn.DoClick = function()
             local resetDefaults = BetterLights.ResolveClientResetDefaults(defaults)
             BetterLights.ApplyClientSettings(resetDefaults)
+            notification.AddLegacy(phrase("notice.page_settings_reset"), NOTIFY_GENERIC, 3)
+            surface.PlaySound("buttons/button14.wav")
         end
     end
 
@@ -961,6 +973,8 @@ if CLIENT then
         btn:SetEnabled(next(resettable) ~= nil)
         btn.DoClick = function()
             BetterLights.ApplyClientSettings(BetterLights.ResolveClientResetDefaults(resettable))
+            notification.AddLegacy(phrase("notice.page_settings_reset"), NOTIFY_GENERIC, 3)
+            surface.PlaySound("buttons/button14.wav")
         end
         return btn
     end
@@ -1898,7 +1912,7 @@ if CLIENT then
                 betterlights_flashlight_player_enable = 0,
                 betterlights_flashlight_custom_sounds = 1,
             })
-        end)
+        end, "page.player_flashlight.desc")
 
     registerPage("Flashlight", "BL_FlashlightPosition", "menu.position", function(panel)
             setupPage(panel, "page.flashlight_position.title", "page.flashlight_position.desc")
@@ -1987,13 +2001,13 @@ if CLIENT then
                 false
             )
             BetterLights.Flashlight.BuildWeaponAttachmentBlacklistEditor(blacklist)
-        end)
+        end, "page.flashlight_position.desc")
 
     registerPage("Flashlight", "BL_FlashlightVisual", "menu.visual", function(panel)
             BetterLights.ClearFlashlightKnownTextureCache()
 
             populateFlashlightVisualPanel(panel)
-        end)
+        end, "page.flashlight_visuals.desc")
 
     registerPage("Projectiles", "BL_HeliBomb", "menu.heli_bomb", function(panel)
             setupPage(panel, "page.heli_bomb.title", "page.heli_bomb.desc")
@@ -2171,7 +2185,7 @@ if CLIENT then
 
         registerPage("Eye Glow", "BL_CombineSoldiers", "menu.combine_soldiers", function(panel)
             addCombineEyeGlowPanel(panel)
-        end)
+        end, "page.combine_eye.desc")
 
         registerPage("Eye Glow", "BL_DogEyeGlow", "menu.dog_eye_glow", function(panel)
             setupPage(panel, "page.dog_eye_glow.title", "page.dog_eye_glow.desc")

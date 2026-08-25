@@ -34,9 +34,51 @@ if CLIENT then
     local suppressBindToggleUntilRelease = false
     local searchShortcutDown = false
     local escapeShortcutDown = false
+    local PAGE_NAVIGATION_KEYS = { KEY_PAGEUP, KEY_PAGEDOWN, KEY_HOME, KEY_END }
+    local PAGE_NAVIGATION_REPEAT_DELAY = 0.4
+    local PAGE_NAVIGATION_REPEAT_INTERVAL = 0.1
+    local PAGE_NAVIGATION_BLOCKING_CLASSES = {
+        DBinder = true,
+        DComboBox = true,
+        DListView = true,
+        DListView_Line = true,
+        DMenu = true,
+        DNumberWang = true,
+        DNumSlider = true,
+        DSlider = true,
+        DTextEntry = true,
+        DTree = true,
+        DTree_Node = true,
+        NumberWang = true,
+        TextEntry = true
+    }
+    local pageNavigationStates = {}
 
     local function phrase(key)
         return MENU.Phrase(key)
+    end
+
+    local function getOptionalPhrase(key)
+        if not key then return "" end
+
+        local phraseKey = "betterlights." .. key
+        local value = language.GetPhrase(phraseKey)
+        if value == phraseKey then return "" end
+        return value
+    end
+
+    local function getPageDescription(page)
+        return getOptionalPhrase(page and page.descriptionKey)
+    end
+
+    local function getPageFullTitle(page)
+        if page and page.descriptionKey then
+            local titleKey = string.gsub(page.descriptionKey, "%.desc$", ".title")
+            local fullTitle = getOptionalPhrase(titleKey)
+            if fullTitle ~= "" then return fullTitle end
+        end
+
+        return page and phrase(page.titleKey) or ""
     end
 
     local function readCookieNumber(name, fallback)
@@ -95,6 +137,82 @@ if CLIENT then
         suppressBindToggleUntilRelease = false
         searchShortcutDown = input.IsControlDown() and input.IsKeyDown(KEY_F)
         escapeShortcutDown = input.IsKeyDown(KEY_ESCAPE)
+    end
+
+    local function resetPageNavigation()
+        for i = 1, #PAGE_NAVIGATION_KEYS do
+            local keyCode = PAGE_NAVIGATION_KEYS[i]
+            local isDown = input.IsKeyDown(keyCode)
+            local state = pageNavigationStates[keyCode]
+            if not state then
+                state = {}
+                pageNavigationStates[keyCode] = state
+            end
+
+            state.down = isDown
+            state.blocked = isDown
+            state.repeatAt = math.huge
+        end
+    end
+
+    local function focusedControlConsumesPageNavigation(frame)
+        local focus = vgui.GetKeyboardFocus()
+        while IsValid(focus) and focus ~= frame do
+            if isfunction(focus.IsEditing) and focus:IsEditing() then return true end
+            if isfunction(focus.IsMenuOpen) and focus:IsMenuOpen() then return true end
+            if isfunction(focus.GetSelectedItem)
+                or isfunction(focus.GetSelectedLine)
+                or isfunction(focus.GetSelectedNumber)
+                or isfunction(focus.GetSlideX)
+                or isfunction(focus.ChooseOptionID) then
+                return true
+            end
+            if PAGE_NAVIGATION_BLOCKING_CLASSES[focus:GetName()]
+                or PAGE_NAVIGATION_BLOCKING_CLASSES[focus:GetClassName()] then
+                return true
+            end
+            focus = focus:GetParent()
+        end
+
+        return false
+    end
+
+    local function updatePageNavigation(frame, settingsPanel, canNavigate)
+        local now = RealTime()
+        local focusChecked = false
+
+        for i = 1, #PAGE_NAVIGATION_KEYS do
+            local keyCode = PAGE_NAVIGATION_KEYS[i]
+            local state = pageNavigationStates[keyCode]
+            if not state then
+                state = { down = false, blocked = false, repeatAt = 0 }
+                pageNavigationStates[keyCode] = state
+            end
+
+            local isDown = input.IsKeyDown(keyCode)
+            if isDown and canNavigate and not focusChecked then
+                canNavigate = not focusedControlConsumesPageNavigation(frame)
+                focusChecked = true
+            end
+
+            if not isDown then
+                state.down = false
+                state.blocked = false
+                state.repeatAt = 0
+            elseif not state.down then
+                state.down = true
+                state.blocked = not canNavigate
+                state.repeatAt = now + PAGE_NAVIGATION_REPEAT_DELAY
+                if canNavigate then
+                    settingsPanel:HandlePageNavigationKey(keyCode)
+                end
+            elseif not canNavigate then
+                state.blocked = true
+            elseif not state.blocked and now >= state.repeatAt then
+                state.repeatAt = now + PAGE_NAVIGATION_REPEAT_INTERVAL
+                settingsPanel:HandlePageNavigationKey(keyCode)
+            end
+        end
     end
 
     local function refreshBinder(binder)
@@ -239,8 +357,30 @@ if CLIENT then
         self.Navigation = vgui.Create("DPanel", self.Divider)
         self.Navigation:DockPadding(8, 8, 8, 8)
 
+        self.Identity = vgui.Create("DPanel", self.Navigation)
+        self.Identity:Dock(TOP)
+        self.Identity:SetTall(22)
+        self.Identity:SetPaintBackground(false)
+
+        self.Version = vgui.Create("DLabel", self.Identity)
+        self.Version:Dock(RIGHT)
+        self.Version:DockMargin(8, 0, 0, 0)
+        self.Version:SetText(tostring(BetterLights.VERSION or ""))
+        self.Version:SetDark(true)
+        self.Version:SetContentAlignment(6)
+        self.Version:SizeToContents()
+        self.Version:SetTooltip(MENU.PhraseFormat("about.version", BetterLights.VERSION or ""))
+
+        self.AddonName = vgui.Create("DLabel", self.Identity)
+        self.AddonName:Dock(FILL)
+        self.AddonName:SetText(phrase("addon.name"))
+        self.AddonName:SetFont("DermaDefaultBold")
+        self.AddonName:SetDark(true)
+        self.AddonName:SetContentAlignment(4)
+
         self.SearchBar = vgui.Create("DPanel", self.Navigation)
         self.SearchBar:Dock(TOP)
+        self.SearchBar:DockMargin(0, 4, 0, 0)
         self.SearchBar:SetTall(28)
         self.SearchBar:SetPaintBackground(false)
 
@@ -264,6 +404,7 @@ if CLIENT then
         self.MatchStatus:SetTall(18)
         self.MatchStatus:SetDark(true)
         self.MatchStatus:SetContentAlignment(4)
+        self.MatchStatus:SetTooltip(phrase("tooltip.page_keyboard_navigation"))
 
         self.EmptyState = vgui.Create("DLabel", self.Navigation)
         self.EmptyState:Dock(FILL)
@@ -322,6 +463,33 @@ if CLIENT then
 
         self.Search:RequestFocus()
         self.Search:SelectAll()
+    end
+
+    function SETTINGS_PANEL:HandlePageNavigationKey(keyCode)
+        if not IsValid(self.Content) then return false end
+
+        local scrollBar = self.Content:GetVBar()
+        if not IsValid(scrollBar) then return false end
+        if not scrollBar.Enabled then return false end
+
+        local target
+        local current = scrollBar:GetScroll()
+        local pageSize = math.max(64, math.floor(self.Content:GetTall() * 0.9))
+
+        if keyCode == KEY_PAGEUP then
+            target = current - pageSize
+        elseif keyCode == KEY_PAGEDOWN then
+            target = current + pageSize
+        elseif keyCode == KEY_HOME then
+            target = 0
+        elseif keyCode == KEY_END then
+            target = self.Content:GetCanvas():GetTall()
+        else
+            return false
+        end
+
+        scrollBar:SetScroll(target)
+        return true
     end
 
     function SETTINGS_PANEL:ClearSearchFilter(focusSearch)
@@ -403,6 +571,10 @@ if CLIENT then
             local page = pages[i]
             local pageNode = categoryNode:AddNode(phrase(page.titleKey), PAGE_ICON)
             pageNode.BetterLightsPage = page
+            local pageDescription = getPageDescription(page)
+            if pageDescription ~= "" then
+                pageNode:SetTooltip(pageDescription)
+            end
             self.PageNodes[page.id] = pageNode
 
             if page.id == selectedPageId then
@@ -444,9 +616,11 @@ if CLIENT then
             if not developerOnly or MENU.IsDeveloperMode() then
                 local categoryTitle = category and phrase(category[2]) or page.category
                 local pageTitle = phrase(page.titleKey)
+                local pageDescription = getPageDescription(page)
                 local matches = filter == ""
                     or string.find(string.lower(categoryTitle), filter, 1, true)
                     or string.find(string.lower(pageTitle), filter, 1, true)
+                    or string.find(string.lower(pageDescription), filter, 1, true)
 
                 if matches then
                     categorizedPages[page.category] = categorizedPages[page.category] or {}
@@ -538,7 +712,7 @@ if CLIENT then
 
         local frame = self:GetParent()
         if IsValid(frame) and frame.SetTitle then
-            frame:SetTitle(MENU.PhraseFormat("window.settings.page_title", phrase(page.titleKey)))
+            frame:SetTitle(MENU.PhraseFormat("window.settings.page_title", getPageFullTitle(page)))
         end
 
         form:InvalidateLayout(true)
@@ -776,6 +950,7 @@ if CLIENT then
             frame:MoveToFront()
             frame.SettingsPanel:Refresh(pageId)
             resetBindListener()
+            resetPageNavigation()
             return frame
         end
 
@@ -807,6 +982,7 @@ if CLIENT then
         MENU._settingsFrame = frame
         frame:MakePopup()
         resetBindListener()
+        resetPageNavigation()
         return frame
     end
 
@@ -815,6 +991,7 @@ if CLIENT then
         if IsValid(frame) and frame:IsVisible() then
             frame:Close()
             resetBindListener()
+            resetPageNavigation()
             return nil
         end
 
@@ -841,6 +1018,7 @@ if CLIENT then
     hook.Add("Think", "BetterLights_SettingsMenuBindListener", function()
         local frame = MENU._settingsFrame
         if not (IsValid(frame) and frame:IsVisible()) then
+            resetPageNavigation()
             if suppressBindToggleUntilRelease
                 and bindListenerKey ~= KEY_NONE
                 and input.IsKeyDown(bindListenerKey) then
@@ -873,6 +1051,13 @@ if CLIENT then
         escapeShortcutDown = escapeDown
 
         if not frame:IsVisible() then return end
+
+        local canNavigatePage = isActive
+            and not isKeyTrapping
+            and IsValid(settingsPanel)
+        if IsValid(settingsPanel) then
+            updatePageNavigation(frame, settingsPanel, canNavigatePage)
+        end
 
         local keyCode = getMenuBindingKey()
         if keyCode == KEY_NONE then
