@@ -2089,7 +2089,8 @@ if CLIENT then
             panel:NumSlider(phrase("control.decay"), "betterlights_manhack_decay", 0, 5000, 0)
             panel:CheckBox(phrase("control.add_model_elight"), "betterlights_manhack_models_elight")
             panel:NumSlider(phrase("control.model_elight_radius"), "betterlights_manhack_models_elight_size_mult", 0, 3, 2)
-            addColorMixerControl(panel, "control.color", "betterlights_manhack_color_r", "betterlights_manhack_color_g", "betterlights_manhack_color_b")
+            addColorMixerControl(panel, "control.hostile_color", "betterlights_manhack_color_r", "betterlights_manhack_color_g", "betterlights_manhack_color_b")
+            addColorMixerControl(panel, "control.hacked_color", "betterlights_manhack_hacked_color_r", "betterlights_manhack_hacked_color_g", "betterlights_manhack_hacked_color_b")
             addResetButton(panel, {
                 betterlights_manhack_enable = 1,
                 betterlights_manhack_size = 70,
@@ -2100,6 +2101,9 @@ if CLIENT then
                 betterlights_manhack_color_r = 255,
                 betterlights_manhack_color_g = 60,
                 betterlights_manhack_color_b = 60,
+                betterlights_manhack_hacked_color_r = 60,
+                betterlights_manhack_hacked_color_g = 255,
+                betterlights_manhack_hacked_color_b = 60,
             })
         end)
 

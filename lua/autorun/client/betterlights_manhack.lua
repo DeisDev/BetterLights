@@ -11,19 +11,33 @@ if CLIENT then
     local cvar_col_r = BL.CreateClientConVar("betterlights_manhack_color_r", "255", true, false, "Manhack color - red (0-255)")
     local cvar_col_g = BL.CreateClientConVar("betterlights_manhack_color_g", "60", true, false, "Manhack color - green (0-255)")
     local cvar_col_b = BL.CreateClientConVar("betterlights_manhack_color_b", "60", true, false, "Manhack color - blue (0-255)")
+    local cvar_hacked_col_r = BL.CreateClientConVar("betterlights_manhack_hacked_color_r", "60", true, false, "Hacked Manhack color - red (0-255)")
+    local cvar_hacked_col_g = BL.CreateClientConVar("betterlights_manhack_hacked_color_g", "255", true, false, "Hacked Manhack color - green (0-255)")
+    local cvar_hacked_col_b = BL.CreateClientConVar("betterlights_manhack_hacked_color_b", "60", true, false, "Hacked Manhack color - blue (0-255)")
     local ATTACH_NAMES = { "Eye", "Light" }
+    local HACKED_MANHACK_SPAWNFLAG = 2097152
+
+    local function isHackedManhack(ent)
+        return ent:HasSpawnFlags(HACKED_MANHACK_SPAWNFLAG)
+    end
 
     BL.TrackClass("npc_manhack")
     BL.RegisterNPCRagdollLightProvider("manhack_eyes", {
         class = "npc_manhack",
         category = "eye",
-        update = function(ragdoll, _, entry)
+        capture = function(ent)
+            return { hacked = isHackedManhack(ent) }
+        end,
+        update = function(ragdoll, data, entry)
             if not cvar_enable:GetBool() then return end
 
             local size = math.max(0, cvar_size:GetFloat())
             local brightness = math.max(0, cvar_brightness:GetFloat())
             local decay = math.max(0, cvar_decay:GetFloat())
             local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+            if data.hacked then
+                r, g, b = BL.GetColorFromCvars(cvar_hacked_col_r, cvar_hacked_col_g, cvar_hacked_col_b)
+            end
             local doElight = cvar_models_elight:GetBool()
             local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
 
@@ -70,21 +84,27 @@ if CLIENT then
         local brightness = math.max(0, cvar_brightness:GetFloat())
         local decay = math.max(0, cvar_decay:GetFloat())
         local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
+        local hackedR, hackedG, hackedB = BL.GetColorFromCvars(cvar_hacked_col_r, cvar_hacked_col_g, cvar_hacked_col_b)
         local doElight = cvar_models_elight:GetBool()
         local elMult = math.max(0, cvar_models_elight_size_mult:GetFloat())
 
         local function update(ent)
             if not IsValid(ent) then return end
 
+            local lightR, lightG, lightB = r, g, b
+            if isHackedManhack(ent) then
+                lightR, lightG, lightB = hackedR, hackedG, hackedB
+            end
+
             local idx = ent:EntIndex()
             for i, attachmentName in ipairs(ATTACH_NAMES) do
                 local pos = BL.GetAttachmentPos(ent, { attachmentName })
                 if pos then
                     local lightId = idx + (i * 10000)
-                    BL.CreateDLight(lightId, pos, r, g, b, brightness, decay, size, false)
+                    BL.CreateDLight(lightId, pos, lightR, lightG, lightB, brightness, decay, size, false)
 
                     if doElight then
-                        BL.CreateDLight(lightId, pos, r, g, b, brightness, decay, size * elMult, true)
+                        BL.CreateDLight(lightId, pos, lightR, lightG, lightB, brightness, decay, size * elMult, true)
                     end
                 end
             end
