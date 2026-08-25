@@ -2,14 +2,18 @@ if CLIENT then
 
     local MENU = BetterLights.Menu
 
-    function MENU.RegisterWeaponPanels()
-        local phrase = MENU.Phrase
-        local setupPage = MENU.SetupPage
-        local addColorMixerControl = MENU.AddColorMixerControl
-        local addResetButton = MENU.AddResetButton
-        local registerPage = MENU.RegisterPage
+    local phrase = MENU.Phrase
+    local setupPage = MENU.SetupPage
+    local addColorMixerControl = MENU.AddColorMixerControl
+    local addResetButton = MENU.AddResetButton
+    MENU.RegisterWeaponPanels = nil
 
-        registerPage("Weapons", "BL_CrossbowHeld", "menu.crossbow_held", function(panel)
+    MENU.RegisterPages("BetterLights_Menu_Weapons", {
+        {
+            category = "Weapons",
+            id = "BL_CrossbowHeld",
+            titleKey = "menu.crossbow_held",
+            buildPanel = function(panel)
             setupPage(panel, "page.crossbow_held.title", "page.crossbow_held.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_crossbow_hold_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_crossbow_hold_size", 0, 300, 0)
@@ -27,9 +31,14 @@ if CLIENT then
                 betterlights_crossbow_hold_color_g = 140,
                 betterlights_crossbow_hold_color_b = 40,
             })
-        end)
+            end
+        },
 
-        registerPage("Weapons", "BL_Physgun", "menu.physgun", function(panel)
+        {
+            category = "Weapons",
+            id = "BL_Physgun",
+            titleKey = "menu.physgun",
+            buildPanel = function(panel)
             setupPage(panel, "page.physgun.title", "page.physgun.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_physgun_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_physgun_size", 0, 300, 0)
@@ -61,9 +70,14 @@ if CLIENT then
                 betterlights_physgun_color_g = 130,
                 betterlights_physgun_color_b = 255,
             })
-        end)
+            end
+        },
 
-        registerPage("Weapons", "BL_GravityGun", "menu.gravitygun", function(panel)
+        {
+            category = "Weapons",
+            id = "BL_GravityGun",
+            titleKey = "menu.gravitygun",
+            buildPanel = function(panel)
             setupPage(panel, "page.gravitygun.title", "page.gravitygun.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_gravitygun_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_gravitygun_size", 0, 300, 0)
@@ -87,9 +101,14 @@ if CLIENT then
                 betterlights_gravitygun_super_color_g = 140,
                 betterlights_gravitygun_super_color_b = 255,
             })
-        end)
+            end
+        },
 
-        registerPage("Weapons", "BL_RPG_Held", "menu.rpg_held", function(panel)
+        {
+            category = "Weapons",
+            id = "BL_RPG_Held",
+            titleKey = "menu.rpg_held",
+            buildPanel = function(panel)
             setupPage(panel, "page.rpg_held.title", "page.rpg_held.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_rpg_hold_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_rpg_hold_size", 0, 300, 0)
@@ -105,9 +124,14 @@ if CLIENT then
                 betterlights_rpg_hold_color_g = 60,
                 betterlights_rpg_hold_color_b = 60,
             })
-        end)
+            end
+        },
 
-        registerPage("Gunfire", "BL_StunStick", "menu.stunstick", function(panel)
+        {
+            category = "Gunfire",
+            id = "BL_StunStick",
+            titleKey = "menu.stunstick",
+            buildPanel = function(panel)
             setupPage(panel, "page.stunstick.title", "page.stunstick.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_stunstick_impact_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_stunstick_impact_size", 0, 400, 0)
@@ -123,9 +147,14 @@ if CLIENT then
                 betterlights_stunstick_impact_color_g = 190,
                 betterlights_stunstick_impact_color_b = 255,
             })
-        end)
+            end
+        },
 
-        registerPage("Weapons", "BL_ToolGun", "menu.toolgun", function(panel)
+        {
+            category = "Weapons",
+            id = "BL_ToolGun",
+            titleKey = "menu.toolgun",
+            buildPanel = function(panel)
             setupPage(panel, "page.toolgun.title", "page.toolgun.desc")
             panel:CheckBox(phrase("control.enable"), "betterlights_toolgun_enable")
             panel:NumSlider(phrase("control.radius"), "betterlights_toolgun_size", 0, 300, 0)
@@ -145,6 +174,7 @@ if CLIENT then
                 betterlights_toolgun_color_g = 255,
                 betterlights_toolgun_color_b = 255,
             })
-        end)
-    end
+            end
+        }
+    })
 end

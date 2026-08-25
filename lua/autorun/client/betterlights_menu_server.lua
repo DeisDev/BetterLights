@@ -688,8 +688,19 @@ if CLIENT then
         end
     end
 
-    function MENU.RegisterServerPanels()
-        MENU.RegisterPage("Admin", "BL_Admin", "menu.server_policy", buildServerPolicyPage)
-        MENU.RegisterPage("Admin", "BL_GlobalFlashlight", "menu.global_flashlight", buildGlobalFlashlightPage)
-    end
+    MENU.RegisterServerPanels = nil
+    MENU.RegisterPages("BetterLights_Menu_Server", {
+        {
+            category = "Admin",
+            id = "BL_Admin",
+            titleKey = "menu.server_policy",
+            buildPanel = buildServerPolicyPage
+        },
+        {
+            category = "Admin",
+            id = "BL_GlobalFlashlight",
+            titleKey = "menu.global_flashlight",
+            buildPanel = buildGlobalFlashlightPage
+        }
+    })
 end

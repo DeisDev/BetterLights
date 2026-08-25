@@ -686,13 +686,26 @@ if CLIENT then
     hook.Add("BetterLights_ClientEnabledPreferenceChanged", "BetterLights_RefreshClientSettingsPage", refreshClientSettingsPanels)
     hook.Add("BetterLights_ServerSettingsChanged", "BetterLights_RefreshClientSettingsPolicy", refreshClientSettingsPanels)
 
-    function MENU.RegisterGeneralPanel()
-        local registerPage = MENU.RegisterPage
-
-        registerPage("General", "BL_Client", "menu.client", buildClientPage)
-        registerPage("General", "BL_Performance", "menu.performance", buildPerformancePage)
-        MENU.RegisterServerPanels()
-
-        registerPage("Profiles", "BL_Profiles", "page.profiles.title", buildProfilesPage)
-    end
+    MENU.RegisterGeneralPanel = nil
+    MENU.RegisterPages("BetterLights_Menu_General", {
+        {
+            category = "General",
+            id = "BL_Client",
+            titleKey = "menu.client",
+            buildPanel = buildClientPage,
+            default = true
+        },
+        {
+            category = "General",
+            id = "BL_Performance",
+            titleKey = "menu.performance",
+            buildPanel = buildPerformancePage
+        },
+        {
+            category = "Profiles",
+            id = "BL_Profiles",
+            titleKey = "page.profiles.title",
+            buildPanel = buildProfilesPage
+        }
+    })
 end

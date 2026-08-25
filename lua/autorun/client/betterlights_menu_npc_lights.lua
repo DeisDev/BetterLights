@@ -78,8 +78,19 @@ if CLIENT then
         })
     end
 
-    function MENU.RegisterNPCLightPanels()
-        MENU.RegisterPage("NPCs", "BL_NPCRemains", "menu.npc_remains", buildNPCRagdollLightsPage)
-        MENU.RegisterPage("Eye Glow", "BL_PlayerEyeGlow", "menu.player_eye_glow", buildPlayerEyeLightsPage)
-    end
+    MENU.RegisterNPCLightPanels = nil
+    MENU.RegisterPages("BetterLights_Menu_NPCLights", {
+        {
+            category = "NPCs",
+            id = "BL_NPCRemains",
+            titleKey = "menu.npc_remains",
+            buildPanel = buildNPCRagdollLightsPage
+        },
+        {
+            category = "Eye Glow",
+            id = "BL_PlayerEyeGlow",
+            titleKey = "menu.player_eye_glow",
+            buildPanel = buildPlayerEyeLightsPage
+        }
+    })
 end

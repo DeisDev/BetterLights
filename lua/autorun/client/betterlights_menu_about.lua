@@ -1,18 +1,21 @@
 if CLIENT then
 
     local MENU = BetterLights.Menu
+    local phrase = MENU.Phrase
+    local phraseFormat = MENU.PhraseFormat
+    local setupPage = MENU.SetupPage
+    local addSection = MENU.AddSection
+    local addStyledButton = MENU.AddStyledButton
+    local styleButton = MENU.StyleButton
+    local addHelpText = MENU.AddHelpText
+    MENU.RegisterAboutPanel = nil
 
-    function MENU.RegisterAboutPanel()
-        local phrase = MENU.Phrase
-        local phraseFormat = MENU.PhraseFormat
-        local setupPage = MENU.SetupPage
-        local addSection = MENU.AddSection
-        local addStyledButton = MENU.AddStyledButton
-        local styleButton = MENU.StyleButton
-        local addHelpText = MENU.AddHelpText
-        local registerPage = MENU.RegisterPage
-
-        registerPage("About", "BL_About", "menu.about", function(panel)
+    MENU.RegisterPages("BetterLights_Menu_About", {
+        {
+            category = "About",
+            id = "BL_About",
+            titleKey = "menu.about",
+            buildPanel = function(panel)
             setupPage(panel, "page.about.title", "page.about.desc")
 
             local version = BetterLights.VERSION
@@ -89,6 +92,7 @@ if CLIENT then
             otherAddonsBtn.DoClick = function()
                 gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=3551812511")
             end
-        end)
-    end
+            end
+        }
+    })
 end

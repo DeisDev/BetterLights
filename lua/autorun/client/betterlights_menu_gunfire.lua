@@ -2,15 +2,19 @@ if CLIENT then
 
     local MENU = BetterLights.Menu
 
-    function MENU.RegisterGunfirePanels()
-        local setupPage = MENU.SetupPage
-        local addSection = MENU.AddSection
-        local addLightControls = MENU.AddLightControls
-        local addColorMixerControl = MENU.AddColorMixerControl
-        local addResetButton = MENU.AddResetButton
-        local registerPage = MENU.RegisterPage
+    local setupPage = MENU.SetupPage
+    local addSection = MENU.AddSection
+    local addLightControls = MENU.AddLightControls
+    local addColorMixerControl = MENU.AddColorMixerControl
+    local addResetButton = MENU.AddResetButton
+    MENU.RegisterGunfirePanels = nil
 
-        registerPage("Gunfire", "BL_BulletImpacts", "menu.bullet_impacts", function(panel)
+    MENU.RegisterPages("BetterLights_Menu_Gunfire", {
+        {
+            category = "Gunfire",
+            id = "BL_BulletImpacts",
+            titleKey = "menu.bullet_impacts",
+            buildPanel = function(panel)
             setupPage(panel, "page.bullet_impacts.title", "page.bullet_impacts.desc")
             local generic = addSection(panel, "section.generic_impacts", "section.generic_impacts.desc", true)
             addLightControls(generic, "betterlights_bullet_impact", {
@@ -45,9 +49,14 @@ if CLIENT then
                 betterlights_bullet_impact_ar2_color_g = 190,
                 betterlights_bullet_impact_ar2_color_b = 255,
             })
-        end)
+            end
+        },
 
-        registerPage("Gunfire", "BL_MuzzleFlash", "menu.muzzle_flash", function(panel)
+        {
+            category = "Gunfire",
+            id = "BL_MuzzleFlash",
+            titleKey = "menu.muzzle_flash",
+            buildPanel = function(panel)
             setupPage(panel, "page.muzzle_flash.title", "page.muzzle_flash.desc")
             local generic = addSection(panel, "section.generic_muzzle_flash", nil, true)
             generic:CheckBox(MENU.Phrase("control.enable"), "betterlights_muzzle_enable")
@@ -91,6 +100,7 @@ if CLIENT then
                 betterlights_muzzle_ar2_color_g = 190,
                 betterlights_muzzle_ar2_color_b = 255,
             })
-        end)
-    end
+            end
+        }
+    })
 end

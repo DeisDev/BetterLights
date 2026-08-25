@@ -1,10 +1,7 @@
 if CLIENT then
     local MENU = BetterLights.Menu
     local MENU_COMMAND = "betterlights_menu"
-    local DEFAULT_PAGE_ID = "BL_Client"
     local FRAME_ICON = "icon16/lightbulb.png"
-    local PAGE_ICON = "icon16/page_white_wrench.png"
-    local CATEGORY_ICON = "icon16/folder.png"
     local WIDGET_ICON = "betterlights/icon64/lightbulb.png"
     local WINDOW_MARGIN = 32
     local DEFAULT_FRAME_WIDTH = 1100
@@ -58,39 +55,6 @@ if CLIENT then
         return MENU.Phrase(key)
     end
 
-    local function getOptionalPhrase(key)
-        if not key then return "" end
-
-        local phraseKey = "betterlights." .. key
-        local value = language.GetPhrase(phraseKey)
-        if value == phraseKey then return "" end
-        return value
-    end
-
-    local function getPageDescription(page)
-        return getOptionalPhrase(page and page.descriptionKey)
-    end
-
-    local function sortPagesByTitle(pages)
-        table.sort(pages, function(a, b)
-            local aTitle = string.lower(phrase(a.titleKey))
-            local bTitle = string.lower(phrase(b.titleKey))
-            if aTitle ~= bTitle then return aTitle < bTitle end
-
-            return a.id < b.id
-        end)
-    end
-
-    local function getPageFullTitle(page)
-        if page and page.descriptionKey then
-            local titleKey = string.gsub(page.descriptionKey, "%.desc$", ".title")
-            local fullTitle = getOptionalPhrase(titleKey)
-            if fullTitle ~= "" then return fullTitle end
-        end
-
-        return page and phrase(page.titleKey) or ""
-    end
-
     local function readCookieNumber(name, fallback)
         local value = cookie.GetNumber(name, fallback)
         if not isnumber(value) or value ~= value or value == math.huge or value == -math.huge then
@@ -126,7 +90,7 @@ if CLIENT then
         return DEFAULT_TREE_LINE_HEIGHT
     end
 
-    MENU._lastPageId = MENU._lastPageId or cookie.GetString(COOKIE_LAST_PAGE, DEFAULT_PAGE_ID)
+    MENU._lastPageId = MENU._lastPageId or cookie.GetString(COOKIE_LAST_PAGE, "")
 
     local function normalizeBinding(binding)
         return string.lower(string.Trim(tostring(binding or "")))
@@ -349,8 +313,7 @@ if CLIENT then
     local SETTINGS_PANEL = {}
 
     function SETTINGS_PANEL:Init()
-        self.PageDefinitions = {}
-        self.CategoryDefinitions = {}
+        self.NavigationModel = MENU.BuildNavigationModel()
         self.PageNodes = {}
         self.CategoryNodes = {}
         self.CategoryExpansion = {}
@@ -562,30 +525,26 @@ if CLIENT then
     end
 
     function SETTINGS_PANEL:GetPage(id)
-        for i = 1, #self.PageDefinitions do
-            local page = self.PageDefinitions[i]
-            if page.id == id then return page end
-        end
-
-        return nil
+        return self.NavigationModel and self.NavigationModel.pagesById[id] or nil
     end
 
-    function SETTINGS_PANEL:AddCategoryNode(categoryId, category, title, pages, query, selectedPageId)
+    function SETTINGS_PANEL:AddCategoryNode(category, query, selectedPageId)
+        local categoryId = category.id
+        local pages = category.pages
         if #pages == 0 then return end
 
         self.FirstVisiblePage = self.FirstVisiblePage or pages[1]
 
-        local categoryNode = self.Tree:AddNode(title, category.icon or CATEGORY_ICON)
+        local categoryNode = self.Tree:AddNode(category.title, category.icon)
         local selectedCategory = false
         self.CategoryNodes[categoryId] = categoryNode
 
         for i = 1, #pages do
             local page = pages[i]
-            local pageNode = categoryNode:AddNode(phrase(page.titleKey), PAGE_ICON)
+            local pageNode = categoryNode:AddNode(page.title, page.icon)
             pageNode.BetterLightsPage = page
-            local pageDescription = getPageDescription(page)
-            if pageDescription ~= "" then
-                pageNode:SetTooltip(pageDescription)
+            if page.description ~= "" then
+                pageNode:SetTooltip(page.description)
             end
             self.PageNodes[page.id] = pageNode
 
@@ -602,7 +561,7 @@ if CLIENT then
 
     function SETTINGS_PANEL:RebuildTree(filter, selectedPageId)
         filter = string.lower(string.Trim(tostring(filter or "")))
-        selectedPageId = selectedPageId or self.CurrentPageId or MENU._lastPageId or DEFAULT_PAGE_ID
+        selectedPageId = selectedPageId or self.CurrentPageId or MENU._lastPageId
 
         if self.CurrentFilter == "" then
             self:CaptureCategoryExpansion()
@@ -610,72 +569,12 @@ if CLIENT then
         self.CurrentFilter = filter
 
         local tree = self:CreateTree()
-        local categorizedPages = {}
-        local knownCategories = {}
-        local matchCount = 0
+        local model = MENU.BuildNavigationModel(filter)
+        self.NavigationModel = model
         self.FirstVisiblePage = nil
 
-        for i = 1, #self.CategoryDefinitions do
-            local category = self.CategoryDefinitions[i]
-            knownCategories[category[1]] = category
-            categorizedPages[category[1]] = {}
-        end
-
-        for i = 1, #self.PageDefinitions do
-            local page = self.PageDefinitions[i]
-            local category = knownCategories[page.category]
-            local developerOnly = category and category.developer
-            if not developerOnly or MENU.IsDeveloperMode() then
-                local categoryTitle = category and phrase(category[2]) or page.category
-                local pageTitle = phrase(page.titleKey)
-                local pageDescription = getPageDescription(page)
-                local matches = filter == ""
-                    or string.find(string.lower(categoryTitle), filter, 1, true)
-                    or string.find(string.lower(pageTitle), filter, 1, true)
-                    or string.find(string.lower(pageDescription), filter, 1, true)
-
-                if matches then
-                    categorizedPages[page.category] = categorizedPages[page.category] or {}
-                    categorizedPages[page.category][#categorizedPages[page.category] + 1] = page
-                    matchCount = matchCount + 1
-                end
-            end
-        end
-
-        for i = 1, #self.CategoryDefinitions do
-            local category = self.CategoryDefinitions[i]
-            if not category.developer or MENU.IsDeveloperMode() then
-                sortPagesByTitle(categorizedPages[category[1]])
-                self:AddCategoryNode(
-                    category[1],
-                    category,
-                    phrase(category[2]),
-                    categorizedPages[category[1]],
-                    filter,
-                    selectedPageId
-                )
-            end
-        end
-
-        local extraCategories = {}
-        for categoryId, pages in pairs(categorizedPages) do
-            if not knownCategories[categoryId] and #pages > 0 then
-                extraCategories[#extraCategories + 1] = categoryId
-            end
-        end
-        table.sort(extraCategories)
-
-        for i = 1, #extraCategories do
-            local categoryId = extraCategories[i]
-            sortPagesByTitle(categorizedPages[categoryId])
-            self:AddCategoryNode(
-                categoryId,
-                {},
-                categoryId,
-                categorizedPages[categoryId],
-                filter,
-                selectedPageId
-            )
+        for i = 1, #model.categories do
+            self:AddCategoryNode(model.categories[i], filter, selectedPageId)
         end
 
         local selectedNode = self.PageNodes[selectedPageId]
@@ -685,13 +584,14 @@ if CLIENT then
             self.SelectingNode = false
         end
 
-        tree:SetVisible(matchCount > 0)
-        self.EmptyState:SetVisible(matchCount == 0)
+        tree:SetVisible(model.matchCount > 0)
+        self.EmptyState:SetVisible(model.matchCount == 0)
         self.ClearSearch:SetVisible(filter ~= "")
         self.MatchStatus:SetText(MENU.PhraseFormat(
-            matchCount == 1 and "status.settings_page_count_one" or "status.settings_page_count_many",
-            matchCount
+            model.matchCount == 1 and "status.settings_page_count_one" or "status.settings_page_count_many",
+            model.matchCount
         ))
+        return model
     end
 
     function SETTINGS_PANEL:OpenPage(page, forceRefresh)
@@ -723,11 +623,11 @@ if CLIENT then
         self.CurrentPageId = page.id
         MENU._lastPageId = page.id
         cookie.Set(COOKIE_LAST_PAGE, page.id)
-        page.buildPanel(form)
+        MENU.BuildPage(page.id, form)
 
         local frame = self:GetParent()
         if IsValid(frame) and frame.SetTitle then
-            frame:SetTitle(MENU.PhraseFormat("window.settings.page_title", getPageFullTitle(page)))
+            frame:SetTitle(MENU.PhraseFormat("window.settings.page_title", page.fullTitle))
         end
 
         -- A scrollbar can narrow the canvas after the first pass and change wrapped control heights.
@@ -742,13 +642,10 @@ if CLIENT then
     end
 
     function SETTINGS_PANEL:Refresh(pageId)
-        self.PageDefinitions = MENU.GetRegisteredPages()
-        self.CategoryDefinitions = MENU.GetCategoryDefinitions()
+        local targetPageId = pageId or self.CurrentPageId or MENU._lastPageId
+        local model = self:RebuildTree(self.Search:GetValue(), targetPageId)
 
-        local targetPageId = pageId or self.CurrentPageId or MENU._lastPageId or DEFAULT_PAGE_ID
-        self:RebuildTree(self.Search:GetValue(), targetPageId)
-
-        local page = self:GetPage(targetPageId) or self:GetPage(DEFAULT_PAGE_ID) or self.PageDefinitions[1]
+        local page = self:GetPage(targetPageId) or model.defaultPage or model.pages[1]
         if page then
             self:OpenPage(page, true)
 
@@ -939,9 +836,15 @@ if CLIENT then
         MENU.AddSettingsAccessControls(panel, { showOpenButton = false })
     end
 
-    function MENU.RegisterAppearancePanel()
-        MENU.RegisterPage("Appearance", "BL_SettingsWindow", "page.settings_window.title", buildAppearancePage)
-    end
+    MENU.RegisterAppearancePanel = nil
+    MENU.RegisterPages("BetterLights_Menu_Appearance", {
+        {
+            category = "Appearance",
+            id = "BL_SettingsWindow",
+            titleKey = "page.settings_window.title",
+            buildPanel = buildAppearancePage
+        }
+    })
 
     if IsValid(MENU._settingsFrame) then
         saveFrameLayout(MENU._settingsFrame)
