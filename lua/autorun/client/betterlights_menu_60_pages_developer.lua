@@ -1,5 +1,4 @@
 if CLIENT then
-
     local MENU = BetterLights.Menu
     local phrase = MENU.Phrase
     local setupPage = MENU.SetupPage

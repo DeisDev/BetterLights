@@ -1,8 +1,6 @@
 if CLIENT then
     local MENU = BetterLights.Menu
-    local MENU_COMMAND = "betterlights_menu"
     local FRAME_ICON = "icon16/lightbulb.png"
-    local WIDGET_ICON = "betterlights/icon64/lightbulb.png"
     local WINDOW_MARGIN = 32
     local DEFAULT_FRAME_WIDTH = 1100
     local DEFAULT_FRAME_HEIGHT = 860
@@ -26,9 +24,6 @@ if CLIENT then
     local COOKIE_WINDOW_OPACITY = "betterlights_menu_window_opacity"
     local COOKIE_NAVIGATION_ICONS = "betterlights_menu_navigation_icons"
     local COOKIE_COMPACT_NAVIGATION = "betterlights_menu_compact_navigation"
-    local bindListenerKey = KEY_NONE
-    local bindListenerArmed = false
-    local suppressBindToggleUntilRelease = false
     local searchShortcutDown = false
     local escapeShortcutDown = false
     local PAGE_NAVIGATION_KEYS = { KEY_PAGEUP, KEY_PAGEDOWN, KEY_HOME, KEY_END }
@@ -92,23 +87,7 @@ if CLIENT then
 
     MENU._lastPageId = MENU._lastPageId or cookie.GetString(COOKIE_LAST_PAGE, "")
 
-    local function normalizeBinding(binding)
-        return string.lower(string.Trim(tostring(binding or "")))
-    end
-
-    local function getMenuBindingKey()
-        local keyName = input.LookupBinding(MENU_COMMAND, true)
-        if not isstring(keyName) or keyName == "" then return KEY_NONE end
-
-        local keyCode = input.GetKeyCode(keyName)
-        if not isnumber(keyCode) or keyCode < 0 then return KEY_NONE end
-        return keyCode
-    end
-
-    local function resetBindListener()
-        bindListenerKey = KEY_NONE
-        bindListenerArmed = false
-        suppressBindToggleUntilRelease = false
+    local function resetWindowKeyboardState()
         searchShortcutDown = input.IsControlDown() and input.IsKeyDown(KEY_F)
         escapeShortcutDown = input.IsKeyDown(KEY_ESCAPE)
     end
@@ -189,125 +168,51 @@ if CLIENT then
         end
     end
 
-    local function refreshBinder(binder)
-        timer.Simple(0, function()
-            if not IsValid(binder) then return end
-
-            binder.BetterLightsUpdating = true
-            binder:SetSelectedNumber(getMenuBindingKey())
-            binder.BetterLightsUpdating = false
-        end)
+    local function resetWindowInputState()
+        resetWindowKeyboardState()
+        resetPageNavigation()
+        if MENU.ResetSettingsBindListener then
+            MENU.ResetSettingsBindListener()
+        end
     end
 
-    local function applyMenuBinding(keyCode, binder)
-        local previousKey = input.LookupBinding(MENU_COMMAND, true)
-        local nextKey = keyCode ~= KEY_NONE and input.GetKeyName(keyCode) or nil
-
-        if isstring(previousKey) and previousKey ~= ""
-            and normalizeBinding(previousKey) ~= normalizeBinding(nextKey) then
-            RunConsoleCommand("unbind", previousKey)
+    function MENU.UpdateSettingsWindowKeyboard(frame)
+        if not (IsValid(frame) and frame:IsVisible()) then
+            resetWindowKeyboardState()
+            resetPageNavigation()
+            return false
         end
 
-        if isstring(nextKey) and nextKey ~= "" then
-            RunConsoleCommand("bind", nextKey, MENU_COMMAND)
+        local settingsPanel = frame.SettingsPanel
+        local isActive = frame:IsActive()
+        local isKeyTrapping = input.IsKeyTrapping()
+        local searchDown = input.IsControlDown() and input.IsKeyDown(KEY_F)
+        if searchDown and not searchShortcutDown and isActive and not isKeyTrapping
+            and IsValid(settingsPanel) then
+            settingsPanel:FocusSearch()
         end
+        searchShortcutDown = searchDown
 
-        refreshBinder(binder)
-    end
-
-    local function configureBinder(binder)
-        binder:SetSelectedNumber(getMenuBindingKey())
-
-        binder.OnChange = function(self, keyCode)
-            if self.BetterLightsUpdating then return end
-
-            keyCode = tonumber(keyCode) or KEY_NONE
-            if keyCode == KEY_NONE then
-                applyMenuBinding(KEY_NONE, self)
-                return
+        local escapeDown = input.IsKeyDown(KEY_ESCAPE)
+        if escapeDown and not escapeShortcutDown and isActive and not isKeyTrapping then
+            if IsValid(settingsPanel) and settingsPanel.Search:IsEditing()
+                and settingsPanel.Search:GetValue() ~= "" then
+                settingsPanel:ClearSearchFilter(true)
+            else
+                frame:Close()
             end
-
-            local existing = string.Trim(tostring(input.LookupKeyBinding(keyCode) or ""))
-            if existing == "" or normalizeBinding(existing) == MENU_COMMAND then
-                applyMenuBinding(keyCode, self)
-                return
-            end
-
-            refreshBinder(self)
-
-            local keyName = language.GetPhrase(input.GetKeyName(keyCode) or tostring(keyCode))
-            Derma_Query(
-                MENU.PhraseFormat("dialog.menu_bind_conflict.message", keyName, existing),
-                phrase("dialog.menu_bind_conflict.title"),
-                phrase("button.replace_bind"),
-                function()
-                    if not IsValid(self) then return end
-                    applyMenuBinding(keyCode, self)
-                end,
-                phrase("button.cancel"),
-                function()
-                    if not IsValid(self) then return end
-                    refreshBinder(self)
-                end
-            )
         end
-    end
+        escapeShortcutDown = escapeDown
 
-    local function addOpenSettingsButton(panel)
-        local open = MENU.AddStyledButton(
-            panel,
-            phrase("button.open_settings"),
-            phrase("tooltip.open_settings")
-        )
-        open.DoClick = function()
-            MENU.OpenSettings()
+        if not frame:IsVisible() then return false end
+
+        local canNavigatePage = isActive
+            and not isKeyTrapping
+            and IsValid(settingsPanel)
+        if IsValid(settingsPanel) then
+            updatePageNavigation(frame, settingsPanel, canNavigatePage)
         end
-        return open
-    end
-
-    function MENU.AddSettingsAccessControls(panel, options)
-        options = options or {}
-
-        local access = MENU.AddSection(
-            panel,
-            "section.settings_access",
-            "section.settings_access.desc",
-            options.expanded ~= false
-        )
-        if options.showOpenButton ~= false then
-            addOpenSettingsButton(access)
-        end
-
-        local label = vgui.Create("DLabel")
-        label:SetText(phrase("control.open_menu_key"))
-        label:SetDark(true)
-        label:SetTall(18)
-        label:SetContentAlignment(4)
-        access:AddItem(label)
-
-        local binder = vgui.Create("DBinder")
-        binder:SetTall(24)
-        configureBinder(binder)
-        access:AddItem(binder)
-
-        MENU.AddHelpText(access, phrase("help.optional_bind"))
-        MENU.AddHelpText(access, phrase("help.menu_console_command"))
-        return access
-    end
-
-    function MENU.BuildQuickSettingsPanel(panel)
-        MENU.TrackClientSettingsPanel(panel, MENU.BuildQuickSettingsPanel)
-        MENU.SetupPage(panel, "page.quick_settings.title", "page.quick_settings.desc")
-
-        MENU.AddClientPreferenceSection(panel)
-
-        local settings = MENU.AddSection(panel, "section.full_settings", "section.full_settings.desc", true)
-        addOpenSettingsButton(settings)
-
-        MENU.AddSettingsAccessControls(panel, {
-            showOpenButton = false,
-            expanded = false
-        })
+        return true
     end
 
     local SETTINGS_PANEL = {}
@@ -867,8 +772,7 @@ if CLIENT then
             frame:MakePopup()
             frame:MoveToFront()
             frame.SettingsPanel:Refresh(pageId)
-            resetBindListener()
-            resetPageNavigation()
+            resetWindowInputState()
             return frame
         end
 
@@ -899,8 +803,7 @@ if CLIENT then
 
         MENU._settingsFrame = frame
         frame:MakePopup()
-        resetBindListener()
-        resetPageNavigation()
+        resetWindowInputState()
         return frame
     end
 
@@ -908,8 +811,7 @@ if CLIENT then
         local frame = MENU._settingsFrame
         if IsValid(frame) and frame:IsVisible() then
             frame:Close()
-            resetBindListener()
-            resetPageNavigation()
+            resetWindowInputState()
             return nil
         end
 
@@ -922,85 +824,6 @@ if CLIENT then
         MENU._settingsFrame.SettingsPanel:Refresh()
     end
 
-    concommand.Add(MENU_COMMAND, function(_, _, args)
-        local pageId = args and args[1] or nil
-        if isstring(pageId) and pageId ~= "" then
-            MENU.OpenSettings(pageId)
-            return
-        end
-
-        if suppressBindToggleUntilRelease then return end
-        MENU.ToggleSettings()
-    end)
-
-    hook.Add("Think", "BetterLights_SettingsMenuBindListener", function()
-        local frame = MENU._settingsFrame
-        if not (IsValid(frame) and frame:IsVisible()) then
-            resetPageNavigation()
-            if suppressBindToggleUntilRelease
-                and bindListenerKey ~= KEY_NONE
-                and input.IsKeyDown(bindListenerKey) then
-                return
-            end
-
-            resetBindListener()
-            return
-        end
-
-        local settingsPanel = frame.SettingsPanel
-        local isActive = frame:IsActive()
-        local isKeyTrapping = input.IsKeyTrapping()
-        local searchDown = input.IsControlDown() and input.IsKeyDown(KEY_F)
-        if searchDown and not searchShortcutDown and isActive and not isKeyTrapping
-            and IsValid(settingsPanel) then
-            settingsPanel:FocusSearch()
-        end
-        searchShortcutDown = searchDown
-
-        local escapeDown = input.IsKeyDown(KEY_ESCAPE)
-        if escapeDown and not escapeShortcutDown and isActive and not isKeyTrapping then
-            if IsValid(settingsPanel) and settingsPanel.Search:IsEditing()
-                and settingsPanel.Search:GetValue() ~= "" then
-                settingsPanel:ClearSearchFilter(true)
-            else
-                frame:Close()
-            end
-        end
-        escapeShortcutDown = escapeDown
-
-        if not frame:IsVisible() then return end
-
-        local canNavigatePage = isActive
-            and not isKeyTrapping
-            and IsValid(settingsPanel)
-        if IsValid(settingsPanel) then
-            updatePageNavigation(frame, settingsPanel, canNavigatePage)
-        end
-
-        local keyCode = getMenuBindingKey()
-        if keyCode == KEY_NONE then
-            resetBindListener()
-            return
-        end
-
-        local keyDown = input.IsKeyDown(keyCode)
-        if bindListenerKey ~= keyCode then
-            bindListenerKey = keyCode
-            bindListenerArmed = not keyDown
-            return
-        end
-
-        if not bindListenerArmed then
-            bindListenerArmed = not keyDown
-            return
-        end
-
-        if not keyDown then return end
-
-        bindListenerArmed = false
-        suppressBindToggleUntilRelease = true
-        frame:Close()
-    end)
 
     hook.Add("OnScreenSizeChanged", "BetterLights_ClampSettingsWindow", function()
         local frame = MENU._settingsFrame
@@ -1011,27 +834,4 @@ if CLIENT then
             clampFrameToScreen(frame)
         end)
     end)
-
-    hook.Add("OnReloaded", "BetterLights_RefreshSettingsRegistration", function()
-        if engine.ActiveGamemode() == "sandbox" then
-            RunConsoleCommand("spawnmenu_reload")
-        end
-
-        MENU.RefreshSettingsWindow()
-    end)
-
-    list.Set("DesktopWindows", "BetterLightsSettings", {
-        title = phrase("widget.settings.title"),
-        icon = WIDGET_ICON,
-        width = 960,
-        height = 700,
-        onewindow = true,
-        init = function(_, window)
-            if IsValid(window) then
-                window:Close()
-            end
-
-            MENU.ToggleSettings()
-        end
-    })
 end

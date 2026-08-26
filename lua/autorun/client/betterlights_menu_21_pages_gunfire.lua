@@ -101,6 +101,28 @@ if CLIENT then
                 betterlights_muzzle_ar2_color_b = 255,
             })
             end
+        },
+        {
+            category = "Gunfire",
+            id = "BL_StunStick",
+            titleKey = "menu.stunstick",
+            buildPanel = function(panel)
+            setupPage(panel, "page.stunstick.title", "page.stunstick.desc")
+            panel:CheckBox(MENU.Phrase("control.enable"), "betterlights_stunstick_impact_enable")
+            panel:NumSlider(MENU.Phrase("control.radius"), "betterlights_stunstick_impact_size", 0, 400, 0)
+            panel:NumSlider(MENU.Phrase("control.brightness"), "betterlights_stunstick_impact_brightness", 0, 5, 2)
+            panel:NumSlider(MENU.Phrase("control.duration"), "betterlights_stunstick_impact_time", 0, 1, 2)
+            addColorMixerControl(panel, "control.color", "betterlights_stunstick_impact_color_r", "betterlights_stunstick_impact_color_g", "betterlights_stunstick_impact_color_b")
+            addResetButton(panel, {
+                betterlights_stunstick_impact_enable = 1,
+                betterlights_stunstick_impact_size = 120,
+                betterlights_stunstick_impact_brightness = 1.6,
+                betterlights_stunstick_impact_time = 0.14,
+                betterlights_stunstick_impact_color_r = 120,
+                betterlights_stunstick_impact_color_g = 190,
+                betterlights_stunstick_impact_color_b = 255,
+            })
+            end
         }
     })
 end
