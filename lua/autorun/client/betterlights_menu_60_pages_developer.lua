@@ -17,6 +17,12 @@ if CLIENT then
             refreshSettingsPanel()
         end
 
+        local changelog = addSection(panel, "section.changelog_testing", "section.changelog_testing.desc", false)
+        local simulateUpdate = addStyledButton(changelog, phrase("button.simulate_changelog_update"))
+        simulateUpdate.DoClick = function()
+            MENU._SimulateUpdatedChangelog()
+        end
+
         local diagnostics = addSection(panel, "section.developer_diagnostics", "section.developer_diagnostics.desc", true)
         diagnostics:CheckBox(phrase("control.debug_muzzle_flash"), "betterlights_muzzle_debug")
         diagnostics:CheckBox(phrase("control.debug_combine_mine_detection"), "betterlights_combine_mine_debug")

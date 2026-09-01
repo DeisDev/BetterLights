@@ -6,6 +6,13 @@ if CLIENT then
     local AUTO_OPEN_TIMER = "BetterLights_AutoOpenChangelog"
     local SEEN_VERSION_COOKIE = "betterlights_changelog_seen_version"
     local AUTO_OPEN_CVAR = "betterlights_changelog_auto_open"
+    local SIMULATE_UPDATE_COMMAND = "betterlights_changelog_simulate_update"
+    local TEST_PREVIOUS_VERSION = "v0.0.0-test"
+    local WINDOW_MARGIN = 80
+    local MIN_FRAME_WIDTH = 560
+    local MIN_FRAME_HEIGHT = 360
+    local DEFAULT_FRAME_WIDTH = 840
+    local DEFAULT_FRAME_HEIGHT = 520
     local cvar_auto_open = BL.CreateClientConVar(
         AUTO_OPEN_CVAR,
         "1",
@@ -18,6 +25,10 @@ if CLIENT then
     )
 
     timer.Remove(AUTO_OPEN_TIMER)
+    if IsValid(MENU._changelogFrame) then
+        MENU._changelogFrame:Remove()
+    end
+    MENU._changelogFrame = nil
 
     local function phrase(key)
         return MENU.Phrase and MENU.Phrase(key) or language.GetPhrase("betterlights." .. key)
@@ -43,6 +54,22 @@ if CLIENT then
 
     local function getCurrentVersion()
         return normalizeVersion(BL.VERSION)
+    end
+
+    local function isDeveloperEnabled()
+        local developer = GetConVar("developer")
+        return developer and developer:GetInt() >= 1
+    end
+
+    local function getFrameSize()
+        local maxWidth = math.max(320, ScrW() - WINDOW_MARGIN)
+        local maxHeight = math.max(300, ScrH() - WINDOW_MARGIN)
+        local minWidth = math.min(MIN_FRAME_WIDTH, maxWidth)
+        local minHeight = math.min(MIN_FRAME_HEIGHT, maxHeight)
+        return math.min(DEFAULT_FRAME_WIDTH, maxWidth),
+            math.min(DEFAULT_FRAME_HEIGHT, maxHeight),
+            minWidth,
+            minHeight
     end
 
     local function markVersionSeen(version)
@@ -157,6 +184,8 @@ if CLIENT then
         panel:Clear()
         if not entry then return end
 
+        panel:GetVBar():SetScroll(0)
+
         local canvas = panel:GetCanvas()
         if IsValid(canvas) then
             canvas:DockPadding(12, 12, 12, 12)
@@ -201,19 +230,56 @@ if CLIENT then
         end
     end
 
-    function MENU.OpenChangelogWindow()
+    function MENU.OpenChangelogWindow(showUpdateNotice)
+        if IsValid(MENU._changelogFrame) then
+            MENU._changelogFrame:MakePopup()
+            return MENU._changelogFrame
+        end
+
         local entries, currentVersion = getChangelogEntries()
+        local width, height, minWidth, minHeight = getFrameSize()
 
         local frame = vgui.Create("DFrame")
-        frame:SetTitle(phrase("window.changelog_title"))
-        frame:SetSize(math.min(ScrW() - 80, 840), math.min(ScrH() - 80, 520))
+        frame:SetTitle(showUpdateNotice
+            and phraseFormat("window.changelog_updated_title", currentVersion)
+            or phrase("window.changelog_title"))
+        frame:SetSize(width, height)
+        frame:SetMinWidth(minWidth)
+        frame:SetMinHeight(minHeight)
+        frame:SetSizable(true)
+        frame:SetScreenLock(true)
+        frame:SetDeleteOnClose(true)
         frame:Center()
         frame:MakePopup()
+        MENU._changelogFrame = frame
+
+        local originalOnRemove = frame.OnRemove
+        frame.OnRemove = function(self)
+            if originalOnRemove then
+                originalOnRemove(self)
+            end
+
+            if MENU._changelogFrame == self then
+                MENU._changelogFrame = nil
+            end
+        end
+
         markVersionSeen(currentVersion)
 
         local body = vgui.Create("DPanel", frame)
         body:Dock(FILL)
         body:DockMargin(10, 10, 10, 10)
+
+        if showUpdateNotice then
+            local updateNotice = vgui.Create("DLabel", body)
+            updateNotice:Dock(TOP)
+            updateNotice:DockMargin(12, 12, 12, 0)
+            updateNotice:SetText(phraseFormat("changelog.updated_notice", currentVersion))
+            updateNotice:SetFont("DermaDefaultBold")
+            updateNotice:SetDark(true)
+            updateNotice:SetWrap(true)
+            updateNotice:SetAutoStretchVertical(true)
+        end
 
         local versions = vgui.Create("DListView", body)
         versions:Dock(LEFT)
@@ -233,10 +299,15 @@ if CLIENT then
         local footer = vgui.Create("DPanel", release)
         footer:Dock(BOTTOM)
         footer:DockMargin(0, 8, 0, 0)
-        footer:SetTall(32)
+        footer:SetTall(66)
         footer.Paint = nil
 
-        local neverShow = vgui.Create("DCheckBoxLabel", footer)
+        local preference = vgui.Create("DPanel", footer)
+        preference:Dock(TOP)
+        preference:SetTall(26)
+        preference.Paint = nil
+
+        local neverShow = vgui.Create("DCheckBoxLabel", preference)
         neverShow:Dock(LEFT)
         neverShow:DockMargin(0, 7, 0, 0)
         neverShow:SetText(phrase("control.never_show_changelog"))
@@ -248,19 +319,24 @@ if CLIENT then
             BL.ApplyClientSetting(AUTO_OPEN_CVAR, value and 0 or 1)
         end
 
-        local close = vgui.Create("DButton", footer)
+        local actions = vgui.Create("DPanel", footer)
+        actions:Dock(BOTTOM)
+        actions:SetTall(32)
+        actions.Paint = nil
+
+        local close = vgui.Create("DButton", actions)
         close:Dock(RIGHT)
-        close:SetWide(112)
-        close:SetText(phrase("button.close"))
+        close:SetWide(104)
+        close:SetText(phrase(showUpdateNotice and "button.got_it" or "button.close"))
         close:SetFont("DermaDefaultBold")
         close.DoClick = function()
             frame:Close()
         end
 
-        local workshopChangelog = vgui.Create("DButton", footer)
+        local workshopChangelog = vgui.Create("DButton", actions)
         workshopChangelog:Dock(RIGHT)
         workshopChangelog:DockMargin(0, 0, 8, 0)
-        workshopChangelog:SetWide(190)
+        workshopChangelog:SetWide(176)
         workshopChangelog:SetText(phrase("button.workshop_changelog"))
         workshopChangelog:SetTooltip(phrase("tooltip.workshop_changelog"))
         workshopChangelog.DoClick = function()
@@ -277,7 +353,7 @@ if CLIENT then
                 title = phrase("addon.name"),
                 items = { phrase("changelog.none_found") }
             })
-            return
+            return frame
         end
 
         local function versionRowText(entry)
@@ -308,6 +384,8 @@ if CLIENT then
         end
 
         versions:SelectItem(currentRow or firstRow)
+        versions:RequestFocus()
+        return frame
     end
 
     local function checkForUpdatedChangelog()
@@ -321,13 +399,44 @@ if CLIENT then
         end
 
         if seenVersion ~= currentVersion then
-            MENU.OpenChangelogWindow()
+            MENU.OpenChangelogWindow(true)
         end
     end
 
     local function queueUpdatedChangelogCheck()
         timer.Create(AUTO_OPEN_TIMER, 1, 1, checkForUpdatedChangelog)
     end
+
+    function MENU._SimulateUpdatedChangelog()
+        if not isDeveloperEnabled() then return false end
+
+        local currentVersion = getCurrentVersion()
+        if currentVersion == "" then return false end
+
+        timer.Remove(AUTO_OPEN_TIMER)
+        if IsValid(MENU._changelogFrame) then
+            MENU._changelogFrame:Remove()
+        end
+
+        cookie.Set(SEEN_VERSION_COOKIE, TEST_PREVIOUS_VERSION)
+        queueUpdatedChangelogCheck()
+        return true
+    end
+
+    concommand.Remove(SIMULATE_UPDATE_COMMAND)
+    concommand.Add(
+        SIMULATE_UPDATE_COMMAND,
+        function()
+            if MENU._SimulateUpdatedChangelog() then
+                print("[Better Lights] Queued the simulated update changelog check.")
+                return
+            end
+
+            print("[Better Lights] Enable developer mode with 'developer 1' to simulate an update.")
+        end,
+        nil,
+        "Replay the automatic Better Lights update changelog check"
+    )
 
     hook.Add("InitPostEntity", "BetterLights_AutoOpenChangelog", queueUpdatedChangelogCheck)
 
