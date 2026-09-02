@@ -63,11 +63,31 @@ if CLIENT then
         betterlights_flashlight_world_spill_color_g = SPILL_CUSTOM_DEPENDENCIES,
         betterlights_flashlight_world_spill_color_b = SPILL_CUSTOM_DEPENDENCIES
     }
+    local serverSettingsAccessAllowed = false
+    local serverSettingsAccessSequence = 0
 
     local function canChangeServerSettings()
         local ply = LocalPlayer()
-        return game.SinglePlayer()
-            or (IsValid(ply) and (ply:IsListenServerHost() or ply:IsAdmin()))
+        if not IsValid(ply) then return false end
+
+        serverSettingsAccessSequence = serverSettingsAccessSequence + 1
+        local sequence = serverSettingsAccessSequence
+        local synchronous = true
+
+        BL.CheckServerSettingsAccess(ply, function(allowed)
+            if sequence ~= serverSettingsAccessSequence or ply ~= LocalPlayer() then return end
+
+            allowed = allowed == true
+            local changed = serverSettingsAccessAllowed ~= allowed
+            serverSettingsAccessAllowed = allowed
+
+            if changed and not synchronous and MENU.RefreshSettingsPanel then
+                MENU.RefreshSettingsPanel()
+            end
+        end)
+        synchronous = false
+
+        return serverSettingsAccessAllowed
     end
 
     local function hasServerSettingsState()
@@ -689,6 +709,18 @@ if CLIENT then
     end
 
     MENU.RegisterServerPanels = nil
+
+    hook.Add("CAMI.PlayerUsergroupChanged", "BetterLights_ServerSettingsAccessChanged", function(ply)
+        if ply ~= LocalPlayer() then return end
+
+        serverSettingsAccessSequence = serverSettingsAccessSequence + 1
+        serverSettingsAccessAllowed = false
+
+        if MENU.RefreshSettingsPanel then
+            MENU.RefreshSettingsPanel()
+        end
+    end)
+
     MENU.RegisterPages("BetterLights_Menu_Server", {
         {
             category = "Admin",

@@ -181,9 +181,7 @@ if SERVER then
 
     BL.SendServerSettingsState = sendServerSettings
 
-    function BL.ApplyServerSettings(state, ply)
-        if not canChangeServerSettings(ply) then return false, "not authorized" end
-
+    local function applyServerSettings(state, ply)
         local validated, err = BL.ValidateServerSettingsState(state)
         if not validated then return false, err end
 
@@ -201,6 +199,12 @@ if SERVER then
         sendServerSettings()
         hook.Run("BetterLights_ServerSettingsChanged", validated, IsValid(ply) and ply or nil)
         return true
+    end
+
+    function BL.ApplyServerSettings(state, ply)
+        if not canChangeServerSettings(ply) then return false, "not authorized" end
+
+        return applyServerSettings(state, ply)
     end
 
     local function queueExternalSettingsChange()
@@ -266,13 +270,10 @@ if SERVER then
     end)
 
     net.Receive(BL.NET_SERVER_SETTINGS_APPLY, function(_, ply)
-        if not (IsValid(ply) and canChangeServerSettings(ply)) then return end
+        if not IsValid(ply) then return end
 
         local now = CurTime()
-        if (ply.BetterLights_NextServerSettingsApply or 0) > now then
-            sendServerSettings(ply)
-            return
-        end
+        if (ply.BetterLights_NextServerSettingsApply or 0) > now then return end
         ply.BetterLights_NextServerSettingsApply = now + APPLY_COOLDOWN
 
         local ok, state = pcall(BL.ReadServerSettingsState)
@@ -281,7 +282,18 @@ if SERVER then
             return
         end
 
-        local applied = BL.ApplyServerSettings(state, ply)
-        if not applied then sendServerSettings(ply) end
+        ply.BetterLights_ServerSettingsApplySequence = (ply.BetterLights_ServerSettingsApplySequence or 0) + 1
+        local sequence = ply.BetterLights_ServerSettingsApplySequence
+
+        BL.CheckServerSettingsAccess(ply, function(allowed)
+            if not IsValid(ply) or ply.BetterLights_ServerSettingsApplySequence ~= sequence then return end
+            if not allowed then
+                sendServerSettings(ply)
+                return
+            end
+
+            local applied = applyServerSettings(state, ply)
+            if not applied then sendServerSettings(ply) end
+        end)
     end)
 end
