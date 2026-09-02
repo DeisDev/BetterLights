@@ -1,6 +1,6 @@
 [b]Better Lights[/b]
 
-[i]Configurable dynamic lighting for Garry's Mod.[/i]
+Configurable dynamic lighting for Garry's Mod.
 
 [img]https://files.catbox.moe/8uylmi.gif[/img]
 
@@ -8,15 +8,20 @@
 
 [b]Overview[/b]
 
-Better Lights adds highly configurable dynamic lighting effects to most parts of the game. Some of these things include: 
+Better Lights adds configurable dynamic lighting and other effects to Garry's Mod.
+
+Some of these things include:
 
 [list]
-[*]A spiffy new flashlight with a whole bunch of settings
-[*]Fire, explosions, projectiles, bullet impacts and muzzle flashes can now emit light
+[*]A customizable flashlight with settings for brightness, range, FOV, color, shadows, textures, positioning, sway, and more
+[*]Fire, explosions, projectiles, bullet impacts, and muzzle flashes can emit light
+[*]Items and pickups can emit light
 [*]NPCs emit light where it makes sense
-[*]NPCs like the combine can emit light from their eyes
+[*]NPCs like Combine soldiers can emit light from their eyes
 [*]A bunch more cool stuff for you to check out!
 [/list]
+
+Most lighting effects can be configured or disabled individually.
 
 [img]https://files.catbox.moe/z9kpr2.gif[/img]
 
@@ -26,30 +31,46 @@ Better Lights adds highly configurable dynamic lighting effects to most parts of
 
 Starting with Better Lights v1.6.0, settings are available in a dedicated window that you can open from any gamemode, not just Sandbox.
 
+Your settings are saved automatically. You can also save settings profiles and import or export them to share with other players.
+
 There are four ways to open the settings window:
 
 [list]
 [*]Enter [b]betterlights_menu[/b] in the console.
-[*]Assign an optional menu shortcut in Utilities > Better Lights > Quick Settings
-[*]Select the Better Lights icon from the context menu. 
+[*]Assign an optional menu shortcut in Utilities > Better Lights > Quick Settings.
+[*]Select the Better Lights icon from the context menu.
 [*]Open Utilities > Better Lights > Quick Settings and click Open Better Lights Settings.
 [/list]
 
+The custom flashlight replacement is disabled by default and can be enabled in the flashlight settings.
 
 [img]https://files.catbox.moe/okwsv1.gif[/img]
 
 [hr][/hr]
 
+[b]Multiplayer[/b]
+
+Better Lights needs to be installed on the server for multiplayer use.
+
+Most lighting is rendered client-side, while the server handles things like muzzle flashes, explosions, bullet impacts, flashlight behavior, and addon settings.
+
+Server admins can disable Better Lights, enable it for everyone, or let each player choose whether they want to use it.
+
+[hr][/hr]
+
 [b]Engine Limits[/b]
 
-Better Lights works inside the normal Source Engine lighting limits. All lighting effects, addons etc. share this limit. Here is what that can look like:  
+Better Lights works inside the normal Source Engine lighting limits. These limits are shared with the map, Garry's Mod, and other addons.
 
 [list]
 [*]Dynamic lights: 32 world lights and 64 entity lights can be active at once.
 [*]Shadowed projected textures: 8 can be active by default across flashlights, map lights, and addon spotlights.
-[*]If the limit is reached, lights may disappear, flicker, or be replaced by newer lights.
+[*]If a limit is reached, lights may disappear, flicker, or be replaced by newer lights.
 [/list]
 
+Better Lights includes its own configurable light budget to help avoid this. By default, it leaves some room for the map and other addons and prioritizes more important lights when a scene gets crowded.
+
+There are also settings for distance culling, fading, and light prioritization.
 
 [hr][/hr]
 
@@ -57,11 +78,11 @@ Better Lights works inside the normal Source Engine lighting limits. All lightin
 
 [list]
 [*]Should work with most GShader Library addons.
-[*]Includes integrations with most of the popular SWEP bases such as ARC9 and MWBase.
-[*]Most features are client-side and can be disabled individually. There are a few server-side effects such as muzzle flashes, flashlight beams and bullet impacts.
+[*]Includes integrations for ARC9, ArcCW, MWBase, and TFA Base.
+[*]Most features are client-side and can be disabled individually.
 [/list]
 
-If you are having trouble with the flashlight, it is very likely you have a mod conflict. Please make sure you check for this before you report an issue.
+If you are having trouble with the flashlight, it is very likely that another addon is conflicting with it. Flashlight replacements and weapon bases with their own flashlight systems are the most likely causes. Please check for conflicts before reporting an issue.
 
 [hr][/hr]
 
@@ -69,7 +90,7 @@ If you are having trouble with the flashlight, it is very likely you have a mod 
 
 [b]Use the 64-bit branch of Garry's Mod if you can.[/b]
 
-Better Lights is made and tested on the 64-bit chromium branch, and unless you have a really old pc, I highty recommend you switch over. 
+Better Lights is made and tested on the 64-bit Chromium branch. It is recommended rather than required, but unless you have a really old PC, I highly recommend switching over.
 
 [hr][/hr]
 
@@ -97,7 +118,7 @@ This addon is open source and welcomes collaboration:
 
 [url=https://github.com/DeisDev/BetterLights][b]Better Lights Source Code[/b][/url]
 
-I do not consistently provide support through Steam comments or my Steam profile. Please use GitHub for bug reports when possible, as you will always get an answer there. 
+I do not consistently provide support through Steam comments or my Steam profile. Please use GitHub for bug reports when possible, as that is where I actively provide support.
 
 If you enjoy the addon, please consider [b]rating and favoriting it[/b].
 
@@ -111,5 +132,5 @@ More of my addons:
 [hr][/hr]
 
 [spoiler]
-keywords: Better Lights, BetterLights, gmod lighting, garry's mod lighting, garrys mod lights, dynamic lighting, dynamic lights, dlight, elight, projected flashlight, shadow flashlight, custom flashlight, flashlight texture, custom flashlight texture, weapon lights, muzzle flash, muzzle flashes, bullet impact lights, projectile lights, explosion lights, fire lights, glow effects, item glow, pickup glow, healthkit glow, health vial glow, battery glow, AR2 glow, AR2 orb light, combine ball light, combine eye glow, combine soldier glow, NPC lighting, NPC glow, hunter light, hunter flechette light, hunter chopper light, hunter chopper spotlight, strider light, strider muzzle flash, antlion glow, antlion spit light, antlion grub glow, antlion guardian glow, manhack light, city scanner light, rollermine light, hacked rollermine light, RPG rocket light, grenade light, crossbow bolt light, magnusson light, heli bomb light, physgun light, toolgun light, gravity gun light, scanner searchlight, chopper spotlight, gmod effects, visual effects, VFX, realism, immersive lighting, Half-Life 2 lighting, HL2 effects, sandbox lighting, configurable lights, client-side lighting, optimized lighting, performance friendly, 64-bit branch, ARC9 compatible, ArcCW compatible, GShader compatible
+keywords: Better Lights, BetterLights, gmod lighting, garry's mod lighting, garrys mod lights, dynamic lighting, dynamic lights, dlight, elight, projected flashlight, shadow flashlight, custom flashlight, flashlight texture, custom flashlight texture, weapon lights, muzzle flash, muzzle flashes, bullet impact lights, projectile lights, explosion lights, fire lights, glow effects, item glow, pickup glow, healthkit glow, health vial glow, battery glow, AR2 glow, AR2 orb light, combine ball light, combine eye glow, combine soldier glow, NPC lighting, NPC glow, hunter light, hunter flechette light, hunter chopper light, hunter chopper spotlight, strider light, strider muzzle flash, antlion glow, antlion spit light, antlion grub glow, antlion guardian glow, manhack light, city scanner light, rollermine light, hacked rollermine light, RPG rocket light, grenade light, crossbow bolt light, magnusson light, heli bomb light, physgun light, toolgun light, gravity gun light, scanner searchlight, chopper spotlight, gmod effects, visual effects, VFX, realism, immersive lighting, Half-Life 2 lighting, HL2 effects, sandbox lighting, configurable lights, client-side lighting, optimized lighting, performance friendly, 64-bit branch, ARC9 compatible, ArcCW compatible, MWBase compatible, TFA compatible, GShader compatible
 [/spoiler]
