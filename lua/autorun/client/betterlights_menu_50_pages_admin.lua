@@ -700,7 +700,9 @@ if CLIENT then
             category = "Admin",
             id = "BL_GlobalFlashlight",
             titleKey = "menu.global_flashlight",
-            buildPanel = buildGlobalFlashlightPage
+            buildPanel = function(panel)
+                buildGlobalFlashlightPage(panel)
+            end
         }
     })
 end

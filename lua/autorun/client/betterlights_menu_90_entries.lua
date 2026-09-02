@@ -158,20 +158,6 @@ if CLIENT then
         spawnmenu.AddToolCategory(SPAWNMENU_TAB_ID, SPAWNMENU_CATEGORY_ID, phrase("addon.name"))
     end
 
-    local function buildAboutAccessPanel(panel)
-        MENU.SetupPage(panel, "page.about.title", "page.about.desc")
-
-        local settings = MENU.AddSection(panel, "section.full_settings", "section.full_settings.desc", true)
-        local open = MENU.AddStyledButton(
-            settings,
-            phrase("button.open_settings"),
-            phrase("tooltip.open_settings")
-        )
-        open.DoClick = function()
-            MENU.OpenSettings("BL_About")
-        end
-    end
-
     concommand.Remove(MENU_COMMAND)
     concommand.Add(MENU_COMMAND, function(_, _, args)
         local pageId = args and args[1] or nil
@@ -260,16 +246,6 @@ if CLIENT then
             "",
             "",
             MENU.BuildQuickSettingsPanel
-        )
-
-        spawnmenu.AddToolMenuOption(
-            SPAWNMENU_TAB_ID,
-            SPAWNMENU_CATEGORY_ID,
-            "BL_About",
-            phrase("menu.about"),
-            "",
-            "",
-            buildAboutAccessPanel
         )
     end)
 end
