@@ -104,7 +104,7 @@ if CLIENT then
             phrase("tooltip.open_settings")
         )
         open.DoClick = function()
-            MENU.OpenSettings()
+            MENU.ToggleSettings()
         end
         return open
     end
