@@ -10,11 +10,12 @@ if CLIENT then
     MF.BlacklistedWeaponClasses = MF.BlacklistedWeaponClasses or {}
 
     local function normalizeClassName(value)
-        if IsValid(value) and value.GetClass then
+        if isentity(value) and IsValid(value) then
             value = value:GetClass()
         end
+        if type(value) ~= "string" then return nil end
 
-        value = string.lower(string.Trim(tostring(value or "")))
+        value = string.lower(string.Trim(value))
         if value == "" or #value > MAX_CLASS_LENGTH then return nil end
         if string.find(value, "%s") then return nil end
 
@@ -191,6 +192,7 @@ if CLIENT then
         local clearBlacklist
 
         local function refreshList()
+            if not IsValid(list) then return end
             list:Clear()
 
             local classes = MF.GetBlacklistedWeaponClasses()

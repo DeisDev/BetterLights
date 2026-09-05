@@ -110,6 +110,7 @@ if CLIENT then
 
     local function normalizeProfile(profile)
         if type(profile) ~= "table" then return nil end
+        if type(profile.settings) ~= "table" then return nil end
 
         local name = normalizeName(profile.name)
         if not name then return nil end
@@ -169,7 +170,7 @@ if CLIENT then
             schemaVersion = SCHEMA_VERSION,
             profiles = store.profiles
         }, false)
-        if not json then
+        if not json or type(util.JSONToTable(json)) ~= "table" then
             return false, "notice.profile_save_failed"
         end
 
