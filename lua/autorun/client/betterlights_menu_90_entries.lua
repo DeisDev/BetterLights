@@ -190,6 +190,14 @@ if CLIENT then
         end
 
         local keyDown = input.IsKeyDown(keyCode)
+        local focus = vgui.GetKeyboardFocus()
+        if not frame:IsActive() or input.IsKeyTrapping()
+            or (IsValid(focus) and isfunction(focus.IsEditing) and focus:IsEditing()) then
+            bindListenerKey = keyCode
+            bindListenerArmed = false
+            return
+        end
+
         if bindListenerKey ~= keyCode then
             bindListenerKey = keyCode
             bindListenerArmed = not keyDown

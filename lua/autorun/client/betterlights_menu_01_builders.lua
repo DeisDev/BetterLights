@@ -454,6 +454,8 @@ if CLIENT then
         panel:NumSlider(phrase("control.model_elight_radius"), prefix .. "_models_elight_size_mult", 0, 3, 2)
     end
 
+    MENU.AddModelElightControls = addModelElightControls
+
     local function addLightControls(panel, prefix, options)
         options = options or {}
 

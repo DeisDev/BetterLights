@@ -15,10 +15,10 @@ if CLIENT then
     local cvar_hacked_col_g = BL.CreateClientConVar("betterlights_manhack_hacked_color_g", "255", true, false, "Hacked Manhack color - green (0-255)")
     local cvar_hacked_col_b = BL.CreateClientConVar("betterlights_manhack_hacked_color_b", "60", true, false, "Hacked Manhack color - blue (0-255)")
     local ATTACH_NAMES = { "Eye", "Light" }
-    local HACKED_MANHACK_SPAWNFLAG = 2097152
+    local HACKED_STATE_KEY = "BetterLights_ManhackHacked"
 
     local function isHackedManhack(ent)
-        return ent:HasSpawnFlags(HACKED_MANHACK_SPAWNFLAG)
+        return ent:GetNW2Bool(HACKED_STATE_KEY, false)
     end
 
     BL.TrackClass("npc_manhack")
@@ -35,7 +35,7 @@ if CLIENT then
             local brightness = math.max(0, cvar_brightness:GetFloat())
             local decay = math.max(0, cvar_decay:GetFloat())
             local r, g, b = BL.GetColorFromCvars(cvar_col_r, cvar_col_g, cvar_col_b)
-            if data.hacked then
+            if data.hacked or isHackedManhack(ragdoll) then
                 r, g, b = BL.GetColorFromCvars(cvar_hacked_col_r, cvar_hacked_col_g, cvar_hacked_col_b)
             end
             local doElight = cvar_models_elight:GetBool()

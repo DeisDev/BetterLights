@@ -147,11 +147,19 @@ if SERVER then
         end
     end
 
-    local function canChangeServerSettings(ply)
-        return not IsValid(ply)
-            or game.SinglePlayer()
-            or ply:IsListenServerHost()
-            or ply:IsAdmin()
+    -- Asynchronous CAMI providers require a callback. Synchronous callers fail closed.
+    local function canChangeServerSettings(ply, callback)
+        if callback ~= nil then
+            return BL.CheckServerSettingsAccess(ply, callback)
+        end
+
+        local allowed = false
+        local reason = "authorization requires a callback"
+        BL.CheckServerSettingsAccess(ply, function(result, resultReason)
+            allowed = result
+            reason = resultReason or "not authorized"
+        end)
+        return allowed, reason
     end
 
     BL.CanChangeServerSettings = canChangeServerSettings
@@ -201,10 +209,35 @@ if SERVER then
         return true
     end
 
-    function BL.ApplyServerSettings(state, ply)
-        if not canChangeServerSettings(ply) then return false, "not authorized" end
+    -- With a callback, return whether the query started and report the apply result through it.
+    -- Without a callback, never apply later after returning an authorization failure.
+    function BL.ApplyServerSettings(state, ply, callback)
+        if callback == nil then
+            local allowed, reason = canChangeServerSettings(ply)
+            if not allowed then return false, reason end
+            return applyServerSettings(state, ply)
+        end
+        if not isfunction(callback) then return false, "invalid callback" end
 
-        return applyServerSettings(state, ply)
+        local validated, err = BL.ValidateServerSettingsState(state)
+        if not validated then
+            callback(false, err)
+            return false, err
+        end
+
+        local requiresPlayer = IsValid(ply)
+        return canChangeServerSettings(ply, function(allowed, reason)
+            if requiresPlayer and not IsValid(ply) then
+                callback(false, "invalid player")
+                return
+            end
+            if not allowed then
+                callback(false, reason or "not authorized")
+                return
+            end
+
+            callback(applyServerSettings(validated, ply))
+        end)
     end
 
     local function queueExternalSettingsChange()

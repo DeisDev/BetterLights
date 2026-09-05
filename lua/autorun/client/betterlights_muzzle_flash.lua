@@ -7,7 +7,9 @@ if CLIENT then
     local LOCAL_ECHO_WINDOW = 0.2
     local MAX_RESOLVE_ATTEMPTS = 2
     local MAX_FIRST_PERSON_MUZZLE_DIST_SQ = 192 * 192
-    local WRAPPER_VERSION = 3
+    local WRAPPER_VERSION = 4
+    MF._firingBulletContext = MF._firingBulletContext or {}
+    local firingContext = MF._firingBulletContext
 
     local cvar_enable = BL.CreateClientConVar("betterlights_muzzle_enable", "1", true, false, "Enable muzzle flash light on firing")
     BL.CreateClientConVar("betterlights_muzzle_size", "250", true, false, "Muzzle flash radius")
@@ -497,10 +499,13 @@ if CLIENT then
         })
     end)
 
-    local function handleLocalFireBullets(firingEntity, bullet)
-        local shooter, weapon = resolveLocalShooterAndWeapon(firingEntity)
+    local function handleLocalFireBullets(ent, bullet)
+        local shooter, weapon = resolveLocalShooterAndWeapon(ent)
         if shooter ~= LocalPlayer() then return end
         if IsFirstTimePredicted and not IsFirstTimePredicted() then return end
+
+        -- Keep the confirmed pellet hook while retaining the SWEP's tracer and adapter metadata.
+        if ent == firingContext.entity then bullet = firingContext.bullet end
 
         local adapter, adapterId = getAdapterForWeapon(weapon)
         local rule = MF.MatchWeaponRule(shooter, weapon, bullet, adapterId)
@@ -548,18 +553,30 @@ if CLIENT then
         })
     end
 
-    local function removeLegacyEntityFireBulletsWrapper()
+    local function wrapEntityFireBullets()
         local meta = FindMetaTable("Entity")
         if not (meta and isfunction(meta.FireBullets)) then return end
-        if not isfunction(meta.BetterLightsFireBulletsOriginal) then return end
+        if meta.BetterLightsFireBulletsWrapperVersion == WRAPPER_VERSION then return end
 
-        local wrapperInfo = debug and debug.getinfo and debug.getinfo(meta.FireBullets, "S") or nil
-        local wrapperSource = string.lower(tostring(wrapperInfo and wrapperInfo.source or ""))
-        if not string.find(wrapperSource, "betterlights_muzzle_flash.lua", 1, true) then return end
+        local original = meta.BetterLightsFireBulletsOriginal or meta.FireBullets
+        meta.BetterLightsFireBulletsOriginal = original
+        meta.BetterLightsFireBulletsWrapperVersion = WRAPPER_VERSION
+        meta.FireBullets = function(self, bullet, suppressHostEvents)
+            if not BL.IsEnabled() then return original(self, bullet, suppressHostEvents) end
 
-        meta.FireBullets = meta.BetterLightsFireBulletsOriginal
-        meta.BetterLightsFireBulletsWrapperVersion = nil
-        meta.BetterLightsFireBulletsOriginal = nil
+            local previousEntity, previousBullet = firingContext.entity, firingContext.bullet
+            firingContext.entity, firingContext.bullet = self, bullet
+            local function finish(ok, ...)
+                firingContext.entity, firingContext.bullet = previousEntity, previousBullet
+                if not ok then
+                    local err = ...
+                    error(err, 0)
+                end
+                return ...
+            end
+
+            return finish(pcall(original, self, bullet, suppressHostEvents))
+        end
     end
 
     local function wrapEntityMuzzleFlash()
@@ -577,7 +594,7 @@ if CLIENT then
         end
     end
 
-    removeLegacyEntityFireBulletsWrapper()
+    wrapEntityFireBullets()
     wrapEntityMuzzleFlash()
 
     concommand.Add("betterlights_muzzle_status", function()

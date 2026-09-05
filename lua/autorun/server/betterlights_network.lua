@@ -21,7 +21,9 @@ if SERVER then
         [STRIDER_CLASS] = BL.NET_STRIDER_BULLET_IMPACT,
         [HUNTER_CHOPPER_CLASS] = BL.NET_HUNTER_CHOPPER_BULLET_IMPACT
     }
-    local WRAPPER_VERSION = 4
+    local WRAPPER_VERSION = 5
+    MF._firingBulletContext = MF._firingBulletContext or {}
+    local firingContext = MF._firingBulletContext
     local recentMuzzleShots = {}
     local recentMuzzleFrame
     local recentStunstickImpacts = {}
@@ -288,6 +290,9 @@ if SERVER then
         if not IsValid(ent) then return end
         if not bullet then return end
 
+        -- PostEntityFireBullets confirms the shot, but omits input fields such as TracerName.
+        if ent == firingContext.entity then bullet = firingContext.bullet end
+
         local shooter, weapon = resolveShooterAndWeapon(ent)
         if isIgnoredSource(shooter, weapon) then return end
 
@@ -324,15 +329,20 @@ if SERVER then
     end
 
     local function installBulletImpactCallback(ent, bullet)
-        if not BL.IsServerEnabled() then return end
-        if not IsValid(ent) then return end
-        if not bullet then return end
+        if not BL.IsServerEnabled() then return bullet end
+        if not IsValid(ent) then return bullet end
+        if not istable(bullet) then return bullet end
 
         local shooter, weapon = resolveShooterAndWeapon(ent)
-        if isIgnoredSource(shooter, weapon) then return end
+        if isIgnoredSource(shooter, weapon) then return bullet end
 
+        -- Weapons can reuse their bullet table. Keep our callback off the caller's table.
+        local prepared = {}
+        for key, value in pairs(bullet) do
+            prepared[key] = value
+        end
         local prev = bullet.Callback
-        bullet.Callback = function(att, tr, dmginfo)
+        prepared.Callback = function(att, tr, dmginfo)
             local ret
             if isfunction(prev) then ret = prev(att, tr, dmginfo) end
             if not BL.IsServerEnabled() then return ret end
@@ -356,6 +366,7 @@ if SERVER then
 
             return ret
         end
+        return prepared
     end
 
     local function wrapEntityFireBullets()
@@ -367,8 +378,21 @@ if SERVER then
         meta.BetterLightsFireBulletsWrapperVersion = WRAPPER_VERSION
         meta.BetterLightsFireBulletsOriginal = original
         meta.FireBullets = function(self, bullet, suppressHostEvents)
-            installBulletImpactCallback(self, bullet)
-            return original(self, bullet, suppressHostEvents)
+            if not BL.IsServerEnabled() then return original(self, bullet, suppressHostEvents) end
+
+            local prepared = installBulletImpactCallback(self, bullet)
+            local previousEntity, previousBullet = firingContext.entity, firingContext.bullet
+            firingContext.entity, firingContext.bullet = self, prepared
+            local function finish(ok, ...)
+                firingContext.entity, firingContext.bullet = previousEntity, previousBullet
+                if not ok then
+                    local err = ...
+                    error(err, 0)
+                end
+                return ...
+            end
+
+            return finish(pcall(original, self, prepared, suppressHostEvents))
         end
     end
 

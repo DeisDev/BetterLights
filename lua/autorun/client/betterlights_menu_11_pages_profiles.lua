@@ -39,6 +39,8 @@ if CLIENT then
     end
 
     local function refreshProfileList(list, preferredProfileId)
+        if not IsValid(list) then return end
+
         local _, selectedRow = list:GetSelectedLine()
         local selectedProfileId = preferredProfileId
             or (IsValid(selectedRow) and selectedRow.BetterLightsProfileId)

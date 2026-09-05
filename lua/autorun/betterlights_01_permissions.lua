@@ -37,6 +37,10 @@ function BL.CheckServerSettingsAccess(ply, callback)
         if answered then return end
 
         answered = true
+        if not IsValid(ply) then
+            callback(false, "invalid player")
+            return
+        end
         callback(allowed == true, reason)
     end
 

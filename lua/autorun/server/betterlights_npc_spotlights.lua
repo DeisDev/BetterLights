@@ -1,4 +1,5 @@
 if SERVER then
+    local BL = BetterLights
     local STATE_UPDATE_INTERVAL = 0.1
     local SPOTLIGHT_CONFIGS = {
         npc_cscanner = {
@@ -19,6 +20,7 @@ if SERVER then
     local trackedSpotlights = {}
     local ownerSpotlights = {}
     local nextStateUpdate = 0
+    local trackingEnabled = false
 
     local function getConfig(ent)
         if not (IsValid(ent) and ent.GetClass) then return nil end
@@ -42,13 +44,17 @@ if SERVER then
     end
 
     hook.Add("OnEntityCreated", "BetterLights_NPCSpotlightState_Track", function(ent)
+        if not BL.IsServerEnabled() then return end
         timer.Simple(0, function()
+            if not BL.IsServerEnabled() then return end
             trackOwner(ent)
             trackSpotlight(ent)
         end)
     end)
 
     hook.Add("EntityRemoved", "BetterLights_NPCSpotlightState_Remove", function(ent)
+        if not trackedOwners[ent] and not trackedSpotlights[ent] then return end
+
         local owner = ent.GetOwner and ent:GetOwner()
         if IsValid(owner) and ownerSpotlights[owner] == ent then
             ownerSpotlights[owner] = nil
@@ -59,7 +65,14 @@ if SERVER then
         trackedOwners[ent] = nil
     end)
 
-    timer.Simple(0, function()
+    local function clearTracking()
+        table.Empty(trackedOwners)
+        table.Empty(trackedSpotlights)
+        table.Empty(ownerSpotlights)
+    end
+
+    local function rebuildTracking()
+        clearTracking()
         for className in pairs(SPOTLIGHT_CONFIGS) do
             for _, ent in ipairs(ents.FindByClass(className)) do
                 trackOwner(ent)
@@ -69,9 +82,20 @@ if SERVER then
         for _, ent in ipairs(ents.FindByClass("spotlight_end")) do
             trackSpotlight(ent)
         end
-    end)
+    end
 
     hook.Add("Think", "BetterLights_NPCSpotlightState_Update", function()
+        if not BL.IsServerEnabled() then
+            if trackingEnabled then clearTracking() end
+            trackingEnabled = false
+            return
+        end
+        if not trackingEnabled then
+            rebuildTracking()
+            trackingEnabled = true
+            nextStateUpdate = 0
+        end
+
         local now = CurTime()
         if now < nextStateUpdate then return end
         nextStateUpdate = now + STATE_UPDATE_INTERVAL

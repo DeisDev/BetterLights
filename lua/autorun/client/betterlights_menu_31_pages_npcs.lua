@@ -6,6 +6,7 @@ if CLIENT then
     local addHelpText = MENU.AddHelpText
     local addBulkToggleSection = MENU.AddBulkToggleSection
     local addLightControls = MENU.AddLightControls
+    local addModelElightControls = MENU.AddModelElightControls
     local addColorMixerControl = MENU.AddColorMixerControl
     local addResetButton = MENU.AddResetButton
 
