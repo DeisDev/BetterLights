@@ -7,7 +7,7 @@ if CLIENT then
     local LOCAL_ECHO_WINDOW = 0.2
     local MAX_RESOLVE_ATTEMPTS = 2
     local MAX_FIRST_PERSON_MUZZLE_DIST_SQ = 192 * 192
-    local WRAPPER_VERSION = 4
+    local WRAPPER_VERSION = 5
     MF._firingBulletContext = MF._firingBulletContext or {}
     local firingContext = MF._firingBulletContext
 
@@ -430,7 +430,8 @@ if CLIENT then
             end
         end
 
-        if shouldSuppressServerEcho(payload.shooter, payload.weapon, profileId, payload.adapterId) then return end
+        -- The echo window must not suppress new locally predicted shots during rapid fire.
+        if not payload.predicted and shouldSuppressServerEcho(payload.shooter, payload.weapon, profileId, payload.adapterId) then return end
         if isBuiltinDefaultMuzzleRule(rule) and not IsValid(payload.weapon) then return end
 
         local profile = MF.GetProfile(profileId)
