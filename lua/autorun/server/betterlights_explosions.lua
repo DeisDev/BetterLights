@@ -7,6 +7,7 @@ if SERVER then
     local DAMAGE_REMOVAL_WINDOW = 0.35
     local FLECHETTE_CLASS = "hunter_flechette"
     local FLECHETTE_EXPLODE_SOUND = "npc_hunter.flechetteexplode"
+    local PHYSEXPLOSION_NO_DAMAGE = 1
 
     util.AddNetworkString(BL.NET_EVENT_MESSAGE)
 
@@ -328,7 +329,11 @@ if SERVER then
     end
 
     hook.Add("AcceptInput", "BetterLights_ExplosionInput_Server", function(ent, input)
-        local profileId = EXP.MatchInput(getEntityClass(ent), input)
+        local className = getEntityClass(ent)
+        -- Force-only physics explosions move props in scripted scenes, such as luggage shoves.
+        if className == "env_physexplosion" and ent:HasSpawnFlags(PHYSEXPLOSION_NO_DAMAGE) then return end
+
+        local profileId = EXP.MatchInput(className, input)
         if not profileId then return end
 
         emitFallback(profileId, getEntityCenter(ent), BL.EXPLOSION_SOURCE_INPUT)
