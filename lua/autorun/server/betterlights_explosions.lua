@@ -5,6 +5,8 @@ if SERVER then
     local SUPPRESSION_DISTANCE_SQR = 160 * 160
     local SUPPRESSION_AGE = 0.12
     local DAMAGE_REMOVAL_WINDOW = 0.35
+    local FLECHETTE_CLASS = "hunter_flechette"
+    local FLECHETTE_EXPLODE_SOUND = "npc_hunter.flechetteexplode"
 
     util.AddNetworkString(BL.NET_EVENT_MESSAGE)
 
@@ -93,6 +95,17 @@ if SERVER then
 
         return true
     end
+
+    hook.Add("EntityEmitSound", "BetterLights_HunterFlechetteExplosion_Server", function(data)
+        if not BL.IsServerEnabled() then return end
+        if not istable(data) then return end
+        if string.lower(data.OriginalSoundName or "") ~= FLECHETTE_EXPLODE_SOUND then return end
+        if getEntityClass(data.Entity) ~= FLECHETTE_CLASS then return end
+
+        -- Native flechette explosions use DMG_DISSOLVE, bypassing blast-damage
+        -- detection and Lua particle wrappers. This sound confirms detonation.
+        EXP.Emit("hunter_flechette", data.Entity:GetPos(), BL.EXPLOSION_SOURCE_SOUND)
+    end)
 
     local function copyVector(pos)
         if not isUsableVector(pos) then return nil end

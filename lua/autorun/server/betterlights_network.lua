@@ -21,7 +21,7 @@ if SERVER then
         [STRIDER_CLASS] = BL.NET_STRIDER_BULLET_IMPACT,
         [HUNTER_CHOPPER_CLASS] = BL.NET_HUNTER_CHOPPER_BULLET_IMPACT
     }
-    local WRAPPER_VERSION = 5
+    local WRAPPER_VERSION = 6
     MF._firingBulletContext = MF._firingBulletContext or {}
     local firingContext = MF._firingBulletContext
     local recentMuzzleShots = {}
@@ -328,6 +328,25 @@ if SERVER then
         sendMuzzleFlash(shooter, weapon, rule.profile, BL.MUZZLE_SOURCE_FIREBULLETS, origin, adapterId, rule.attachments)
     end
 
+    local function sendBulletImpact(ent, attacker, bullet, tr)
+        if not BL.IsServerEnabled() then return end
+        if not tr or not tr.Hit or tr.HitSky or not tr.HitPos then return end
+
+        local pos = tr.HitPos
+        if tr.HitNormal then
+            pos = pos + tr.HitNormal * 2
+        end
+
+        net.Start(BL.NET_EVENT_MESSAGE)
+            local specialMessage = getSpecialImpactMessage(ent)
+            net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
+            net.WriteVector(pos)
+            if not specialMessage then
+                net.WriteBool(isAR2Shot(attacker, bullet))
+            end
+        net.SendPVS(pos)
+    end
+
     local function installBulletImpactCallback(ent, bullet)
         if not BL.IsServerEnabled() then return bullet end
         if not IsValid(ent) then return bullet end
@@ -347,22 +366,8 @@ if SERVER then
             if isfunction(prev) then ret = prev(att, tr, dmginfo) end
             if not BL.IsServerEnabled() then return ret end
             if type(ret) == "table" and ret.effects == false then return ret end
-            if not (dmginfo and dmginfo.GetDamage and dmginfo:GetDamage() > 0) then return ret end
-            if not tr or not tr.Hit or not tr.HitPos then return ret end
-
-            local pos = tr.HitPos
-            if tr.HitNormal then
-                pos = pos + tr.HitNormal * 2
-            end
-
-            net.Start(BL.NET_EVENT_MESSAGE)
-                local specialMessage = getSpecialImpactMessage(ent)
-                net.WriteUInt(specialMessage or BL.NET_BULLET_IMPACT, 4)
-                net.WriteVector(pos)
-                if not specialMessage then
-                    net.WriteBool(isAR2Shot(att, bullet))
-                end
-            net.SendPVS(pos)
+            -- A world impact can have no damage while still producing effects.
+            sendBulletImpact(ent, att, bullet, tr)
 
             return ret
         end
@@ -434,6 +439,19 @@ if SERVER then
     MF.SendAdapterMuzzleFlash = sendAdapterMuzzleFlash
 
     hook.Remove("EntityFireBullets", "BetterLights_BulletImpact_Server")
+    hook.Add("PostEntityFireBullets", "BetterLights_BulletImpact_Server_Post", function(ent, bullet)
+        if not BL.IsServerEnabled() then return end
+        if not IsValid(ent) or not istable(bullet) then return end
+
+        -- Native weapons/NPCs bypass the Lua FireBullets wrapper. Lua shots use
+        -- its callback so effects=false is respected and each impact is sent once.
+        if ent == firingContext.entity then return end
+
+        local shooter, weapon = resolveShooterAndWeapon(ent)
+        if isIgnoredSource(shooter, weapon) then return end
+
+        sendBulletImpact(ent, shooter, bullet, bullet.Trace)
+    end)
 
     local function isStunstickDamage(attacker, inflictor)
         if IsValid(inflictor) and inflictor.GetClass and inflictor:GetClass() == STUNSTICK_CLASS then
