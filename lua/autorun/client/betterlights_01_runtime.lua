@@ -492,7 +492,7 @@ if CLIENT then
         local now = CurTime()
         for i = #BL._activeFlashes, 1, -1 do
             local f = BL._activeFlashes[i]
-            if not f or now >= f.die then
+            if not f or f.die <= f.start or now >= f.die then
                 if f then
                     if f.key and BL._activeFlashByKey[f.key] == f then
                         BL._activeFlashByKey[f.key] = nil
@@ -509,11 +509,13 @@ if CLIENT then
                 BL._activeFlashes[#BL._activeFlashes] = nil
             else
                 local dur = math.max(0.001, f.die - f.start)
-                local t = (f.die - now) / dur
+                local remaining = f.die - now
+                -- Predicted shots can start ahead of Think's CurTime. Never amplify their light.
+                local t = math.Clamp(remaining / dur, 0, 1)
                 local brightness = f.baseBrightness * t
                 local size = f.baseSize * (0.4 + 0.6 * t)
                 BL.CreateDLight(f.id, f.pos, f.r, f.g, f.b, brightness, 0, size, false, {
-                    dietime = 0.05,
+                    dietime = math.min(0.05, remaining),
                     priority = BL.LIGHT_PRIORITY_FLASH
                 })
             end

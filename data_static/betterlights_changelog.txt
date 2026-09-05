@@ -1,9 +1,10 @@
 [b]Better Lights v1.6.0[/b]
 
 [list]
-[*]Added a dedicated, searchable settings window with an optional key bind, a toggling Sandbox desktop shortcut, and a streamlined Quick Settings entry in the Spawn Menu.
+[*]Prevent short muzzle flashes from overbrightening.
+[*]Added a dedicated, searchable settings window with an optional key bind, a Sandbox desktop shortcut, and a streamlined Quick Settings entry in the Spawn Menu. The desktop shortcut and Quick Settings button both toggle the window.
 [*]Added settings window appearance and navigation options for opacity, icons, and compact spacing.
-[*]Improved settings search, keyboard navigation, page and scroll restoration, resizing, and small-screen layout.
+[*]Improved settings search, keyboard navigation, page and scroll restoration, resizing, and small-screen layout. The menu shortcut stays inactive while typing or assigning a key.
 [*]Improved settings pages with clearer enabled, disabled, locked, and server-controlled states, plus quick controls for groups of effects.
 [*]Improved the global flashlight settings menu with clearer override states and unapplied-change feedback.
 [*]Added server-wide flashlight settings.
@@ -11,6 +12,7 @@
 [*]Added CAMI permission support so server owners can delegate access to Better Lights server settings without granting full admin access.
 [*]Added a dedicated Profiles category for saving, loading, importing, exporting, and resetting personal settings, with clearer selection, quicker saving, and double-click loading.
 [*]Added smaller profile files and compact sharing codes while preserving existing JSON import, viewing, and copying.
+[*]Improved handling of damaged profiles and invalid blacklist entries, with recovery copies of damaged profile files preserved before saving.
 [*]Added a muzzle flash blacklist.
 [*]Polished the in-game changelog, which now opens after updates by default and includes a Never show again option.
 [*]Added a configurable third-person flashlight spill light with adjustable radius and either beam-matched or custom brightness and color.
@@ -28,7 +30,7 @@
 [*]Added configurable eye lights for player models, including first-person and multiplayer options.
 [*]Added optional eye lights for Dog.
 [*]Improved Rollermine lights and settings for regular, hacked, and temporary power-down states.
-[*]Added separate green lighting controls for hacked Manhacks.
+[*]Added separate green lighting controls for hacked Manhacks and their ragdolls.
 [*]Added flashlight, muzzle flash, projectile, and explosion compatibility for Customizable Weaponry 2.0 and TFA Base weapons.
 [*]Added ArcCW flashlight and muzzle flash compatibility.
 [*]Improved MW Base muzzle flash handling and added flashlight attachment support for MW Base weapons.
@@ -38,10 +40,13 @@
 [*]Added impact lights for confirmed Stun Stick hits.
 [*]Added menu controls for Combine Ball lighting targets, RPG explosion flashes, and showing the held Crossbow light only while loaded.
 [*]Improved muzzle flash placement and compatibility across supported weapon bases and weapons with real muzzle attachments.
+[*]Fixed missing muzzle flashes during rapid fire.
 [*]Fixed false or repeated gunfire lights from non-gun weapons, unsupported weapons, some NPC and NextBot attacks, and shotgun pellets.
 [*]Fixed muzzle flashes and bullet impact lights appearing for shots that did not actually fire.
+[*]Restored missing bullet impact lights for default weapons, NPCs, and scripted weapons, including hits that cause no damage.
 [*]Improved explosion flashes so they originate reliably and avoid repeats from damaged targets or removed entities.
-[*]Improved Scanner and Hunter Chopper searchlights so they follow the real spotlight state and direction, use model attachments reliably, respond to changed settings, and clean up correctly.
+[*]Restored explosion flashes when Hunter flechettes detonate.
+[*]Improved Scanner and Hunter Chopper searchlights so they follow the real spotlight state and direction, use model attachments reliably, respond to changed settings, and clean up correctly, with less server work while Better Lights is disabled.
 [*]Improved held and dropped weapon light placement and flashlight weapon attachment handling.
 [*]Improved Antlion Worker glow placement and Antlion spit impact detection.
 [*]Fixed fire lights remaining visible when their size or brightness was set to zero.
