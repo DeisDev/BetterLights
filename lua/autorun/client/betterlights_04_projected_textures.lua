@@ -144,6 +144,10 @@ if CLIENT then
         end
 
         for lamp in pairs(BL._projectedTextureRecords) do
+            -- A refreshed feature may have lost its local store to garbage collection.
+            if lamp and lamp.IsValid and lamp:IsValid() then
+                lamp:Remove()
+            end
             BL._projectedTextureRecords[lamp] = nil
             BL._projectedBudgetPrevious[lamp] = nil
             BL._projectedBudgetNext[lamp] = nil
@@ -157,6 +161,10 @@ if CLIENT then
     end)
 
     hook.Add("ShutDown", "BetterLights_ProjectorStoreCleanup", function()
+        BL.ClearAllProjectedTextures()
+    end)
+
+    hook.Add("OnReloaded", "BetterLights_ProjectorReloadCleanup", function()
         BL.ClearAllProjectedTextures()
     end)
 

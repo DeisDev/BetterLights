@@ -135,33 +135,75 @@ if CLIENT then
         }
     end
 
+    local function decodeStore(source)
+        local decoded = util.JSONToTable(source)
+        if type(decoded) ~= "table" or type(decoded.profiles) ~= "table" then
+            return defaultStore(), true
+        end
+
+        local store = defaultStore()
+        local needsBackup = decoded.schemaVersion ~= SCHEMA_VERSION
+        local count = #decoded.profiles
+        for key in pairs(decoded.profiles) do
+            if type(key) ~= "number" or key % 1 ~= 0 or key < 1 or key > count then
+                needsBackup = true
+            end
+        end
+
+        for i = 1, count do
+            local profile = normalizeProfile(decoded.profiles[i])
+            if profile then
+                store.profiles[#store.profiles + 1] = profile
+            else
+                needsBackup = true
+            end
+        end
+
+        return store, needsBackup
+    end
+
     local function ensureStore()
         if PROFILES._store then return PROFILES._store end
 
         local source = file.Read(PROFILE_PATH, "DATA")
         if not source or source == "" then
             PROFILES._store = defaultStore()
-            return PROFILES._store
+            PROFILES._storeNeedsBackup = source == nil and file.Exists(PROFILE_PATH, "DATA")
+        else
+            PROFILES._store, PROFILES._storeNeedsBackup = decodeStore(source)
         end
 
-        local decoded = util.JSONToTable(source)
-        if type(decoded) ~= "table" then
-            PROFILES._store = defaultStore()
-            return PROFILES._store
-        end
+        return PROFILES._store
+    end
 
-        local store = defaultStore()
-        if type(decoded.profiles) == "table" then
-            for i = 1, #decoded.profiles do
-                local profile = normalizeProfile(decoded.profiles[i])
-                if profile then
-                    store.profiles[#store.profiles + 1] = profile
+    local function preserveUnreadableStore()
+        -- Recheck disk even when the cached store predates this recovery guard.
+        local source = file.Read(PROFILE_PATH, "DATA")
+        if source == nil then
+            if file.Exists(PROFILE_PATH, "DATA") then
+                return false, "notice.profile_read_failed"
+            end
+            return true
+        end
+        if source == "" then return true end
+
+        local _, needsBackup = decodeStore(source)
+        if not needsBackup and not PROFILES._storeNeedsBackup then return true end
+
+        local prefix = PROFILE_DIR .. "/profiles_recovery_" .. tostring(os.time()) .. "_"
+        for i = 1, 100 do
+            local backupPath = prefix .. tostring(i) .. ".json"
+            if not file.Exists(backupPath, "DATA") then
+                if not file.Write(backupPath, source) or file.Read(backupPath, "DATA") ~= source then
+                    return false, "notice.profile_recovery_failed"
                 end
+
+                MsgN("[BetterLights] Preserved unreadable profile data in data/" .. backupPath)
+                return true
             end
         end
 
-        PROFILES._store = store
-        return store
+        return false, "notice.profile_recovery_failed"
     end
 
     local function writeStore()
@@ -175,10 +217,14 @@ if CLIENT then
         end
 
         file.CreateDir(PROFILE_DIR)
+        local preserved, preserveError = preserveUnreadableStore()
+        if not preserved then return false, preserveError end
+
         if not file.Write(PROFILE_PATH, json) then
             return false, "notice.profile_save_failed"
         end
 
+        PROFILES._storeNeedsBackup = false
         return true
     end
 
