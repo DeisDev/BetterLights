@@ -289,6 +289,7 @@ if SERVER then
         if not BL.IsServerEnabled() then return end
         if not IsValid(ent) then return end
         if not bullet then return end
+        if hook.Run("BetterLights_ShouldSuppressMuzzleFlash", ent, bullet) then return end
 
         -- PostEntityFireBullets confirms the shot, but omits input fields such as TracerName.
         if ent == firingContext.entity then bullet = firingContext.bullet end
@@ -309,6 +310,7 @@ if SERVER then
 
     hook.Remove("EntityFireBullets", "BetterLights_MuzzleFlash_Server")
     hook.Add("PostEntityFireBullets", "BetterLights_MuzzleFlash_Server_Post", handleMuzzleFireBullets)
+    hook.Add("BetterLights_FireBulletsMuzzleFlash", "BetterLights_MuzzleFlash_Server_Integration", handleMuzzleFireBullets)
 
     local function handleMuzzleFlashCall(ent)
         if not BL.IsServerEnabled() then return end

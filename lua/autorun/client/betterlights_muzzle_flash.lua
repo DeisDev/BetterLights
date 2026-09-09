@@ -504,6 +504,7 @@ if CLIENT then
         local shooter, weapon = resolveLocalShooterAndWeapon(ent)
         if shooter ~= LocalPlayer() then return end
         if IsFirstTimePredicted and not IsFirstTimePredicted() then return end
+        if hook.Run("BetterLights_ShouldSuppressMuzzleFlash", ent, bullet) then return end
 
         -- Keep the confirmed pellet hook while retaining the SWEP's tracer and adapter metadata.
         if ent == firingContext.entity then bullet = firingContext.bullet end
@@ -529,6 +530,7 @@ if CLIENT then
 
     hook.Remove("EntityFireBullets", "BetterLights_MuzzleFlash_ClientPrediction")
     hook.Add("PostEntityFireBullets", "BetterLights_MuzzleFlash_ClientPrediction_Post", handleLocalFireBullets)
+    hook.Add("BetterLights_FireBulletsMuzzleFlash", "BetterLights_MuzzleFlash_ClientPrediction_Integration", handleLocalFireBullets)
 
     local function handleLocalMuzzleFlash(ent)
         local shooter, weapon = getLocalMuzzleFlashShooterAndWeapon(ent)

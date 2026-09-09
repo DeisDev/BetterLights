@@ -1,3 +1,10 @@
+[b]Better Lights v1.6.2[/b]
+
+[list]
+[*]Fixed missing muzzle flash lights when using ProjectileMod+.
+[*]Fixed extra muzzle flashes when ProjectileMod+ bullets hit surfaces.
+[/list]
+
 [b]Better Lights v1.6.1[/b]
 
 [list]
