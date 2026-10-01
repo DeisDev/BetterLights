@@ -8,7 +8,8 @@ if CLIENT then
     local PROFILE_PATH = PROFILE_DIR .. "/profiles.json"
     local SCHEMA_VERSION = 1
     local EXPORT_TYPE = "betterlights" .. ".settings_profile"
-    local SHARE_CODE_PREFIX = "BLP1:"
+    local FULL_SHARE_CODE_PREFIX = "BLP1:"
+    local CHANGED_SHARE_CODE_PREFIX = "BLP2:"
     local MAX_EXPORT_JSON_BYTES = 256 * 1024
     local MAX_SHARE_TEXT_BYTES = 384 * 1024
     local MAX_NAME_LENGTH = 48
@@ -53,6 +54,37 @@ if CLIENT then
         return string.lower(tostring(a or "")) == string.lower(tostring(b or ""))
     end
 
+    local function isDefaultValue(cvarName, value)
+        local default = BL.GetClientConVarDefault(cvarName)
+        if default == nil then return false end
+        if value == default then return true end
+
+        local number = tonumber(value)
+        return number ~= nil and number == tonumber(default)
+    end
+
+    local function copyChangedSettings(settings)
+        local out = {}
+
+        for cvarName, value in pairs(settings) do
+            if not isDefaultValue(cvarName, value) then
+                out[cvarName] = value
+            end
+        end
+
+        return out
+    end
+
+    local function fillMissingDefaults(settings)
+        for cvarName, default in pairs(BL.GetRegisteredClientConVarDefaults()) do
+            if settings[cvarName] == nil then
+                settings[cvarName] = default
+            end
+        end
+
+        return copySettings(settings)
+    end
+
     local function encodeShareCode(json)
         if type(json) ~= "string" or json == "" then
             return nil, "notice.profile_export_failed"
@@ -72,7 +104,15 @@ if CLIENT then
             return nil, "notice.profile_export_failed"
         end
 
-        return SHARE_CODE_PREFIX .. encoded
+        return CHANGED_SHARE_CODE_PREFIX .. encoded
+    end
+
+    local function matchShareCodePrefix(source)
+        for _, prefix in ipairs({ FULL_SHARE_CODE_PREFIX, CHANGED_SHARE_CODE_PREFIX }) do
+            if string.sub(source, 1, string.len(prefix)) == prefix then
+                return prefix
+            end
+        end
     end
 
     local function decodeShareSource(source)
@@ -82,15 +122,16 @@ if CLIENT then
         end
 
         source = string.Trim(source)
-        if string.sub(source, 1, string.len(SHARE_CODE_PREFIX)) ~= SHARE_CODE_PREFIX then
+        local prefix = matchShareCodePrefix(source)
+        if not prefix then
             if string.len(source) > MAX_EXPORT_JSON_BYTES then
                 return nil, "notice.profile_import_too_large"
             end
 
-            return source
+            return source, false
         end
 
-        local encoded = string.sub(source, string.len(SHARE_CODE_PREFIX) + 1)
+        local encoded = string.sub(source, string.len(prefix) + 1)
         if encoded == "" then
             return nil, "notice.profile_import_malformed"
         end
@@ -105,7 +146,7 @@ if CLIENT then
             return nil, "notice.profile_import_malformed"
         end
 
-        return json
+        return json, prefix == CHANGED_SHARE_CODE_PREFIX
     end
 
     local function normalizeProfile(profile)
@@ -445,7 +486,7 @@ if CLIENT then
         return BL.ApplyClientSettings(copySettings(profile.settings))
     end
 
-    function PROFILES.Export(name, settings, addonVersion)
+    local function encodeExport(name, settings, addonVersion, changedOnly)
         local nameError
         name, nameError = normalizeName(name)
         if not name then return nil, nameError end
@@ -455,6 +496,10 @@ if CLIENT then
             return nil, "notice.profile_import_empty_settings"
         end
 
+        if changedOnly then
+            settings = copyChangedSettings(settings)
+        end
+
         return util.TableToJSON({
             type = EXPORT_TYPE,
             schemaVersion = SCHEMA_VERSION,
@@ -462,6 +507,10 @@ if CLIENT then
             addonVersion = tostring(addonVersion or BL.VERSION or ""),
             settings = settings
         }, false)
+    end
+
+    function PROFILES.Export(name, settings, addonVersion)
+        return encodeExport(name, settings, addonVersion, false)
     end
 
     function PROFILES.ExportProfile(profile)
@@ -476,8 +525,12 @@ if CLIENT then
         local json, errorKey = PROFILES.Export(name, settings, addonVersion)
         if not json then return nil, errorKey end
 
+        local changedJson
+        changedJson, errorKey = encodeExport(name, settings, addonVersion, true)
+        if not changedJson then return nil, errorKey end
+
         local code
-        code, errorKey = encodeShareCode(json)
+        code, errorKey = encodeShareCode(changedJson)
         if not code then return nil, errorKey end
 
         return code, json
@@ -492,9 +545,9 @@ if CLIENT then
     end
 
     function PROFILES.DecodeExport(source)
-        local errorKey
-        source, errorKey = decodeShareSource(source)
-        if not source then return nil, errorKey end
+        local changedOnlyOrError
+        source, changedOnlyOrError = decodeShareSource(source)
+        if not source then return nil, changedOnlyOrError end
 
         if source == "" then
             return nil, "notice.profile_import_malformed"
@@ -514,6 +567,10 @@ if CLIENT then
         end
 
         local settings = copySettings(decoded.settings)
+        if changedOnlyOrError then
+            settings = fillMissingDefaults(settings)
+        end
+
         if countSettings(settings) == 0 then
             return nil, "notice.profile_import_empty_settings"
         end
@@ -526,7 +583,8 @@ if CLIENT then
         return {
             name = name,
             addonVersion = tostring(decoded.addonVersion or ""),
-            settings = settings
+            settings = settings,
+            usesCurrentDefaults = changedOnlyOrError
         }
     end
 end

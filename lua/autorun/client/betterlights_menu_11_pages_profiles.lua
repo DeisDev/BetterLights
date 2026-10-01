@@ -263,6 +263,11 @@ if CLIENT then
         refreshProfileList(list, profile.id)
         notify("notice.profile_imported", NOTIFY_GENERIC, 3)
 
+        local importedVersion = string.Trim(imported.addonVersion)
+        if imported.usesCurrentDefaults and importedVersion ~= "" and importedVersion ~= BetterLights.VERSION then
+            notify("notice.profile_import_version_mismatch", NOTIFY_HINT, 6, importedVersion)
+        end
+
         if IsValid(frame) then
             frame:Close()
         end
