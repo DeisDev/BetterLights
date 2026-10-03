@@ -156,12 +156,22 @@ if CLIENT then
     }
     local MIN_FOV = 10
     local MAX_FOV = 120
-    local WALL_FOV_SCALE = 0.95
-    local WALL_SHRINK_DISTANCE = 32
-    local CLOSE_WALL_BRIGHTNESS_SCALE = 0.96
     local MIN_DISTANCE = 128
     local MAX_DISTANCE = 4096
-    local NEAR_Z = 4
+    -- The beam leaves a lens of this radius, so its spot shrinks toward the lens size instead of a point.
+    local LENS_RADIUS = 1
+    -- Nothing this close in front of the lens is lit or casts shadows, so the holder's own model and weapon never block the beam.
+    -- The clearance shrinks when a surface is closer, so a lens pressed against a wall still lights it.
+    local LENS_CLEARANCE = 4
+    local SURFACE_GAP = 0.5
+    local CONTACT_HULL_SIZE = 1
+    local CONTACT_MASK = bit.bor(MASK_OPAQUE_AND_NPCS, CONTENTS_WINDOW)
+    -- The engine keeps projected light at full strength within 100 units, then fades it by 1/distance.
+    -- Raising that cap lets the shrinking spot keep getting brighter as it closes in, up to this many times.
+    local FULL_BRIGHTNESS_DISTANCE = 100
+    local CLOSE_BRIGHTNESS_MAX = 8
+    local PREDICTION_TIMEOUT = 1
+    local FLASHLIGHT_SOUNDS = BL.FLASHLIGHT_SOUNDS
     local MIN_BRIGHTNESS = 0.1
     local MAX_BRIGHTNESS = 5
     local MIN_FORWARD_OFFSET = -32
@@ -210,11 +220,22 @@ if CLIENT then
     BL._flashlightWorldSpillLightIds = BL._flashlightWorldSpillLightIds or {}
     setmetatable(BL._flashlightWorldSpillLightIds, { __mode = "k" })
     local knownTextureCache
-    local traceData = {
-        mins = Vector(-4, -4, -4),
-        maxs = Vector(4, 4, 4),
-        mask = MASK_SHOT_HULL
+    local contactFilter = {}
+    local contactTraceData = {
+        mins = Vector(-CONTACT_HULL_SIZE, -CONTACT_HULL_SIZE, -CONTACT_HULL_SIZE),
+        maxs = Vector(CONTACT_HULL_SIZE, CONTACT_HULL_SIZE, CONTACT_HULL_SIZE),
+        mask = CONTACT_MASK,
+        filter = contactFilter
     }
+    local clearanceTraceData = {
+        mask = CONTACT_MASK,
+        filter = contactFilter
+    }
+    local beamSettings = {}
+    local predictedToggle
+    local lastPredictedCommand
+    local viewModelHiddenLamp
+    local viewModelHiddenBrightness
 
     BL.RegisterProjectedTextureStore(projectors, projectorData)
 
@@ -451,7 +472,43 @@ if CLIENT then
         return false
     end
 
-    local function getWeaponAttachmentTransform(ply, localPlayer, settings)
+    local function getSlabExit(reach, origin, dir, low, high)
+        if dir > 0 then return math.min(reach, (high - origin) / dir) end
+        if dir < 0 then return math.min(reach, (low - origin) / dir) end
+        return reach
+    end
+
+    -- Distance from the eye to the front of the player's collision hull, capped at its horizontal corner.
+    local function getBodyReach(ply, eyePos, dir)
+        local mins, maxs
+        if ply:Crouching() then
+            mins, maxs = ply:GetHullDuck()
+        else
+            mins, maxs = ply:GetHull()
+        end
+
+        local base = ply:GetPos()
+        local reach = math.min(maxs.x, maxs.y, -mins.x, -mins.y) * math.sqrt(2)
+        reach = getSlabExit(reach, eyePos.x, dir.x, base.x + mins.x, base.x + maxs.x)
+        reach = getSlabExit(reach, eyePos.y, dir.y, base.y + mins.y, base.y + maxs.y)
+        reach = getSlabExit(reach, eyePos.z, dir.z, base.z + mins.z, base.z + maxs.z)
+
+        return math.max(0, reach)
+    end
+
+    -- Viewmodel depth is not physical, so pull the lens toward the eye until it sits no farther ahead than the body.
+    -- Scaling along the eye ray keeps it on the muzzle on screen.
+    local function limitToBodyReach(ply, lensPos, viewPos, viewAng)
+        local forward = viewAng:Forward()
+        local offset = lensPos - viewPos
+        local depth = offset:Dot(forward)
+        local reach = getBodyReach(ply, viewPos, forward)
+        if depth <= reach then return lensPos end
+
+        return viewPos + offset * (reach / depth)
+    end
+
+    local function getWeaponAttachmentTransform(ply, localPlayer, settings, viewPos, viewAng)
         if not getEffectiveBool(settings.attachment) then return end
         if ply.InVehicle and ply:InVehicle() then return end
         if isFirstPersonZooming(ply, localPlayer) then return end
@@ -469,26 +526,33 @@ if CLIENT then
 
         if not (attachment and attachment.Pos and attachment.Ang) then return end
 
+        local lensPos = applyAttachmentOffset(attachment.Pos, attachment.Ang, settings)
+        if isFirstPersonView(ply, localPlayer) then
+            lensPos = limitToBodyReach(ply, lensPos, viewPos, viewAng)
+        end
+
         -- Keep projector offsets separate so the visible flare stays on the attachment.
-        return applyAttachmentOffset(attachment.Pos, attachment.Ang, settings), attachment.Ang, attachment.Pos, attachment.Ang
+        return lensPos, attachment.Ang, attachment.Pos, attachment.Ang
     end
 
-    local function getViewOriginTransform(ply, localPlayer, settings)
+    local function getViewOriginTransform(ply, localPlayer, settings, viewPos, viewAng)
         local useMainView = isFirstPersonView(ply, localPlayer)
-        local useMainViewAngles = useMainView and MainEyeAngles
-        local aim = not useMainViewAngles and ply.GetAimVector and ply:GetAimVector() or nil
-        local ang = useMainViewAngles and MainEyeAngles() or (aim and aim:Angle() or ply:EyeAngles())
-        local pos = useMainView and MainEyePos and MainEyePos() or ply:EyePos()
+        local ang = useMainView and Angle(viewAng.p, viewAng.y, viewAng.r) or ply:GetAimVector():Angle()
+        local pos = useMainView and viewPos or ply:EyePos()
         local inVehicle = ply.InVehicle and ply:InVehicle()
         local forwardOffset = inVehicle and VEHICLE_OFFSET_FORWARD or 0
         local downOffset = inVehicle and VEHICLE_OFFSET_DOWN or 0
+
+        if useMainView and not inVehicle then
+            forwardOffset = getBodyReach(ply, pos, ang:Forward())
+        end
 
         pos = pos
             + ang:Forward() * (forwardOffset + math.Clamp(getEffectiveNumber(settings.forwardOffset), MIN_FORWARD_OFFSET, MAX_FORWARD_OFFSET))
             + ang:Right() * getEffectiveNumber(settings.viewOriginOffset)
             - ang:Up() * downOffset
 
-        if not inVehicle and not useMainViewAngles and ply.GetViewPunchAngles then
+        if not inVehicle and not useMainView then
             ang = ang + ply:GetViewPunchAngles()
         end
 
@@ -497,24 +561,54 @@ if CLIENT then
             return pos, ang, eyeAttachment.Pos, eyeAttachment.Ang or ang
         end
 
-        return pos, ang, pos, ang
+        return pos, ang
     end
 
-    local function getFlashlightOriginTransform(ply, localPlayer)
+    local function getFlashlightOriginTransform(ply, localPlayer, viewPos, viewAng)
         local settings = getPlacementSettings(ply, localPlayer)
-        local pos, ang, flarePos, flareAng = getWeaponAttachmentTransform(ply, localPlayer, settings)
+        local pos, ang, flarePos, flareAng = getWeaponAttachmentTransform(ply, localPlayer, settings, viewPos, viewAng)
         if pos then return pos, ang, flarePos, flareAng end
 
-        return getViewOriginTransform(ply, localPlayer, settings)
+        return getViewOriginTransform(ply, localPlayer, settings, viewPos, viewAng)
     end
 
-    local function getWallDistance(ply, pos, ang)
-        traceData.filter = ply
-        traceData.start = pos
-        traceData.endpos = pos + ang:Forward() * WALL_SHRINK_DISTANCE
+    local function addContactFilter(count, ent)
+        if not IsValid(ent) then return count end
 
-        local wallTrace = util.TraceHull(traceData)
-        return wallTrace.StartPos:Distance(wallTrace.HitPos)
+        count = count + 1
+        contactFilter[count] = ent
+        return count
+    end
+
+    local function setContactFilter(ply)
+        local count = addContactFilter(0, ply)
+        count = addContactFilter(count, ply:GetActiveWeapon())
+        count = addContactFilter(count, ply:GetVehicle())
+
+        for i = #contactFilter, count + 1, -1 do
+            contactFilter[i] = nil
+        end
+    end
+
+    -- Slide the lens back toward the eye until it sits in open space, so it never lights through walls.
+    local function keepLensInOpenSpace(eyePos, lensPos)
+        contactTraceData.start = eyePos
+        contactTraceData.endpos = lensPos
+
+        local tr = util.TraceHull(contactTraceData)
+        if tr.StartSolid then return eyePos end
+
+        return tr.HitPos
+    end
+
+    local function getLensClearance(lensPos, dir)
+        clearanceTraceData.start = lensPos
+        clearanceTraceData.endpos = lensPos + dir * LENS_CLEARANCE
+
+        local tr = util.TraceLine(clearanceTraceData)
+        if tr.StartSolid then return LENS_CLEARANCE end
+
+        return math.Clamp(tr.Fraction * LENS_CLEARANCE - SURFACE_GAP, 0, LENS_CLEARANCE)
     end
 
     local function getFlashlightColor()
@@ -580,89 +674,217 @@ if CLIENT then
             return ang
         end
 
-        data.smoothAng = data.smoothAng or Angle(ang.p, ang.y, ang.r)
-        data.smoothAng = LerpAngle(math.Clamp(FrameTime() * AIM_SMOOTHING / intensity, 0, 1), data.smoothAng, ang)
+        local smoothAng = data.smoothAng
+        if not smoothAng then
+            smoothAng = Angle(ang.p, ang.y, ang.r)
+            data.smoothAng = smoothAng
+            return smoothAng
+        end
 
-        return data.smoothAng
+        local t = 1 - math.exp(-FrameTime() * AIM_SMOOTHING / intensity)
+        smoothAng.p = math.NormalizeAngle(smoothAng.p + math.AngleDifference(ang.p, smoothAng.p) * t)
+        smoothAng.y = math.NormalizeAngle(smoothAng.y + math.AngleDifference(ang.y, smoothAng.y) * t)
+        smoothAng.r = math.NormalizeAngle(smoothAng.r + math.AngleDifference(ang.r, smoothAng.r) * t)
+
+        return smoothAng
     end
 
-    local function getFOV(wallDist)
-        local fov = math.Clamp(getEffectiveNumber(cvar_fov), MIN_FOV, MAX_FOV)
-        local minWallFov = math.max(MIN_FOV, fov * WALL_FOV_SCALE)
-        local t = math.Clamp(wallDist / WALL_SHRINK_DISTANCE, 0, 1)
-        return Lerp(t, minWallFov, fov)
-    end
-
-    local function getBrightness(ply, wallDist)
-        local t = math.Clamp(wallDist / WALL_SHRINK_DISTANCE, 0, 1)
-        local baseBrightness = math.Clamp(getEffectiveNumber(cvar_brightness), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
-        local brightness = baseBrightness * Lerp(t, CLOSE_WALL_BRIGHTNESS_SCALE, 1)
-
-        if not getEffectiveBool(cvar_flicker) then return brightness end
+    local function getBrightness(ply, baseBrightness)
+        if not beamSettings.flicker then return baseBrightness end
 
         local phase = ply:EntIndex() * 0.731
         local wave = math.sin(CurTime() * 22 + phase) * 0.65 + math.sin(CurTime() * 47 + phase * 1.7) * 0.35
-        local amount = math.Clamp(getEffectiveNumber(cvar_flicker_amount), 0, MAX_FLICKER_AMOUNT)
-        return math.max(0, brightness * (1 + wave * amount))
+        return math.max(0, baseBrightness * (1 + wave * beamSettings.flickerAmount))
+    end
+
+    local function refreshBeamSettings()
+        beamSettings.texture = getTexturePath()
+        beamSettings.color = getFlashlightColor()
+        beamSettings.fov = math.Clamp(getEffectiveNumber(cvar_fov), MIN_FOV, MAX_FOV)
+        beamSettings.distance = math.Clamp(getEffectiveNumber(cvar_distance), MIN_DISTANCE, MAX_DISTANCE)
+        beamSettings.brightness = math.Clamp(getEffectiveNumber(cvar_brightness), MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+        beamSettings.flicker = getEffectiveBool(cvar_flicker)
+        beamSettings.flickerAmount = math.Clamp(getEffectiveNumber(cvar_flicker_amount), 0, MAX_FLICKER_AMOUNT)
+        beamSettings.shadows = getEffectiveBool(cvar_shadows)
+        beamSettings.shadowDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_depth_bias))
+        beamSettings.shadowSlopeScaleDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_slope_scale_depth_bias))
+        beamSettings.shadowFilter = math.max(0, getEffectiveNumber(cvar_shadow_filter))
+    end
+
+    -- Runs once the main view is set up, so placement matches this frame's camera and viewmodel.
+    local function resolveProjectorPlacement(ply, data, options, viewPos, viewAng)
+        if not IsValid(ply) then return end
+
+        local localPlayer = LocalPlayer()
+        local lensPos, ang, flarePos, flareAng = getFlashlightOriginTransform(ply, localPlayer, viewPos, viewAng)
+        local eyePos = isFirstPersonView(ply, localPlayer) and viewPos or ply:EyePos()
+
+        setContactFilter(ply)
+        lensPos = keepLensInOpenSpace(eyePos, lensPos)
+        ang = getSmoothedAngle(data, ang)
+
+        -- A cone through a lens of LENS_RADIUS has its apex this far behind the lens.
+        local apexDistance = LENS_RADIUS / math.tan(math.rad(options.fov * 0.5))
+        local forward = ang:Forward()
+
+        options.pos = lensPos - forward * apexDistance
+        options.ang = ang
+        options.nearZ = apexDistance + getLensClearance(lensPos, forward)
+        options.farZ = data.distance + apexDistance
+
+        data.flarePos = flarePos or lensPos
+        data.flareAng = flareAng or ang
     end
 
     local function updateProjector(ply, localPlayer)
         local lamp = BL.GetOrCreateProjectedTexture(projectors, ply)
         if not lamp then return end
 
-        local data = projectorData[ply] or {}
-        projectorData[ply] = data
+        local data = projectorData[ply]
+        if not data then
+            data = {}
+            data.options = {
+                pos = ply:EyePos(),
+                ang = ply:EyeAngles(),
+                nearZ = LENS_CLEARANCE,
+                farZ = beamSettings.distance,
+                prepare = function(options, viewPos, viewAng)
+                    resolveProjectorPlacement(ply, data, options, viewPos, viewAng)
+                end
+            }
+            projectorData[ply] = data
+        end
 
-        local pos, ang, flarePos, flareAng = getFlashlightOriginTransform(ply, localPlayer)
+        local options = data.options
+        local brightness = getBrightness(ply, beamSettings.brightness)
+        data.distance = beamSettings.distance
+        data.flashlightColor = beamSettings.color
 
-        ang = getSmoothedAngle(data, ang)
-        data.flarePos = flarePos or pos
-        data.flareAng = flareAng or ang
+        if data.flarePos then
+            updateWorldSpillLight(ply, localPlayer, data.flarePos, beamSettings.color, brightness)
+        end
 
-        local wallDist = getWallDistance(ply, pos, ang)
-        local distance = math.Clamp(getEffectiveNumber(cvar_distance), MIN_DISTANCE, MAX_DISTANCE)
-        local flashlightColor = getFlashlightColor()
-        local brightness = getBrightness(ply, wallDist)
-        data.flashlightColor = flashlightColor
+        options.texture = beamSettings.texture
+        options.fov = beamSettings.fov
+        options.brightness = brightness
+        options.brightnessGain = CLOSE_BRIGHTNESS_MAX
+        options.linearAttenuation = FULL_BRIGHTNESS_DISTANCE / CLOSE_BRIGHTNESS_MAX
+        options.color = beamSettings.color
+        options.shadows = beamSettings.shadows
+        options.shadowDepthBias = beamSettings.shadowDepthBias
+        options.shadowSlopeScaleDepthBias = beamSettings.shadowSlopeScaleDepthBias
+        options.shadowFilter = beamSettings.shadowFilter
+        options.priority = ply == localPlayer and BL.LIGHT_PRIORITY_LOCAL_PLAYER or BL.LIGHT_PRIORITY_GAMEPLAY
 
-        updateWorldSpillLight(ply, localPlayer, data.flarePos, flashlightColor, brightness)
-
-        BL.UpdateProjectedTexture(lamp, {
-            texture = getTexturePath(),
-            pos = pos,
-            ang = ang,
-            nearZ = NEAR_Z,
-            farZ = distance,
-            fov = getFOV(wallDist),
-            brightness = brightness,
-            color = flashlightColor,
-            shadows = getEffectiveBool(cvar_shadows),
-            shadowDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_depth_bias)),
-            shadowSlopeScaleDepthBias = math.max(0, getEffectiveNumber(cvar_shadow_slope_scale_depth_bias)),
-            shadowFilter = math.max(0, getEffectiveNumber(cvar_shadow_filter)),
-            priority = localPlayer and BL.LIGHT_PRIORITY_LOCAL_PLAYER or BL.LIGHT_PRIORITY_GAMEPLAY
-        })
+        BL.UpdateProjectedTexture(lamp, options)
     end
 
     local function isRendererEnabled()
         return BL.IsEnabled() and getEffectiveBool(cvar_player_enable)
     end
 
-    local function isPlayerFlashlightActive(ply)
+    local function getIntegrationFlashlightState(ply)
         local activeWeapon = ply:GetActiveWeapon()
+        if not IsValid(activeWeapon) then return nil end
 
-        if IsValid(activeWeapon) then
-            for _, integration in ipairs(FL.GetIntegrations()) do
-                local getFlashlightState = integration.GetFlashlightState
-                if isfunction(getFlashlightState) then
-                    local state = getFlashlightState(ply, activeWeapon)
-                    if state ~= nil then return state == true end
-                end
+        for _, integration in ipairs(FL.GetIntegrations()) do
+            local getFlashlightState = integration.GetFlashlightState
+            if isfunction(getFlashlightState) then
+                local state = getFlashlightState(ply, activeWeapon)
+                if state ~= nil then return state == true end
             end
+        end
+
+        return nil
+    end
+
+    local function readNetworkedToggle(ply)
+        local packed = ply:GetNWInt(BL.NW_FLASHLIGHT_TOGGLE, 0)
+        return math.floor(packed / 2), packed % 2 == 1
+    end
+
+    -- Holds the predicted state until the server reports handling that many toggle inputs.
+    local function getLocalFlashlightState(ply)
+        local inputCount, state = readNetworkedToggle(ply)
+        local predicted = predictedToggle
+        if not predicted then return state end
+
+        if inputCount >= predicted.inputCount or RealTime() > predicted.expires then
+            predictedToggle = nil
+            return state
+        end
+
+        return predicted.state
+    end
+
+    local function isPlayerFlashlightActive(ply)
+        local integrationState = getIntegrationFlashlightState(ply)
+        if integrationState ~= nil then return integrationState end
+
+        if ply == LocalPlayer() then
+            return getLocalFlashlightState(ply)
         end
 
         return ply:GetNWBool("BetterLights_Flashlight", false)
     end
+
+    local function integrationClaimsFlashlightInput(ply)
+        for _, integration in ipairs(FL.GetIntegrations()) do
+            local handlesImpulse = integration.HandlesFlashlightImpulse
+            if isfunction(handlesImpulse) and handlesImpulse(ply) == true then return true end
+
+            local overrideDisabled = integration.IsFlashlightOverrideDisabled
+            if isfunction(overrideDisabled) and overrideDisabled(ply) == true then return true end
+        end
+
+        return false
+    end
+
+    local function canPredictToggle(ply)
+        if not isRendererEnabled() then return false end
+        if not ply:Alive() then return false end
+
+        local mpFlashlight = GetConVar("mp_flashlight")
+        if mpFlashlight and not mpFlashlight:GetBool() then return false end
+        if getIntegrationFlashlightState(ply) ~= nil then return false end
+
+        return not integrationClaimsFlashlightInput(ply)
+    end
+
+    local function playPredictedToggleSound(ply, state)
+        local useCustomSounds = getEffectiveBool(cvar_custom_sounds)
+        local soundName
+        if useCustomSounds then
+            soundName = state and FLASHLIGHT_SOUNDS.customOn or FLASHLIGHT_SOUNDS.customOff
+        else
+            soundName = state and FLASHLIGHT_SOUNDS.defaultOn or FLASHLIGHT_SOUNDS.defaultOff
+        end
+
+        local soundLevel = useCustomSounds and FLASHLIGHT_SOUNDS.customLevel or FLASHLIGHT_SOUNDS.defaultLevel
+        EmitSound(soundName, ply:GetPos(), -1, CHAN_AUTO, 1, soundLevel, 0, 100, 1)
+    end
+
+    -- StartCommand runs clientside when each command is created, so the toggle shows without waiting a round trip.
+    hook.Add("StartCommand", "BetterLights_FlashlightPredictToggle", function(ply, cmd)
+        if cmd:GetImpulse() ~= 100 then return end
+
+        local commandNumber = cmd:CommandNumber()
+        if commandNumber == 0 or commandNumber == lastPredictedCommand then return end
+        if ply ~= LocalPlayer() or not canPredictToggle(ply) then return end
+
+        lastPredictedCommand = commandNumber
+
+        local state = not getLocalFlashlightState(ply)
+        local inputCount = predictedToggle and predictedToggle.inputCount or readNetworkedToggle(ply)
+
+        predictedToggle = {
+            inputCount = inputCount + 1,
+            state = state,
+            expires = RealTime() + PREDICTION_TIMEOUT + ply:Ping() / 1000 * 2
+        }
+
+        playPredictedToggleSound(ply, state)
+    end)
 
     local function shouldDrawFlare(ply, localPlayer)
         if not getEffectiveBool(cvar_flare) then return false end
@@ -751,9 +973,10 @@ if CLIENT then
         local seen = {}
 
         local localPlayer = LocalPlayer()
+        refreshBeamSettings()
 
         for _, ply in ipairs(player.GetAll()) do
-            if IsValid(ply) and ply:Alive() and isPlayerFlashlightActive(ply) then
+            if IsValid(ply) and ply:Alive() and not ply:IsDormant() and isPlayerFlashlightActive(ply) then
                 seen[ply] = true
                 updateProjector(ply, localPlayer)
             end
@@ -781,6 +1004,29 @@ if CLIENT then
     hook.Add("ShutDown", "BetterLights_PlayerFlashlightsCleanup", function()
         removeAllProjectors()
         clearFlareHandles()
+    end)
+
+    -- A weapon-mounted light does not light the weapon or hands holding it, so darken the local lamp for the viewmodel pass.
+    hook.Add("PreDrawViewModels", "BetterLights_FlashlightSkipViewModels", function()
+        local lamp = projectors[LocalPlayer()]
+        if not IsValid(lamp) then return end
+
+        viewModelHiddenLamp = lamp
+        viewModelHiddenBrightness = lamp:GetBrightness()
+        lamp:SetBrightness(0)
+        lamp:Update()
+    end)
+
+    -- PreDrawEffects runs after every viewmodel has drawn.
+    hook.Add("PreDrawEffects", "BetterLights_FlashlightSkipViewModels", function()
+        local lamp = viewModelHiddenLamp
+        if not lamp then return end
+
+        viewModelHiddenLamp = nil
+        if not IsValid(lamp) then return end
+
+        lamp:SetBrightness(viewModelHiddenBrightness)
+        lamp:Update()
     end)
 
     hook.Add("PostDrawTranslucentRenderables", "BetterLights_PlayerFlashlightFlares", function(isDrawingDepth, isDrawingSkybox)

@@ -4,6 +4,14 @@
 [*]Shortened profile sharing codes by leaving out settings that match the defaults.
 [*]Added a notice when importing a code from another version, since unchanged settings use your current defaults.
 [*]Existing profile codes and JSON imports still work; use JSON when sharing with older versions.
+[*]Reworked the custom flashlight beam near walls. It now shrinks as the light gets closer and is smallest when you touch the wall, with or without a weapon.
+[*]The flashlight now gets brighter as its spot shrinks up close.
+[*]Fixed the flashlight shining through walls into the next room.
+[*]Fixed the flashlight lighting up your own weapon and hands, and your own model blocking the beam.
+[*]Fixed flickering shadows from flashlights and spotlights when looking around, and the beam lagging behind your view.
+[*]The flashlight now turns on and off instantly in multiplayer instead of waiting for the server.
+[*]Fixed flashlight sway feeling different at different frame rates.
+[*]Fixed other players' flashlights getting the same priority as your own when the light limit is reached.
 [/list]
 
 [b]Better Lights v1.6.2[/b]

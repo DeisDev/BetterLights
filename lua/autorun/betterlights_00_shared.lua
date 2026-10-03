@@ -8,6 +8,17 @@ BL.NET_SERVER_SETTINGS_REQUEST = "BetterLights_RequestServerSettings"
 BL.NET_SERVER_SETTINGS_APPLY = "BetterLights_ApplyServerSettings"
 BL.NET_SERVER_SETTINGS_STATE = "BetterLights_ServerSettings"
 
+-- Packs the flashlight state with a count of handled toggle inputs: count * 2 + (on and 1 or 0).
+BL.NW_FLASHLIGHT_TOGGLE = "BetterLights_FlashlightToggle"
+BL.FLASHLIGHT_SOUNDS = {
+    customOn = "betterlights/flashlight_on.wav",
+    customOff = "betterlights/flashlight_off.wav",
+    customLevel = 77,
+    defaultOn = "HL2Player.FlashLightOn",
+    defaultOff = "HL2Player.FlashLightOff",
+    defaultLevel = 75
+}
+
 BL.SERVER_MODE_DISABLED = 0
 BL.SERVER_MODE_ENABLED = 1
 BL.SERVER_MODE_PLAYER_CHOICE = 2

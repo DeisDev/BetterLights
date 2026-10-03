@@ -5,12 +5,7 @@ if SERVER then
     util.AddNetworkString(BL.NET_FLASHLIGHT_CLIENT_SETTINGS)
 
     local INPUT_DEBOUNCE = 0.05
-    local CUSTOM_SOUND_ON = "betterlights/flashlight_on.wav"
-    local CUSTOM_SOUND_OFF = "betterlights/flashlight_off.wav"
-    local DEFAULT_SOUND_ON = "HL2Player.FlashLightOn"
-    local DEFAULT_SOUND_OFF = "HL2Player.FlashLightOff"
-    local CUSTOM_SOUND_LEVEL = 77
-    local DEFAULT_SOUND_LEVEL = 75
+    local SOUNDS = BL.FLASHLIGHT_SOUNDS
     local SOUND_PITCH = 100
     local SOUND_VOLUME = 1
     local SOUND_FLAGS = 0
@@ -95,7 +90,7 @@ if SERVER then
         return ok, allowed
     end
 
-    local function getFlashlightSoundFilters(pos)
+    local function getFlashlightSoundFilters(pos, skipPlayer)
         local audibleFilter = RecipientFilter()
         local customFilter = RecipientFilter()
         local defaultFilter = RecipientFilter()
@@ -103,13 +98,15 @@ if SERVER then
         audibleFilter:AddPAS(pos)
 
         for _, listener in ipairs(audibleFilter:GetPlayers()) do
-            local useCustomSounds = BL.IsEnabledForPlayer(listener)
-                and BL.GetEffectiveServerFlashlightBool(SOUNDS_SETTING, listener.BetterLights_CustomFlashlightSounds)
+            if listener ~= skipPlayer then
+                local useCustomSounds = BL.IsEnabledForPlayer(listener)
+                    and BL.GetEffectiveServerFlashlightBool(SOUNDS_SETTING, listener.BetterLights_CustomFlashlightSounds)
 
-            if useCustomSounds then
-                customFilter:AddPlayer(listener)
-            else
-                defaultFilter:AddPlayer(listener)
+                if useCustomSounds then
+                    customFilter:AddPlayer(listener)
+                else
+                    defaultFilter:AddPlayer(listener)
+                end
             end
         end
 
@@ -122,11 +119,11 @@ if SERVER then
         ply:EmitSound(soundName, soundLevel, SOUND_PITCH, SOUND_VOLUME, CHAN_AUTO, SOUND_FLAGS, SOUND_DSP, filter)
     end
 
-    local function emitFlashlightSound(ply, state)
-        local customFilter, defaultFilter = getFlashlightSoundFilters(ply:GetPos())
+    local function emitFlashlightSound(ply, state, ownerPredicted)
+        local customFilter, defaultFilter = getFlashlightSoundFilters(ply:GetPos(), ownerPredicted and ply or nil)
 
-        emitFilteredSound(ply, state and CUSTOM_SOUND_ON or CUSTOM_SOUND_OFF, CUSTOM_SOUND_LEVEL, customFilter)
-        emitFilteredSound(ply, state and DEFAULT_SOUND_ON or DEFAULT_SOUND_OFF, DEFAULT_SOUND_LEVEL, defaultFilter)
+        emitFilteredSound(ply, state and SOUNDS.customOn or SOUNDS.customOff, SOUNDS.customLevel, customFilter)
+        emitFilteredSound(ply, state and SOUNDS.defaultOn or SOUNDS.defaultOff, SOUNDS.defaultLevel, defaultFilter)
     end
 
     local function isFlashlightOverrideDisabledFor(ply)
@@ -215,7 +212,15 @@ if SERVER then
         return allowed ~= false
     end
 
-    local function setFlashlight(ply, state, silent, skipPermission)
+    -- Clients compare the input count with their own pending toggles to confirm or undo predicted presses.
+    local function publishFlashlightState(ply)
+        local inputCount = ply.BetterLights_FlashlightInputCount or 0
+        local stateBit = ply:GetNWBool("BetterLights_Flashlight", false) and 1 or 0
+
+        ply:SetNWInt(BL.NW_FLASHLIGHT_TOGGLE, inputCount * 2 + stateBit)
+    end
+
+    local function setFlashlight(ply, state, silent, skipPermission, ownerPredicted)
         if not IsValid(ply) then return false end
 
         state = state and true or false
@@ -228,16 +233,17 @@ if SERVER then
         if ply:GetNWBool("BetterLights_Flashlight", false) == state then return true end
 
         ply:SetNWBool("BetterLights_Flashlight", state)
+        publishFlashlightState(ply)
 
         if not silent then
-            emitFlashlightSound(ply, state)
+            emitFlashlightSound(ply, state, ownerPredicted)
         end
 
         return true
     end
 
-    local function toggleFlashlight(ply)
-        return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false))
+    local function toggleFlashlight(ply, ownerPredicted)
+        return setFlashlight(ply, not ply:GetNWBool("BetterLights_Flashlight", false), false, false, ownerPredicted)
     end
 
     local function reconcileFlashlightEligibility(ply, adoptVanillaState)
@@ -287,10 +293,15 @@ if SERVER then
         if integrationHandlesFlashlightImpulse(ply) then return end
 
         cmd:SetImpulse(0)
-        if recentlyHandledInput(ply) then return end
+        ply.BetterLights_FlashlightInputCount = (ply.BetterLights_FlashlightInputCount or 0) + 1
 
-        toggleFlashlight(ply)
-        markHandledInput(ply)
+        if not recentlyHandledInput(ply) then
+            -- Multiplayer clients predict their own toggle and play its sound locally.
+            toggleFlashlight(ply, not game.SinglePlayer())
+            markHandledInput(ply)
+        end
+
+        publishFlashlightState(ply)
     end)
 
     hook.Add("PlayerSwitchFlashlight", "BetterLights_FlashlightSwitch", function(ply, state)

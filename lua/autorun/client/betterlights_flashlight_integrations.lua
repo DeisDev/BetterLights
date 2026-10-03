@@ -835,12 +835,38 @@ if CLIENT then
         }
     end
 
+    local function playerDisablesIntegrationFlashlight(ply, id, matcher)
+        return isIntegrationFlashlightOverrideDisabled(id) and matcher(ply:GetActiveWeapon())
+    end
+
+    -- Mirrors the server check so the local player only predicts toggles the server will handle.
+    local function arc9HandlesFlashlightImpulse(ply)
+        if playerDisablesIntegrationFlashlight(ply, "arc9", isArc9Weapon) then return false end
+
+        local weapon = ply:GetActiveWeapon()
+        if not isArc9Weapon(weapon) then return false end
+
+        if isfunction(weapon.GetCustomize) then
+            local ok, customizing = pcall(weapon.GetCustomize, weapon)
+            if ok and customizing == true then return true end
+        end
+
+        if not isfunction(weapon.CanToggleAllStatsOnF) then return false end
+
+        local ok, count = pcall(weapon.CanToggleAllStatsOnF, weapon)
+        count = ok and tonumber(count) or nil
+        return count ~= nil and count > 0
+    end
+
     FL.RegisterIntegration({
         id = "tfa",
         priority = 130,
         GetAttachmentTransform = getTFAAttachmentTransform,
         UsesViewOrigin = function(_, _, activeWeapon)
             return isTFAViewOriginWeapon(activeWeapon)
+        end,
+        IsFlashlightOverrideDisabled = function(ply)
+            return playerDisablesIntegrationFlashlight(ply, "tfa", isTFAWeapon)
         end
     })
 
@@ -851,19 +877,29 @@ if CLIENT then
         GetFlashlightState = getArc9FlashlightState,
         UsesViewOrigin = function(_, _, activeWeapon)
             return isArc9Throwable(activeWeapon)
+        end,
+        HandlesFlashlightImpulse = arc9HandlesFlashlightImpulse,
+        IsFlashlightOverrideDisabled = function(ply)
+            return playerDisablesIntegrationFlashlight(ply, "arc9", isArc9Weapon)
         end
     })
 
     FL.RegisterIntegration({
         id = "arccw",
         priority = 110,
-        GetAttachmentTransform = getArcCWAttachmentTransform
+        GetAttachmentTransform = getArcCWAttachmentTransform,
+        IsFlashlightOverrideDisabled = function(ply)
+            return playerDisablesIntegrationFlashlight(ply, "arccw", isArcCWWeapon)
+        end
     })
 
     FL.RegisterIntegration({
         id = "mwbase",
         priority = 100,
-        GetAttachmentTransform = getMwBaseAttachmentTransform
+        GetAttachmentTransform = getMwBaseAttachmentTransform,
+        IsFlashlightOverrideDisabled = function(ply)
+            return playerDisablesIntegrationFlashlight(ply, "mwbase", isMwBaseWeapon)
+        end
     })
 
     FL.RegisterIntegration({

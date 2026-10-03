@@ -179,7 +179,7 @@ if CLIENT then
         lamp:SetNearZ(options.nearZ)
         lamp:SetFarZ(options.farZ)
         lamp:SetFOV(options.fov)
-        lamp:SetBrightness((tonumber(options.brightness) or 0) * brightnessScale)
+        lamp:SetBrightness((tonumber(options.brightness) or 0) * (tonumber(options.brightnessGain) or 1) * brightnessScale)
         lamp:SetColor(options.color or color_white)
         lamp:SetEnableShadows(options.shadows)
         if options.shadowDepthBias then lamp:SetShadowDepthBias(options.shadowDepthBias) end
@@ -192,8 +192,12 @@ if CLIENT then
         lamp:Update()
     end
 
-    hook.Add("PreDrawOpaqueRenderables", "BetterLights_ProjectorUpdate", function(isDrawingDepth)
-        if not BL.IsMainViewRender(isDrawingDepth) then return end
+    local lastFlushFrame
+
+    local function flushProjectedTextureUpdates(viewOrigin, viewAngles)
+        local frame = FrameNumber()
+        if lastFlushFrame == frame then return end
+        lastFlushFrame = frame
 
         local candidates = BL._projectedTextureCandidateList
         for i = #candidates, 1, -1 do
@@ -204,6 +208,12 @@ if CLIENT then
             BL._projectedTextureUpdates[lamp] = nil
 
             if lamp and lamp.IsValid and lamp:IsValid() and record.options then
+                local prepare = record.options.prepare
+                if prepare then
+                    prepare(record.options, viewOrigin, viewAngles)
+                    record.pos = record.options.pos
+                end
+
                 candidates[#candidates + 1] = record
             end
         end
@@ -241,5 +251,17 @@ if CLIENT then
 
         BL._projectedBudgetPrevious, BL._projectedBudgetNext =
             BL._projectedBudgetNext, BL._projectedBudgetPrevious
+    end
+
+    -- The engine renders flashlight shadow depth before the scene, so updating here keeps shadows and lighting from the same pose.
+    hook.Add("RenderScene", "BetterLights_ProjectorUpdate", function(origin, angles)
+        flushProjectedTextureUpdates(origin, angles)
+    end)
+
+    -- Another RenderScene hook that returns a value skips this one, so flush during the main view instead.
+    hook.Add("PreDrawOpaqueRenderables", "BetterLights_ProjectorUpdate", function(isDrawingDepth)
+        if not BL.IsMainViewRender(isDrawingDepth) then return end
+
+        flushProjectedTextureUpdates(MainEyePos(), MainEyeAngles())
     end)
 end
